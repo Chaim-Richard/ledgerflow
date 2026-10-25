@@ -11,6 +11,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import AuditEvidencePackPanel from '../components/platform/settings/AuditEvidencePackPanel';
 import { getSupabase } from '../lib/db/client';
 import { useLedgerStore } from '../stores/useLedgerStore';
+import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import { setComponentWorkspace, markComponentCollectionsLoaded } from './helpers/componentFixtures';
 
 const auth = getSupabase().auth;
@@ -64,6 +65,17 @@ test('a period that runs backwards is refused before anything is built', async (
   await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /first date must not be after the last/));
   assert.equal((screen.getByRole('button', { name: 'Download .zip' }) as HTMLButtonElement).disabled, true);
   assert.equal(screen.queryByText('audit-log.csv'), null);
+});
+
+test('a document collection that failed to load is named, and the pack is not offered from half the records', async () => {
+  seed();
+  useDataNeedsStore.setState({ failed: { invoices: 'the database said no' } });
+  render(<AuditEvidencePackPanel />);
+  await waitFor(() => assert.match(screen.getByRole('alert').textContent || '', /could not be loaded: the database said no/));
+  assert.equal((screen.getByRole('button', { name: 'Download .zip' }) as HTMLButtonElement).disabled, true);
+  assert.equal(screen.queryByText('audit-log.csv'), null);
+  assert.ok(screen.getByRole('button', { name: 'Try again' }));
+  useDataNeedsStore.setState({ failed: {} });
 });
 
 test('a bookkeeper is told why the pack is not theirs', async () => {

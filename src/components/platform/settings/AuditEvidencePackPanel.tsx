@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { FileArchive, Download } from 'lucide-react';
 import { useAuthStore } from '../../../stores/useAuthStore';
+import { useDataNeedsStore } from '../../../stores/useDataNeedsStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { useLedgerCollections } from '../../../hooks/useLedgerCollections';
 import { useCurrentRole } from '../../../hooks/useCurrentRole';
@@ -56,6 +57,7 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
   const payRuns = useLedgerStore(s => s.payRuns || []);
   const auditLogs = useLedgerStore(s => s.auditLogs || []);
   const { loading } = useLedgerCollections('invoices', 'payRuns', 'auditLogs');
+  const failed = useDataNeedsStore(s => s.failed.invoices || s.failed.payRuns);
   const review = useAccessReview(workspaceId);
   const [from, setFrom] = useState(monthStart);
   const [to, setTo] = useState(today);
@@ -111,7 +113,10 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
     }
   };
 
-  const busy = loading || review.status === 'loading';
+  const busy = !failed && review.status !== 'error' && (loading || review.status === 'loading');
+  const blocked = failed
+    ? `The documents this pack needs could not be loaded: ${failed}`
+    : review.status === 'error' ? review.error : '';
 
   return (
     <section aria-labelledby="evidence-pack-title" className="p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-5">
@@ -135,7 +140,7 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
           <input type="date" value={to} min={from} onChange={event => setTo(event.target.value)}
             className="mt-1 block min-h-11 w-full bg-[var(--ink)] border border-[var(--line)] rounded-xl px-3 text-[var(--text)]" />
         </label>
-        <button type="button" onClick={download} disabled={invalidPeriod || busy}
+        <button type="button" onClick={download} disabled={invalidPeriod || busy || Boolean(blocked)}
           className="min-h-11 px-4 border border-[var(--line)] rounded-xl text-xs font-bold flex items-center gap-2 disabled:opacity-50">
           <Download aria-hidden="true" size={14} /> Download .zip
         </button>
@@ -146,7 +151,18 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
       {notice && <p role="status" className="text-sm text-[var(--pos)]">{notice}</p>}
       {busy && <LoadingState what="the records this pack needs" />}
 
-      {!busy && files.length > 0 && (
+      {!busy && blocked && (
+        <div role="alert" className="p-4 border border-rose-500/30 bg-rose-500/5 rounded-xl space-y-2">
+          <p className="text-sm text-[var(--text)]">{blocked}</p>
+          <button type="button" onClick={() => {
+            const needs = useDataNeedsStore.getState();
+            needs.retry('invoices'); needs.retry('payRuns');
+            review.reload();
+          }} className="min-h-11 px-4 border border-[var(--line)] rounded-xl text-xs font-bold">Try again</button>
+        </div>
+      )}
+
+      {!busy && !blocked && files.length > 0 && (
         <div className="space-y-2">
           <h3 className="text-[10px] font-black uppercase tracking-wider text-[var(--muted)]">What the pack will contain</h3>
           <ul className="space-y-1 text-xs">

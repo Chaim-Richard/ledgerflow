@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../stores/useAuthStore';
+import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 import { useLedgerStore } from '../stores/useLedgerStore';
 import { useLedgerCollections } from './useLedgerCollections';
 import { useTeamRequests } from './useTeamRequests';
@@ -35,6 +36,7 @@ export function useAccessReview(workspaceId: string): AccessReviewData {
   const user = useAuthStore(s => s.user);
   const { request } = useTeamRequests(workspaceId);
   const { loading: auditLoading } = useLedgerCollections('auditLogs');
+  const auditFailed = useDataNeedsStore(s => s.failed.auditLogs);
   const auditLogs = useLedgerStore(s => s.auditLogs || []);
   const auditTruncated = useLedgerStore(s => Boolean(s.truncatedCollections?.auditLogs));
   const [team, setTeam] = useState<TeamState>({ status: 'loading', members: [], ownerUid: '', roles: {}, error: '' });
@@ -91,9 +93,17 @@ export function useAccessReview(workspaceId: string): AccessReviewData {
     emails,
   }), [team, workspace?.requireTwoStep, auditLogs, user?.uid, selfTwoStep, emails]);
 
-  const status: AccessReviewData['status'] = team.status === 'error'
-    ? 'error'
-    : team.status === 'loading' || auditLoading ? 'loading' : 'ready';
+  const failure = team.status === 'error'
+    ? team.error
+    : auditFailed ? `The audit trail could not be loaded: ${auditFailed}` : '';
+  const status: AccessReviewData['status'] = failure ? 'error' : team.status === 'loading' || (auditLoading && !auditFailed) ? 'loading' : 'ready';
 
-  return { status, error: team.error, rows, requireTwoStep: workspace?.requireTwoStep === true, auditTruncated, reload: () => { void loadTeam(); } };
+  return {
+    status,
+    error: failure,
+    rows,
+    requireTwoStep: workspace?.requireTwoStep === true,
+    auditTruncated,
+    reload: () => { useDataNeedsStore.getState().retry('auditLogs'); void loadTeam(); },
+  };
 }
