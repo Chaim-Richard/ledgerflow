@@ -1,0 +1,101 @@
+/**
+ * Independent audit Pass A — AF-010 high-risk money micro-functions.
+ * Pinned against the functions themselves (expected values computed by hand in this file, never
+ * derived by calling the function under review). Where a current behavior is a verified defect,
+ * the test locks the OBSERVED behavior and names the finding, so a fix must deliberately update
+ * both the function and this audit test. Evidence: audit/function-audit/AF-010-money-microfunctions.md
+ */
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { parseAmountToCents } from '../lib/utils';
+import { bankCsvAmountCents } from '../lib/bankCsvRows';
+import { allocateCents as canonicalAlloc } from '../lib/Allocation';
+import { allocateCents as kernelAlloc } from '../kernel/templates/TransactionTemplates';
+import { TruthEngine } from '../modules/integrity/TruthEngine';
+
+test('AF-010 kernel allocateCents: largest remainder, parts always sum to total (incl. negatives)', () => {
+  assert.deepEqual(kernelAlloc(100, [1, 1, 1]), [34, 33, 33]);
+  assert.deepEqual(kernelAlloc(10, [3, 3, 3]), [4, 3, 3]);
+  // negative totals stay exact: floors distribute the leftover cent
+  assert.deepEqual(kernelAlloc(-101, [1, 1]), [-50, -51]);
+  assert.equal(kernelAlloc(-101, [1, 1]).reduce((a, b) => a + b, 0), -101);
+  // property over random shapes, totals from -1,000,000 to +1,000,000 cents
+  for (let seed = 1; seed <= 3000; seed++) {
+    const total = ((seed * 7919) % 2_000_001) - 1_000_000;
+    const weights = Array.from({ length: 1 + (seed % 6) }, (_, i) => (seed * (i + 3)) % 500);
+    const parts = kernelAlloc(total, weights);
+    assert.equal(parts.length, weights.length);
+    assert.equal(parts.reduce((a, b) => a + b, 0), total, `sum must equal total for seed ${seed}`);
+    assert.ok(parts.every(Number.isSafeInteger), `integer cents only for seed ${seed}`);
+  }
+});
+
+test('AF-010-F1: the two allocateCents primitives have silently different contracts', () => {
+  // The kernel posting allocator COERCES degenerate weights (all zero / negative) onto the first
+  // slot; the "canonical" Allocation module THROWS. Both are used in money paths today.
+  assert.deepEqual(kernelAlloc(500, [0, 0]), [500, 0], 'kernel: zero weights -> first slot takes all');
+  assert.deepEqual(kernelAlloc(100, []), [], 'kernel: empty weights -> empty array');
+  assert.deepEqual(kernelAlloc(100, [5, -3, 2]), [71, 0, 29], 'kernel: negative weight clamped to 0');
+  assert.throws(() => canonicalAlloc(500, [0, 0]), /totalWeight must be > 0/, 'canonical: zero weights throw');
+  assert.throws(() => canonicalAlloc(100, [1, NaN]), /positive finite numbers/, 'canonical: NaN weight throws');
+  assert.throws(() => canonicalAlloc(Number.MAX_SAFE_INTEGER + 1, [1, 1]), /safe integer/);
+  // where both accept the inputs they agree
+  for (const [total, weights] of [[100, [1, 1, 1]], [23499, [10000, 10000]], [-101, [1, 1]], [7, [3, 2, 1]]] as const) {
+    assert.deepEqual(kernelAlloc(total, [...weights]), canonicalAlloc(total, [...weights]));
+  }
+});
+
+test('AF-010-F2: utils.parseAmountToCents loses the sign of parenthesized accounting negatives', () => {
+  // The bank CSV path has its own guarded parser (below), so this reaches the app through UI money
+  // fields and any caller that reuses the utils helper. An accountant typing (500.00) records +500.
+  assert.equal(parseAmountToCents('(100.00)'), 10000, 'OBSERVED DEFECT: parentheses stripped, sign lost');
+  assert.equal(parseAmountToCents('(0.01)'), 1, 'OBSERVED DEFECT: one cent the wrong way');
+  // the other two primitives get parentheses right
+  assert.equal(bankCsvAmountCents('(100.00)'), -10000);
+  assert.equal(TruthEngine.parseAmountToCents('(100.00)'), -10000);
+});
+
+test('AF-010-F3: utils.parseAmountToCents throws on malformed text instead of returning 0', () => {
+  // A render-path caller (e.g. useMemo in a money dialog) typing "1.2.3" hits a DecimalError and
+  // trips the screen error boundary rather than showing a validation message.
+  assert.throws(() => parseAmountToCents('1.2.3'), /Invalid argument/);
+  assert.throws(() => parseAmountToCents('1-2'), /Invalid argument/);
+  assert.throws(() => parseAmountToCents('--5'), /Invalid argument/);
+  // TruthEngine wraps the same class of failure in its own integrity error; OrZero swallows it
+  assert.throws(() => TruthEngine.parseAmountToCents('1.2.3'), /Invalid amount format/);
+  assert.equal(TruthEngine.parseAmountToCentsOrZero('1.2.3'), 0);
+});
+
+test('AF-010-F4: utils.parseAmountToCents boundary table', () => {
+  const cases: Array<[unknown, number]> = [
+    ['', 0], [null, 0], [undefined, 0], ['abc', 0],
+    ['1,234.56', 123456], ['.5', 50], ['5.', 500],
+    ['-$99.95', -9995], ['  -12.34 ', -1234], ['1.005', 101],
+    [2.675, 268], [NaN, 0],
+  ];
+  for (const [input, expected] of cases) assert.equal(parseAmountToCents(input as never), expected, String(input));
+  assert.ok(parseAmountToCents('-0') === 0, '-0 is numerically zero (strictEqual would see -0)');
+  // non-Latin digits are stripped to a silent zero
+  assert.equal(parseAmountToCents('۱۲۳'), 0, 'OBSERVED: Arabic-Indic digits become 0, not a refusal');
+  // Infinity is not an integer cent; document the passthrough so callers cannot assume integer output
+  assert.equal(Number.isFinite(parseAmountToCents(Infinity)), false, 'OBSERVED: Infinity passes through');
+});
+
+test('AF-010: TruthEngine parser handles the notations the utils parser cannot', () => {
+  assert.equal(TruthEngine.parseAmountToCents('1,234.56'), 123456);
+  assert.equal(TruthEngine.parseAmountToCents('100.00 CR'), -10000, 'CR suffix flips to negative');
+  assert.equal(TruthEngine.parseAmountToCents('100.00 DR'), 10000);
+  assert.equal(TruthEngine.parseAmountToCents('−50'), -5000, 'unicode minus');
+  assert.throws(() => TruthEngine.parseAmountToCents(''), /Amount cannot be empty/, 'empty throws here, returns 0 in utils');
+});
+
+test('AF-010: bankCsvAmountCents refuses ambiguity and never invents a sign', () => {
+  assert.equal(bankCsvAmountCents('(12.50)'), -1250);
+  assert.equal(bankCsvAmountCents('12.50-'), -1250);
+  assert.equal(bankCsvAmountCents('$1,234.56'), 123456);
+  assert.equal(bankCsvAmountCents('1.234,56'), 123456, 'semicolon-export comma decimal');
+  assert.equal(bankCsvAmountCents('12.345'), null, 'three decimals refused, not rounded');
+  assert.equal(bankCsvAmountCents('n/a'), null);
+  assert.equal(bankCsvAmountCents(''), null);
+  assert.equal(bankCsvAmountCents(undefined), null);
+});
