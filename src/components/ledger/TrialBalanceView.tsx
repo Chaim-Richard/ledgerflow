@@ -21,6 +21,7 @@ import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
 import ReportEmptyState from '../reporting/ReportEmptyState';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
 import { useBalanceEntries } from '../../hooks/useBalanceEntries';
 
 /** the trial balance worked out here also reads the journal entries */
@@ -350,6 +351,13 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                Double-Entry Stability Protocol
             </div>
             <h2 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h2>
+            {/* A-220: the as-of date in the reader's own date style */}
+            <ReportPeriodHeading
+              asOf
+              className="text-sm font-medium text-[var(--muted)] tabular-nums"
+              startDate={asOfDate}
+              endDate={asOfDate}
+            />
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <MonthNavigator
                 currentDate={asOfDate}

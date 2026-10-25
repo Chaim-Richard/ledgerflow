@@ -23,6 +23,7 @@ import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
 import ReportEmptyState from '../reporting/ReportEmptyState';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -332,6 +333,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       <ReportProvenanceNote id="pl-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.pl} />
 
       {/* Period navigation/actions and aligned report filters. */}
+      {/* A-220: the period these figures cover, written the way the reader's locale writes dates */}
+      <ReportPeriodHeading
+        className="text-sm font-medium text-[var(--muted)] tabular-nums"
+        startDate={dateRange.start}
+        endDate={dateRange.end}
+      />
+
       <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <MonthNavigator 

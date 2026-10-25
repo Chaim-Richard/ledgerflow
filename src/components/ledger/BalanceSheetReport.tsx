@@ -11,6 +11,7 @@ import DrillDownModal from '../layout/DrillDownModal';
 import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
 import ReportEmptyState from '../reporting/ReportEmptyState';
 
 export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
@@ -38,6 +39,14 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
     <div className="space-y-6">
       {/* AUD-10: where these figures come from */}
       <ReportProvenanceNote id="bs-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.balanceSheet} />
+      {/* A-220: the as-of date in the reader's own date style */}
+      <ReportPeriodHeading
+        asOf
+        className="text-sm font-medium text-[var(--muted)] tabular-nums"
+        startDate={columnStartDate}
+        endDate={asOfDate}
+        compareEndDate={isComparative ? priorDate : undefined}
+      />
       {serverAsOf && <p data-testid="bs-balances-source" className="text-xs text-[var(--muted)]">Balances include every entry through {serverAsOf} as summed by the server, plus the loaded entries after it.</p>}
 
 

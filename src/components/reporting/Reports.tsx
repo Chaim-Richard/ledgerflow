@@ -18,6 +18,9 @@ import { getCachedReport, setCachedReport } from '../../lib/reportCache';
 import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 import ReportTotalExplainer from './ReportTotalExplainer';
 import ReportPicker from './ReportPicker';
+import PrintLayoutControl from './PrintLayoutControl';
+import ReportPeriodHeading from './ReportPeriodHeading';
+import { countPrintedColumns } from '../../lib/printLayout';
 
 
 
@@ -58,6 +61,18 @@ const Reports = React.memo(() => {
   const [customPeriod, setCustomPeriod] = useState(() => linked.startDate && linked.endDate ? { startDate: linked.startDate, endDate: linked.endDate } : undefined);
   const [compareMode, setCompareMode] = useState<CompareMode>(linked.compare);
   const [packPeriod, setPackPeriod] = useState<{ startDate: string; endDate: string }>();
+  /**
+   * A-218: the columns the report on screen actually has, measured when Print is pressed, so a wide
+   * table (balance sheet with comparison, trial balance with many accounts) turns the sheet instead
+   * of printing its last columns off the paper.
+   */
+  const [printColumns, setPrintColumns] = useState(0);
+  const printReport = React.useCallback(() => {
+    const root = typeof document === 'undefined' ? null : document.querySelector('[data-print-root]');
+    setPrintColumns(countPrintedColumns(root));
+    // let the paper rule (portrait → landscape) reach the DOM before the print dialog opens
+    requestAnimationFrame(() => window.print());
+  }, []);
   const [drillDownAccount, setDrillDownAccount] = useState<string | null>(null);
   // N-12: a report that knows the figure's filter gets it explained from the server
   const [drillDownExplain, setDrillDownExplain] = useState<ExplainRequest | undefined>(undefined);
@@ -213,18 +228,35 @@ const Reports = React.memo(() => {
       {/* Printed / PDF heading: the report and its period */}
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{(REPORT_TABS_REGISTRY.find(t => t.id === activeTab)?.label as Record<string, string> | undefined)?.en || 'Report'}</h1>
-        <p className="text-sm">{customPeriod ? "Custom range" : periodLabel} · {period.startDate} to {period.endDate}{comparePeriod ? ` · compared with ${comparePeriod.startDate} to ${comparePeriod.endDate}` : ''}</p>
+        <p className="text-sm">{customPeriod ? "Custom range" : periodLabel}</p>
+        {/* A-220: the printed period in the reader's own date format, with the comparison when there is one */}
+        <ReportPeriodHeading
+          className="text-sm"
+          startDate={period.startDate}
+          endDate={period.endDate}
+          compareStartDate={comparePeriod?.startDate}
+          compareEndDate={comparePeriod?.endDate}
+        />
       </div>
       <section data-print-hide data-testid="reports-heading" aria-label="Reports heading" className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-[var(--text)]">Reports</h1>
           <p className="text-sm text-[var(--muted)]">{periodLabel}</p>
+          {/* A-220: the same dates the report covers, in the workspace's own date style */}
+          <ReportPeriodHeading
+            className="text-xs text-[var(--muted)] tabular-nums"
+            startDate={period.startDate}
+            endDate={period.endDate}
+            compareStartDate={comparePeriod?.startDate}
+            compareEndDate={comparePeriod?.endDate}
+          />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => onAction('export')} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Download size={16} aria-hidden="true" /> Export
           </button>
-          <button onClick={() => window.print()} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
+          <PrintLayoutControl columnCount={printColumns} />
+          <button onClick={printReport} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Printer size={16} aria-hidden="true" /> Print / PDF
           </button>
         </div>
