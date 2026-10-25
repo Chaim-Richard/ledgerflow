@@ -31,6 +31,10 @@
  * (Cash 110,000, AR 30,000 → assets 140,000; liabilities 30,000) equal the whole history; 2025-03-31 is before the
  * cut-off: loaded entries (0), as the whole history (0). March P&L (net income 15,000) equals the whole history;
  * February starts before the cut-off and keeps the loaded entries (net income 0; the whole history has −30,000).
+ * With the list capped, those loaded-only columns are incomplete: P&L February and March 2025, balance sheet
+ * 2025-03-31. Their changes are "Not comparable" and never a big move: Cash 105,000 vs 0 at 2025-03-31 (+105,000,
+ * a big move against the $1,000 threshold when the column is taken at face value) is not flagged; Cash vs
+ * 2026-02-28 (105,000 − 110,000 = −5,000, both columns served by the server) is still compared.
  */
 import './helpers/dom';
 import test, { afterEach, beforeEach, describe } from 'node:test';
@@ -147,6 +151,44 @@ describe('L-123 step 3d: period and trend screens read the server opening', () =
     assert.equal(total(server, 'profitAndLoss', 'total:netIncome').current, 15_000);
     assert.equal(total(server, 'profitAndLoss', 'total:netIncome').previousMonth, 0, 'February starts before the cut-off: loaded entries');
     assert.equal(total(whole, 'profitAndLoss', 'total:netIncome').previousMonth, -30_000);
+  });
+
+  test('close comparison with a capped list: February P&L and the year-ago columns are incomplete, their moves not flagged', () => {
+    const capped = buildCloseComparison({ month: '2026-03', accounts: chart, transactions: loaded, opening, workspaceId: ws, capped: true });
+    assert.deepEqual(capped.profitAndLoss.incomplete, { current: false, previousMonth: true, previousYear: true });
+    assert.deepEqual(capped.balanceSheet.incomplete, { current: false, previousMonth: false, previousYear: true });
+    const cash = capped.balanceSheet.rows.find(r => r.id === 'account:cash')!;
+    assert.equal(cash.previousYear, 0);
+    assert.equal(cash.comparablePreviousYear, false);
+    assert.equal(cash.bigMoveYear, false);
+    assert.equal(cash.percentPreviousYear, null);
+    assert.equal(cash.comparablePreviousMonth, true);
+    assert.equal(cash.changePreviousMonth, -5_000);
+    for (const row of capped.profitAndLoss.rows) assert.ok(!row.comparablePreviousMonth && !row.bigMove && !row.bigMoveYear, row.id);
+    assert.ok(capped.bigMoves.every(r => r.comparablePreviousMonth || r.comparablePreviousYear));
+    assert.ok(!capped.bigMoves.some(r => r.id === 'account:cash' && r.bigMoveYear));
+    // taken at face value (not capped) the year-ago cash move is a big move
+    const uncapped = buildCloseComparison({ month: '2026-03', accounts: chart, transactions: loaded, opening, workspaceId: ws });
+    assert.equal(uncapped.balanceSheet.rows.find(r => r.id === 'account:cash')!.bigMoveYear, true);
+    assert.deepEqual(uncapped.profitAndLoss.incomplete, { current: false, previousMonth: false, previousYear: false });
+    // capped without the server's answer: every column is incomplete
+    const noServer = buildCloseComparison({ month: '2026-03', accounts: chart, transactions: loaded, capped: true });
+    assert.deepEqual(noServer.balanceSheet.incomplete, { current: true, previousMonth: true, previousYear: true });
+    assert.equal(noServer.bigMoves.length, 0);
+  });
+
+  test('close comparison panel labels the incomplete columns', async () => {
+    render(<CloseComparisonPanel month="2026-03" currency="USD" />);
+    await waitFor(() => assert.ok(screen.getByTestId('close-comparison-incomplete')));
+    assert.ok(screen.getByTestId('close-comparison-incomplete-pl-previousMonth'));
+    assert.ok(screen.getByTestId('close-comparison-incomplete-bs-previousYear'));
+    assert.equal(screen.queryByTestId('close-comparison-incomplete-bs-previousMonth'), null);
+    assert.ok(text().includes('Not comparable'));
+    cleanup();
+    useLedgerStore.setState({ truncatedCollections: {} });
+    render(<CloseComparisonPanel month="2026-03" currency="USD" />);
+    await waitFor(() => assert.ok(text().includes(formatCurrency(155_000, 'USD'))));
+    assert.equal(screen.queryByTestId('close-comparison-incomplete'), null);
   });
 
   test('close comparison panel shows assets 155,000 at 2026-03-31', async () => {
