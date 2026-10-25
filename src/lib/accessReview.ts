@@ -98,19 +98,31 @@ export interface AccessReviewRow {
   roleChangedFrom: AccessRole | null;
   roleChangedTo: AccessRole | null;
   roleChangedBy: string | null;
+  /**
+   * True when this uid holds a role but is not in the workspace's member list. That person still has
+   * access — the database's membership check accepts a stored role, and a role can be written
+   * without adding a member — so the review lists them instead of hiding them.
+   */
+  roleOnly: boolean;
   twoStep: TwoStepState;
 }
 
-/** Everyone with access: the owner plus the members, each once, in that order. */
-export function accessPeople(input: Pick<AccessReviewInput, 'ownerUid' | 'members'>): string[] {
+/**
+ * Everyone with access: the owner, then the member list in order, then anyone the roles map names
+ * who is not in that list (role-only access), each once.
+ */
+export function accessPeople(input: Pick<AccessReviewInput, 'ownerUid' | 'members' | 'roles'>): string[] {
   const seen = new Set<string>();
   const people: string[] = [];
-  for (const uid of [input.ownerUid, ...input.members]) {
-    const id = typeof uid === 'string' ? uid.trim() : '';
-    if (!id || seen.has(id)) continue;
+  const add = (value: unknown) => {
+    const id = typeof value === 'string' ? value.trim() : '';
+    if (!id || seen.has(id)) return;
     seen.add(id);
     people.push(id);
-  }
+  };
+  add(input.ownerUid);
+  for (const uid of input.members) add(uid);
+  for (const uid of Object.keys(input.roles)) add(uid);
   return people;
 }
 
@@ -179,6 +191,7 @@ export function accessReviewRows(input: AccessReviewInput): AccessReviewRow[] {
       roleChangedFrom: change ? accessRole(detail(change, 'beforeRole')) : null,
       roleChangedTo: change ? accessRole(detail(change, 'afterRole')) : null,
       roleChangedBy: change ? (change.userEmail || change.uid || null) : null,
+      roleOnly: uid !== input.ownerUid && !input.members.includes(uid),
       twoStep: twoStepFor(input, uid, signInAt, ruleChangedAt),
     };
   });
@@ -190,7 +203,7 @@ export function localDay(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-export const ACCESS_REVIEW_HEADERS = ['Person', 'Email', 'Role', 'Last sign-in', 'Two-step login', 'Role last changed', 'Role change', 'Changed by'] as const;
+export const ACCESS_REVIEW_HEADERS = ['Person', 'Email', 'Role', 'Last sign-in', 'Two-step login', 'Role last changed', 'Role change', 'Changed by', 'Note'] as const;
 
 /** CSV rows in the same order, and from the same rows, as the screen shows. Times are ISO for an auditor. */
 export function accessReviewCsvRows(rows: readonly AccessReviewRow[]): string[][] {
@@ -203,8 +216,15 @@ export function accessReviewCsvRows(rows: readonly AccessReviewRow[]): string[][
     row.roleChangedAt ? row.roleChangedAt.toISOString() : 'No role change recorded',
     row.roleChangedFrom && row.roleChangedTo ? `${ACCESS_ROLE_LABELS[row.roleChangedFrom]} → ${ACCESS_ROLE_LABELS[row.roleChangedTo]}` : '',
     row.roleChangedBy || '',
+    row.roleOnly ? 'Role on record; not in the workspace member list' : '',
   ]);
 }
+
+/**
+ * The window event the authenticator panel sends after an authenticator is added or removed, so an
+ * open access review (and its CSV) never reports the reader's previous account status.
+ */
+export const TWO_STEP_CHANGED = 'ledgerflow:two-step-changed';
 
 /** The one sentence the screen and the CSV share about what the two-step column can and cannot say. */
 export function twoStepLimitNote(requireTwoStep: boolean): string {

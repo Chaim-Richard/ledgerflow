@@ -102,6 +102,7 @@ function ScopedAccessReview({ workspaceId }: { workspaceId: string }) {
                     <div className="font-bold text-[var(--text)] break-all">{row.email || row.uid}</div>
                     {row.email && <div className="text-[10px] text-[var(--muted)] break-all">{row.uid}</div>}
                     {row.isSelf && <span className="text-[10px] font-bold text-[var(--brass)]">You</span>}
+                    {row.roleOnly && <div className="text-[10px] text-amber-400">Role on record; not in the workspace member list — this person still has access, review it</div>}
                   </td>
                   <td className="py-3 pr-4">{ACCESS_ROLE_LABELS[row.role]}</td>
                   <td className="py-3 pr-4">

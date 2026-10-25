@@ -33,7 +33,10 @@ export interface EvidenceWorkspace {
   name?: string;
   lockDate?: string | null;
   softLockDate?: string | null;
-  lockException?: { from?: string; to?: string; reason?: string; by?: string } | null;
+  /** the shared `LockException` model (src/lib/periodLock.ts): fromDate/toDate are the open range */
+  lockException?: { fromDate?: string; toDate?: string; reason?: string; by?: string } | null;
+  /** the workspace currency, used where a document carries none of its own */
+  currency?: string;
   requireTwoStep?: boolean;
   twoPersonRule?: boolean;
   payrollApproval?: boolean;
@@ -45,6 +48,8 @@ export interface EvidenceInvoice {
   number?: string;
   date?: string;
   amountCents?: number;
+  /** the invoice's own currency; blank means the workspace currency */
+  currency?: string;
   status?: string;
   approval?: {
     state?: string; thresholdCents?: number; requestedAt?: string; requestedBy?: string;
@@ -76,6 +81,12 @@ export interface AuditEvidenceInput {
   accessRows: readonly AccessReviewRow[];
   /** the audit collection stopped at its cap, so older entries are not in the pack */
   auditCapped?: boolean;
+  /**
+   * The browser cache stopped at its cap for these collections (10,000 invoices, 1,000 pay runs), so
+   * approvals older than the loaded rows are not in the pack. Said in the README and on the screen;
+   * never presented as complete history.
+   */
+  documentsCapped?: { invoices?: boolean; payRuns?: boolean };
 }
 
 export interface EvidenceFile {
@@ -133,7 +144,7 @@ export function auditEntriesInPeriod(logs: readonly EvidenceEntry[], period: Evi
 
 export const AUDIT_LOG_HEADERS = ['When', 'Action', 'Person', 'Email', 'Entity type', 'Entity id', 'Description'] as const;
 export const PERIOD_LOCK_HEADERS = ['When', 'Kind', 'Month or scope', 'Detail', 'Person'] as const;
-export const APPROVAL_HEADERS = ['When', 'Kind', 'Document', 'Document id', 'Amount', 'Status', 'Prepared by', 'Decided by', 'Note'] as const;
+export const APPROVAL_HEADERS = ['Requested', 'Decided', 'Kind', 'Document', 'Document id', 'Amount', 'Currency', 'Status', 'Prepared by', 'Decided by', 'Note'] as const;
 export const APPROVAL_RULE_HEADERS = ['Rule', 'State', 'Limit or scope', 'Note'] as const;
 
 export function auditLogRows(logs: readonly EvidenceEntry[], period: EvidencePeriod): string[][] {
@@ -157,7 +168,8 @@ export function periodLockRows(workspace: EvidenceWorkspace, logs: readonly Evid
   rows.push([
     '',
     'Open partial unlock',
-    exception ? `${text(exception.from)} to ${text(exception.to)}` : '',
+    // the shared LockException model stores the open range as fromDate/toDate
+    exception ? `${text(exception.fromDate)} to ${text(exception.toDate)}` : '',
     exception ? (exception.reason || 'A range inside the locked period may be changed.') : 'None.',
     exception ? text(exception.by) : '',
   ]);
@@ -168,32 +180,49 @@ export function periodLockRows(workspace: EvidenceWorkspace, logs: readonly Evid
   return rows;
 }
 
-/** Invoice approvals and pay-run approvals decided (or asked for) inside the period. */
-export function approvalRows(invoices: readonly EvidenceInvoice[], payRuns: readonly EvidencePayRun[], period: EvidencePeriod): string[][] {
+function moment(value: string | undefined): Date | null {
+  if (!value) return null;
+  const at = new Date(value);
+  return Number.isNaN(at.getTime()) ? null : at;
+}
+
+/**
+ * Invoice approvals and pay-run approvals whose request **or** decision falls inside the period.
+ * Both timestamps are tested: a request made in the period and decided after it must not disappear
+ * from the earlier period's evidence, and the row shows each date so the gap is visible. Each amount
+ * is the document's own figure in the currency named on that row (never silently converted).
+ */
+export function approvalRows(
+  invoices: readonly EvidenceInvoice[],
+  payRuns: readonly EvidencePayRun[],
+  period: EvidencePeriod,
+  workspaceCurrency = '',
+): string[][] {
   const rows: string[][] = [];
   for (const invoice of invoices) {
     const approval = invoice.approval;
     if (!approval || !approval.state) continue;
-    const decidedAt = approval.decidedAt ? new Date(approval.decidedAt) : null;
-    const requestedAt = approval.requestedAt ? new Date(approval.requestedAt) : null;
-    const when = decidedAt || requestedAt;
-    if (!inEvidencePeriod(when, period)) continue;
+    const requestedAt = moment(approval.requestedAt);
+    const decidedAt = moment(approval.decidedAt);
+    if (!inEvidencePeriod(requestedAt, period) && !inEvidencePeriod(decidedAt, period)) continue;
     rows.push([
-      isoOrEmpty(when), 'Invoice approval', text(invoice.number) || text(invoice.id), text(invoice.id),
-      csvMoney(invoice.amountCents), text(approval.state), text(approval.requestedBy), text(approval.decidedBy), text(approval.note),
+      isoOrEmpty(requestedAt), isoOrEmpty(decidedAt), 'Invoice approval',
+      text(invoice.number) || text(invoice.id), text(invoice.id),
+      csvMoney(invoice.amountCents), text(invoice.currency) || text(workspaceCurrency), text(approval.state),
+      text(approval.requestedBy), text(approval.decidedBy), text(approval.note),
     ]);
   }
   for (const run of payRuns) {
-    const decidedAt = run.approvedAt ? new Date(run.approvedAt) : run.rejectedAt ? new Date(run.rejectedAt) : null;
-    const when = decidedAt || (run.createdAt ? new Date(run.createdAt) : null);
-    if (!inEvidencePeriod(when, period)) continue;
+    const requestedAt = moment(run.createdAt);
+    const decidedAt = moment(run.approvedAt) || moment(run.rejectedAt);
+    if (!inEvidencePeriod(requestedAt, period) && !inEvidencePeriod(decidedAt, period)) continue;
     rows.push([
-      isoOrEmpty(when), 'Pay run approval', `Pay run of ${text(run.date)}`, text(run.id),
-      csvMoney(run.totalAmountCents), text(run.status), text(run.submittedByEmail),
-      text(run.approvedByEmail) || text(run.rejectedByEmail), text(run.rejectionNote),
+      isoOrEmpty(requestedAt), isoOrEmpty(decidedAt), 'Pay run approval', `Pay run of ${text(run.date)}`, text(run.id),
+      csvMoney(run.totalAmountCents), text(workspaceCurrency), text(run.status),
+      text(run.submittedByEmail), text(run.approvedByEmail) || text(run.rejectedByEmail), text(run.rejectionNote),
     ]);
   }
-  return rows.sort((a, b) => a[0].localeCompare(b[0]));
+  return rows.sort((a, b) => (a[1] || a[0]).localeCompare(b[1] || b[0]));
 }
 
 /** The approval rules as they stand, so a reader knows what the approvals above are being checked against. */
@@ -225,10 +254,14 @@ function readme(input: AuditEvidenceInput, counts: Record<string, number>): stri
     `- period-locks.csv — the lock dates now in force and every close, reopen, unlock and sign-off recorded in the period (${counts.locks} recorded events).`,
     `- approvals.csv — invoice approvals and pay-run approvals decided or asked for inside the period (${counts.approvals} rows).`,
     '- approval-rules.csv — the invoice approval limit, the two-person rule and pay-run approval as they stand today.',
+    '- Amounts are each document\'s own figure in the currency named on its row; nothing is converted here.',
     `- access-review.csv — one row per person with access: role, last recorded sign-in, two-step login and last role change (${counts.access} people).`,
     '',
     'Limits you should know',
     `- The audit trail in the app loads the newest 500 entries of the workspace, the same list the Audit Trail screen shows.${input.auditCapped ? ' This workspace has more entries than that, so older entries are not in this pack.' : ''}`,
+    ...(input.documentsCapped?.invoices || input.documentsCapped?.payRuns
+      ? [`- The browser also caps what it loads: ${[input.documentsCapped?.invoices ? 'invoices (10,000)' : '', input.documentsCapped?.payRuns ? 'pay runs (1,000)' : ''].filter(Boolean).join(' and ')} reached that limit in this workspace, so an approval older than the loaded rows may be missing from approvals.csv. This is stated, never presented as a complete history.`]
+      : []),
     '- "Not in the recent audit entries" in access-review.csv means exactly that: no entry among those loaded, not "never signed in".',
     '- A sign-in is the app recording that someone entered this workspace in a browser session; every authentication event of an account lives with the sign-in service, not here.',
     `- ${twoStepLimitNote(Boolean(input.workspace.requireTwoStep))}`,
@@ -242,7 +275,7 @@ function readme(input: AuditEvidenceInput, counts: Record<string, number>): stri
 export function buildAuditEvidencePack(input: AuditEvidenceInput): EvidenceFile[] {
   const auditRows = auditLogRows(input.auditLogs, input.period);
   const lockRows = periodLockRows(input.workspace, input.auditLogs, input.period);
-  const approvals = approvalRows(input.invoices, input.payRuns, input.period);
+  const approvals = approvalRows(input.invoices, input.payRuns, input.period, input.workspace.currency);
   const rules = approvalRuleRows(input.workspace);
   const access = accessReviewFileRows(input.accessRows);
   const audit = csvFile('audit-log.csv', AUDIT_LOG_HEADERS, auditRows);

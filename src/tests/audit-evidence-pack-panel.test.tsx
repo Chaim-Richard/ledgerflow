@@ -51,8 +51,8 @@ test('the pack lists its files with the rows they will hold, for the chosen peri
   const items = Array.from(document.querySelectorAll('li')).map(item => item.textContent || '');
   assert.match(items.find(item => item.includes('audit-log.csv')) || '', /2 rows · 7 columns/);
   assert.match(items.find(item => item.includes('period-locks.csv')) || '', /3 rows · 5 columns/);
-  assert.match(items.find(item => item.includes('approvals.csv')) || '', /2 rows · 9 columns/);
-  assert.match(items.find(item => item.includes('access-review.csv')) || '', /2 rows · 8 columns/);
+  assert.match(items.find(item => item.includes('approvals.csv')) || '', /2 rows · 11 columns/);
+  assert.match(items.find(item => item.includes('access-review.csv')) || '', /2 rows · 9 columns/);
   assert.ok(items.some(item => item.includes('README.txt') && item.includes('explains the pack')));
   assert.equal((screen.getByRole('button', { name: 'Download .zip' }) as HTMLButtonElement).disabled, false);
 });

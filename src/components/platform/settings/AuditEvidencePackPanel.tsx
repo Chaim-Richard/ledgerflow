@@ -56,6 +56,8 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
   const invoices = useLedgerStore(s => s.invoices || []);
   const payRuns = useLedgerStore(s => s.payRuns || []);
   const auditLogs = useLedgerStore(s => s.auditLogs || []);
+  const invoicesCapped = useLedgerStore(s => Boolean(s.truncatedCollections?.invoices));
+  const payRunsCapped = useLedgerStore(s => Boolean(s.truncatedCollections?.payRuns));
   const { loading } = useLedgerCollections('invoices', 'payRuns', 'auditLogs');
   const failed = useDataNeedsStore(s => s.failed.invoices || s.failed.payRuns);
   const review = useAccessReview(workspaceId);
@@ -79,6 +81,7 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
         twoPersonRule: workspace.twoPersonRule,
         payrollApproval: workspace.payrollApproval,
         invoiceApproval: workspace.invoiceApproval,
+        currency: workspace.currency,
       },
       period: { from, to },
       generatedAt: generatedAt(),
@@ -87,8 +90,9 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
       payRuns,
       accessRows: review.rows,
       auditCapped: review.auditTruncated,
+      documentsCapped: { invoices: invoicesCapped, payRuns: payRunsCapped },
     });
-  }, [workspace, invalidPeriod, from, to, auditLogs, invoices, payRuns, review.rows, review.auditTruncated]);
+  }, [workspace, invalidPeriod, from, to, auditLogs, invoices, payRuns, review.rows, review.auditTruncated, invoicesCapped, payRunsCapped]);
 
   const download = () => {
     setError(''); setNotice('');
@@ -176,9 +180,17 @@ function ScopedEvidencePack({ workspaceId }: { workspaceId: string }) {
           {files.slice(1).every(file => file.rows.length === 0) && (
             <p className="text-xs text-[var(--muted)]">Nothing was recorded in this period. The pack still downloads, and each file says so with its header row only — a missing period is evidence too.</p>
           )}
+          {(invoicesCapped || payRunsCapped) && (
+            <p role="status" className="text-xs text-amber-400">
+              This workspace holds more {[invoicesCapped ? 'invoices (10,000)' : '', payRunsCapped ? 'pay runs (1,000)' : ''].filter(Boolean).join(' and ')} than
+              the browser loads, so an approval older than the loaded rows may be missing from the pack. It says so in the
+              README; nothing here pretends to be the complete history.
+            </p>
+          )}
           <p className="text-[11px] text-[var(--muted)]">
             The access review file holds the same rows as the access review above it, and the audit file the entries dated
-            inside the period. Times are ISO dates; amounts are the documents' own figures in the workspace currency.
+            inside the period. Times are ISO dates; each amount is the document's own figure in the currency named on that
+            row — nothing is converted.
           </p>
         </div>
       )}

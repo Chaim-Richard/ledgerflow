@@ -19,8 +19,8 @@ function pack(overrides: Partial<AuditEvidenceInput> = {}) {
   const input: AuditEvidenceInput = {
     workspace: {
       id: 'ws-1', name: 'Acme Books', lockDate: '2026-09-30', softLockDate: '2026-10-15',
-      lockException: { from: '2026-09-01', to: '2026-09-07', reason: 'Late bills', by: 'owner@example.test' },
-      requireTwoStep: false, twoPersonRule: true, payrollApproval: true,
+      lockException: { fromDate: '2026-09-01', toDate: '2026-09-07', reason: 'Late bills', by: 'owner@example.test' },
+      currency: 'USD', requireTwoStep: false, twoPersonRule: true, payrollApproval: true,
       invoiceApproval: { enabled: true, thresholdCents: 150000 },
     },
     period,
@@ -81,6 +81,7 @@ test('the lock file states the rule in force and lists the period events inside 
   assert.equal(rows[1][1], 'Current soft close');
   assert.deepEqual(rows[2].slice(1, 3), ['Open partial unlock', '2026-09-01 to 2026-09-07']);
   assert.equal(rows[2][4], 'owner@example.test');
+  assert.equal(rows[2][4], 'owner@example.test');
   assert.deepEqual(rows[3].slice(1, 4), ['Period event', '2026-09', 'Hard-closed 2026-09 (through 2026-09-30)']);
   // no lock and no exception reads as "none", not as a blank that could mean anything
   const bare = periodLockRows({ id: 'ws-2' }, [], period);
@@ -89,18 +90,21 @@ test('the lock file states the rule in force and lists the period events inside 
 
 test('the approvals file holds the invoice and pay-run decisions of the period and nothing outside it', () => {
   const { input } = pack();
-  const rows = approvalRows(input.invoices, input.payRuns, period);
+  const rows = approvalRows(input.invoices, input.payRuns, period, input.workspace.currency);
   assert.equal(rows.length, 2);
-  assert.deepEqual(rows.map(row => row[1]), ['Invoice approval', 'Pay run approval']);
-  const invoice = rows.find(row => row[1] === 'Invoice approval')!;
-  assert.deepEqual(invoice.slice(2, 4), ['INV-1001', 'inv-1']);
-  assert.equal(invoice[4], '2000.00');
-  assert.equal(invoice[5], 'approved');
-  assert.equal(invoice[7], 'owner@example.test');
-  const run = rows.find(row => row[1] === 'Pay run approval')!;
-  assert.equal(run[4], '5000.00');
-  assert.equal(run[6], 'book@example.test');
-  assert.equal(run[7], 'owner@example.test');
+  assert.deepEqual(rows.map(row => row[2]), ['Invoice approval', 'Pay run approval']);
+  const invoice = rows.find(row => row[2] === 'Invoice approval')!;
+  assert.deepEqual(invoice.slice(0, 2), [local(10, 6), local(10, 7)]);
+  assert.deepEqual(invoice.slice(3, 5), ['INV-1001', 'inv-1']);
+  assert.equal(invoice[5], '2000.00');
+  assert.equal(invoice[6], 'USD'); // a document with no own currency reads in the workspace currency
+  assert.equal(invoice[7], 'approved');
+  assert.equal(invoice[9], 'owner@example.test');
+  const run = rows.find(row => row[2] === 'Pay run approval')!;
+  assert.equal(run[5], '5000.00');
+  assert.equal(run[6], 'USD');
+  assert.equal(run[8], 'book@example.test');
+  assert.equal(run[9], 'owner@example.test');
 
   const rules = approvalRuleRows(input.workspace);
   assert.deepEqual(rules.map(row => [row[0], row[1], row[2]]), [['Invoice approval', 'On', '1500.00'], ['Two-person rule', 'On', ''], ['Pay run approval', 'On', '']]);
@@ -122,6 +126,35 @@ test('a capped audit trail and an unreadable two-step status are said in the REA
   assert.match(files[0].text, /more entries than that, so older entries are not in this pack/);
   const required = pack({ workspace: { id: 'ws-4', requireTwoStep: true } });
   assert.match(required.files[0].text, /refuses a password-only session/);
+});
+
+test('a request inside the period survives a decision made after it, and each amount keeps its currency', () => {
+  const { input } = pack({
+    invoices: [
+      { id: 'inv-eur', number: 'INV-EUR', date: '2026-10-20', amountCents: 10000, currency: 'EUR', status: 'sent',
+        approval: { state: 'approved', requestedAt: local(10, 20), requestedBy: 'book@example.test', decidedAt: local(11, 1), decidedBy: 'owner@example.test' } },
+      { id: 'inv-late', number: 'INV-LATE', date: '2026-08-01', amountCents: 50000, status: 'sent',
+        approval: { state: 'awaiting', requestedAt: local(8, 1) } },
+    ],
+    payRuns: [],
+  });
+  const rows = approvalRows(input.invoices, input.payRuns, period, input.workspace.currency);
+  assert.equal(rows.length, 1);
+  const row = rows[0];
+  assert.deepEqual(row.slice(0, 2), [local(10, 20), local(11, 1)]);
+  assert.equal(row[3], 'INV-EUR');
+  assert.equal(row[5], '100.00');
+  assert.equal(row[6], 'EUR'); // the invoice's own currency, indistinguishable from home currency before
+});
+
+test('a capped document list is stated in the README instead of passing for complete history', () => {
+  const { files } = pack({ documentsCapped: { invoices: true } });
+  assert.match(files[0].text, /invoices \(10,000\) reached that limit/);
+  assert.match(files[0].text, /never presented as a complete history/);
+  const both = pack({ documentsCapped: { invoices: true, payRuns: true } });
+  assert.match(both.files[0].text, /invoices \(10,000\) and pay runs \(1,000\)/);
+  const clean = pack();
+  assert.doesNotMatch(clean.files[0].text, /reached that limit/);
 });
 
 test('the download name is a safe file name and the period is validated', () => {

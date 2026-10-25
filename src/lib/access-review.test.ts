@@ -84,10 +84,21 @@ test('the CSV holds the same rows as the screen, in order, with ISO times', () =
   assert.equal(csv[1][7], 'owner@example.test');
   // nothing recorded is written as a sentence, never as a blank that reads like "never"
   const quiet = accessReviewCsvRows(accessReviewRows({ ownerUid: 'solo', members: [], roles: {}, requireTwoStep: false, auditLogs: [] }));
-  assert.deepEqual(quiet[0].slice(3), ['Not in the recent audit entries', 'Only that person can see it', 'No role change recorded', '', '']);
+  assert.deepEqual(quiet[0].slice(3), ['Not in the recent audit entries', 'Only that person can see it', 'No role change recorded', '', '', '']);
 });
 
 test('localDay reads the day a person sees, not UTC', () => {
   assert.equal(localDay(new Date(2026, 0, 9, 23, 30)), '2026-01-09');
   assert.equal(localDay(new Date(2026, 11, 31, 0, 1)), '2026-12-31');
+});
+
+test('a person with a stored role but no member row still reaches the review', () => {
+  const rows = accessReviewRows({
+    ownerUid: owner, members: [accountant], roles: { [accountant]: 'accountant', ghost: 'bookkeeper' },
+    requireTwoStep: false, auditLogs: logs,
+  });
+  assert.deepEqual(rows.map(row => row.uid), [owner, accountant, 'ghost']);
+  assert.deepEqual(rows.map(row => row.roleOnly), [false, false, true]);
+  assert.equal(rows[2].role, 'bookkeeper');
+  assert.match(accessReviewCsvRows(rows)[2][8], /Role on record; not in the workspace member list/);
 });

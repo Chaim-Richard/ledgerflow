@@ -5,7 +5,7 @@ import { useLedgerStore } from '../stores/useLedgerStore';
 import { useLedgerCollections } from './useLedgerCollections';
 import { useTeamRequests } from './useTeamRequests';
 import { multiFactor } from '../lib/db/auth';
-import { accessReviewRows, type AccessReviewRow } from '../lib/accessReview';
+import { accessReviewRows, TWO_STEP_CHANGED, type AccessReviewRow } from '../lib/accessReview';
 
 /**
  * Everything the access review (C-35) and the audit evidence pack (C-36) read: the workspace's
@@ -64,15 +64,24 @@ export function useAccessReview(workspaceId: string): AccessReviewData {
   useEffect(() => { void loadTeam(); }, [loadTeam]);
 
   // Another person's authenticator status belongs to their account: only the reader's own is readable.
-  useEffect(() => {
-    let live = true;
+  // Re-read on mount, when the authenticator panel reports a change, and on Refresh — an auditor must
+  // never get yesterday's "on" after someone turned it off.
+  const loadSelf = useCallback(async () => {
     const account = useAuthStore.getState().user;
     if (!account || account.isAnonymous || useAuthStore.getState().isGuest) { setSelfTwoStep(null); return; }
-    multiFactor(account).getFactors()
-      .then(factors => { if (live) setSelfTwoStep(factors.some(factor => factor.status === 'verified')); })
-      .catch(() => { if (live) setSelfTwoStep(null); });
-    return () => { live = false; };
+    try {
+      const factors = await multiFactor(account).getFactors();
+      setSelfTwoStep(factors.some(factor => factor.status === 'verified'));
+    } catch { setSelfTwoStep(null); }
   }, []);
+
+  useEffect(() => {
+    let live = true;
+    const read = () => { if (live) void loadSelf(); };
+    read();
+    window.addEventListener(TWO_STEP_CHANGED, read);
+    return () => { live = false; window.removeEventListener(TWO_STEP_CHANGED, read); };
+  }, [loadSelf]);
 
   const emails = useMemo(() => {
     const found: Record<string, string> = {};
@@ -104,6 +113,6 @@ export function useAccessReview(workspaceId: string): AccessReviewData {
     rows,
     requireTwoStep: workspace?.requireTwoStep === true,
     auditTruncated,
-    reload: () => { useDataNeedsStore.getState().retry('auditLogs'); void loadTeam(); },
+    reload: () => { useDataNeedsStore.getState().retry('auditLogs'); void loadTeam(); void loadSelf(); },
   };
 }
