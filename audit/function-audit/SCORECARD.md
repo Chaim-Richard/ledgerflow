@@ -65,6 +65,7 @@ Reports → Import Acceptance) — read for reachability, **not** counted as ful
 | **AF-012** | P2 latent | Override-chain answers depend on array order; a displaced rule keeps its displacement; no lint refuses chains/cycles (0 chains in the 584 shipped rules today) | AI #9 rules engine | issue #161 (executed repro, [`AF-012`](AF-012-rule-override-chains.md)) |
 | **AF-013** | P2 | Grid keeps a logical focus without `scrollToItem`; `[-1].id` is reachable after filters empty the list; Tab intercepted globally | AI #3 screens | issue #104 (source-verified, browser repro needed) |
 | **AF-014** | P2 | A failed live collection never retries itself on `online`/visible; only the manual Try again path exists | AI #2/#3 | issue #96 (source-verified, browser repro needed) |
+| **AF-015** | P3 | The P&L route answers from its 60-second cache before the workspace-membership check; the key includes the user id, so no cross-user leak — only a revoked user's own last-minute answer (`reportRoutes.ts:108–110` vs the balance sheet's authorize-then-cache at `:141`) | AI #1 | this audit |
 | AF-002-F1 | P2 latent | Template drops non-positive tax/discount legs (posting guards block reachability) | AI #1 | this audit |
 | AF-010-F1…F7 | P2 ×3, P3 ×4 | allocator contracts, amount parser sign/throw/Latin digits, CSV formula guard, `formatDecimal(Infinity)`, expression precision | AI #1 | this audit |
 
