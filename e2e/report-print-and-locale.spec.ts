@@ -100,7 +100,12 @@ test('A-220: a report header states its period in dates a reader recognises', as
 
   // the balance sheet reads one date as "As of …"
   await page.goto('/?report=balance-sheet#reports');
-  const asOf = page.locator('[data-testid="report-period-heading"]:visible').first();
+  // the Reports page's own period line is still on screen; the balance sheet's header is the one
+  // that reads "As of" and names a single day
+  const asOf = page
+    .locator('[data-testid="report-period-heading"]:visible')
+    .filter({ hasText: 'As of' })
+    .first();
   await expect(asOf).toBeVisible({ timeout: 30000 });
   await expect(asOf).toContainText('As of');
   expect(await asOf.innerText()).not.toMatch(/\d{4}-\d{2}-\d{2}/);
