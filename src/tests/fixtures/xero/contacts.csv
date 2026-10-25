@@ -1,0 +1,4 @@
+*Name,AccountNumber,EmailAddress,POAttentionTo,POAddressLine1,POAddressLine2,POCity,PORegion,POPostalCode,POCountry,PhoneNumber,MobileNumber,TaxNumber
+Acme Ltd,C1,acme@example.com,A. Broker,1 Herzl St,Floor 2,Tel Aviv,Tel Aviv,6100001,Israel,+972-3-555-0101,,516123456
+Beta Co,C2,beta@example.com,,9 Rothschild,,Jerusalem,Jerusalem District,9100001,Israel,+972-2-555-0202,+972-50-555-0202,
+Miriam Cohen,C3,m@example.com,,,,,,,,059555303,
