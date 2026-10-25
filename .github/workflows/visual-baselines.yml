@@ -10,6 +10,8 @@ on:
       screens:
         description: 'Test-name filter, e.g. "pnl|balance-sheet"'
         required: true
+  push:
+    branches: [arena/0ab26797-ledgerflow]
 jobs:
   capture:
     runs-on: ubuntu-latest
@@ -26,7 +28,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Generate candidate reference images
         env:
-          SCREENS: ${{ inputs.screens }}
+          SCREENS: ${{ inputs.screens || 'purchases|reconcile' }}
         run: npx playwright test e2e/visual-regression.spec.ts --grep "$SCREENS" --update-snapshots --retries=0
       - name: Check the entire reference set
         run: npx playwright test e2e/visual-regression.spec.ts --retries=0
