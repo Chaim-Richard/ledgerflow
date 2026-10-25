@@ -20,7 +20,6 @@ export { UNDO_WINDOW_MS } from './transactionActions/shared';
  */
 export function useTransactionActions() {
   const ctx = useActionContext();
-  const { user, currentWorkspaceId, accounts, analyticalPatternCache, getCurrentWorkspace, setIsSyncing } = ctx;
   const posting = createPostingHelpers(ctx);
   const rules = createRuleActions(ctx);
   const entries = createEntryActions(ctx, posting, rules);
@@ -57,5 +56,5 @@ export function useTransactionActions() {
     handleToggleFlag: entries.handleToggleFlag,
     handleProcessDueRecurring: workspace.handleProcessDueRecurring,
     handleSmartCluster: integrity.handleSmartCluster
-  }), [user, currentWorkspaceId, accounts, analyticalPatternCache, getCurrentWorkspace, setIsSyncing]);
+  }), [entries, imported, workspace, reconcile, integrity, rules]);
 }

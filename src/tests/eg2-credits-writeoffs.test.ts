@@ -16,6 +16,13 @@
  *   `write_off` 200.00, cleared = settled = 220.00 (= the entry's 220.00), FX 0. Reversed 10-28: `reversal`
  *   −200.00 / −220.00 dated 10-28, the original marked reversedBy. Written off again 10-30: a new 200.00 row.
  *   Σ rows = 100.00 + 200.00 − 200.00 + 200.00 = 300.00 = amountPaidCents; Σ write-off rows = 200.00 (one write-off).
+ * - credit-application-fx entries (control line +fx, FX line −fx, base currency, id `cafx-{rowId}`):
+ *   A2: DR A/R 1.00 / CR Exchange gain 1.00. A/R for INV-1: DR 1,100.00 (issue) − CR 111.00 (CN-1 issued at 1.11)
+ *   + DR 1.00 = 990.00 = (1,000.00 × 1.10) − cleared 110.00, so EG-10 control-balance has no finding; without the
+ *   entry it reports a −1.00 difference. Yen: DR A/R 0.33 / CR gain 0.33; A/R INV-J: 67.00 − 22.66 + 0.33 = 44.67 =
+ *   round(10,000 × 0.67) − 22.33. Auto-apply CN-3: DR A/R 1.00 / CR gain 1.00; CN-2 (same rate): no entry.
+ * - Vendor FX (sign check): B-E €100.00 at 1.10, VC-E €100.00 at 1.11: payable FX = 110.00 − 111.00 = −1.00 (loss);
+ *   entry CR A/P 1.00 / DR Exchange loss 1.00. A/P: CR 110.00 (bill) − DR 111.00 (credit) + CR 1.00 = 0.
  * - Period locks (review 4369192971): hard close through 2099-12-31 refuses applyCredit and autoApplyCredits for
  *   anyone; a soft close refuses the bookkeeper and lets the owner apply CN-4 $10.00 on INV-G.
  * - Bills dated by issueDate (review 4369192974): VC-2 $10.00 for v2; B-F has only issueDate 2099-01-01 (future),
@@ -85,6 +92,12 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     await db.terminate();
   });
 
+  const fxEntries = async (allocation?: string) => (await db.collection('transactions').where('workspaceId', '==', ws).get()).docs.map(d => d.data())
+    .filter(t => t.metadata?.type === 'credit-application-fx' && (!allocation || t.metadata.allocationId === allocation))
+    .sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const fxOf = async (doc: string) => (await fxEntries()).filter(t => t.metadata.documentId === id(doc));
+  const pairs = (t: Record<string, unknown>) => (t.lines as Array<{ accountId: string; amountCents: number }>).map(l => [l.accountId, l.amountCents]);
+
   const apply = (kind: 'customer' | 'vendor', credit: string, doc: string, amountCents: number, date?: string, operationId?: string) =>
     credits.applyCredit(db, { workspaceId: ws, uid: 'owner-1', kind, creditId: id(credit), documentId: id(doc), amountCents, date, operationId });
 
@@ -95,6 +108,11 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const rows = await live('INV-1');
     assert.deepEqual(rows.map(pick), [['credit', '2026-10-20', 10000, 1.1, 1.11, 11000, 11100, 100]]);
     assert.equal(rows[0].allocationId, `credit-op-cn1-${id('CN-1')}-${id('INV-1')}`);
+    assert.equal(rows[0].transactionId, `cafx-${rows[0].allocationId}`);
+    const fx = await fxEntries();
+    assert.equal(fx.length, 1, 'the retry posted no second entry');
+    assert.deepEqual(fx[0].lines.map((l: { accountId: string; amountCents: number }) => [l.accountId, l.amountCents]), [[id('ar'), 100], [id('fx'), -100]]);
+    assert.deepEqual([fx[0].date, fx[0].currency, fx[0].totalAmountCents, fx[0].metadata.allocationId], ['2026-10-20', 'USD', 100, rows[0].allocationId]);
     const inv = (await db.collection('invoices').doc(id('INV-1')).get()).data()!;
     assert.equal(inv.amountPaidCents, 10000, 'the retry did not settle twice');
     await assert.rejects(apply('customer', 'CN-1', 'INV-1', 5000, '2026-10-20', 'op-cn1'), (e: Error & { status?: number }) => e.status === 409, 'same key, other request: refused');
@@ -107,7 +125,20 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
 
   test('yen: ¥3,333 at 0.0068 on an invoice at 0.0067: 22.33 cleared, 22.66 settled, +0.33', async () => {
     await apply('customer', 'CN-J', 'INV-J', 3333, '2026-10-06');
-    assert.deepEqual((await live('INV-J')).map(pick), [['credit', '2026-10-06', 3333, 0.0067, 0.0068, 2233, 2266, 33]]);
+    const rows = await live('INV-J');
+    assert.deepEqual(rows.map(pick), [['credit', '2026-10-06', 3333, 0.0067, 0.0068, 2233, 2266, 33]]);
+    const fx = await fxOf('INV-J');
+    assert.deepEqual(fx.map(pairs), [[[id('ar'), 33], [id('fx'), -33]]]);
+    assert.equal(rows[0].transactionId, fx[0].id);
+  });
+
+  test('vendor credit at another rate: a loss, CR A/P / DR exchange loss', async () => {
+    await db.collection('bills').doc(id('B-E')).set({ workspaceId: ws, uid: 'owner-1', vendorId: 've', number: 'B-E', date: '2026-10-01', status: 'unpaid', currency: 'EUR', exchangeRate: 1.1, amountCents: 10000, amountPaidCents: 0, apAccountId: id('ap') });
+    await db.collection('vendorCredits').doc(id('VC-E')).set({ workspaceId: ws, uid: 'owner-1', vendorId: 've', number: 'VC-E', date: '2026-10-05', status: 'open', currency: 'EUR', exchangeRate: 1.11, amountCents: 10000, remainingCents: 10000 });
+    await apply('vendor', 'VC-E', 'B-E', 10000, '2026-10-06');
+    const rows = await live('B-E');
+    assert.deepEqual(rows.map(r => r.realizedFxCents), [-100]);
+    assert.deepEqual((await fxOf('B-E')).map(pairs), [[[id('ap'), -100], [id('fx'), 100]]]);
   });
 
   test('vendor credit on a bill: a payable credit row', async () => {
@@ -129,6 +160,11 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     const raws = await Promise.all(rows.map(async r => (await db.collection('paymentAllocations').doc(r.allocationId).get()).data()!));
     assert.equal(new Set(raws.map(r => r.operationId)).size, 1);
     assert.deepEqual(new Set(raws.map(r => r.sourceId)), new Set([id('CN-2'), id('CN-3')]));
+    const fx = await fxOf('INV-A');
+    assert.deepEqual(fx.map(pairs), [[[id('ar'), 100], [id('fx'), -100]]], 'one entry, for CN-3 only');
+    assert.equal(rows.find(r => r.settlementRate === 1.12)!.transactionId, fx[0].id);
+    assert.equal(rows.find(r => r.settlementRate === 1.1)!.transactionId, null);
+    assert.deepEqual(result.fxTransactionIds, [fx[0].id]);
   });
 
   test('write off, reverse, write off again: three rows plus the payment, Σ = one write-off', async () => {
@@ -186,6 +222,24 @@ describe('Against the database', { skip: !process.env.LF_TEST_DATABASE_URL && 'L
     assert.deepEqual(result.applications.map(a => [a.documentId, a.amountCents]), [[id('B-G'), 1000]]);
     assert.equal((await live('B-F')).length, 0);
     assert.equal((await live('B-G')).length, 1);
+  });
+
+  test('EG-10 control-balance: A/R equals the open documents with the FX entries, not without', async () => {
+    const load = async (c: string) => (await db.collection(c).where('workspaceId', '==', ws).get()).docs.map(d => ({ ...d.data(), id: d.id }));
+    const [allInvoices, allocations, accounts] = await Promise.all([load('invoices'), load('paymentAllocations'), load('chartAccounts')]);
+    const docs = ['INV-1', 'INV-J'].map(k => id(k));
+    const invoices = allInvoices.filter(d => docs.includes(d.id));
+    // the issue entries the documents would have posted (seeded directly here): invoice DR A/R, credit note CR A/R, at their rates
+    const issued = (key: string, cents: number) => ({ id: id(`issue-${key}`), workspaceId: ws, date: '2026-10-01', status: 'completed', type: 'actual', currency: 'USD', lines: [{ accountId: id('ar'), amountCents: cents }, { accountId: id('sales'), amountCents: -cents }] });
+    const issues = [issued('INV-1', 110000), issued('CN-1', -11100), issued('INV-J', 6700), issued('CN-J', -2266)];
+    const fx = [...await fxOf('INV-1'), ...await fxOf('INV-J')];
+    assert.equal(fx.length, 2);
+    const check = DATA_CHECKS.find(c => c.id === 'control-balance')!;
+    const ctx = (transactions: unknown[]) => ({ invoices, bills: [], allocations: allocations.filter(r => docs.includes(String((r as { documentId?: string }).documentId))), accounts: accounts.filter(a => a.id === id('ar')), transactions, recurring: [], today: '2026-10-31', baseCurrency: 'USD' }) as unknown as CheckContext;
+    assert.deepEqual(check.run(ctx([...issues, ...fx])), [], 'A/R 990.00 + 44.67 = the open documents');
+    const without = check.run(ctx(issues));
+    assert.deepEqual(without.map(f => f.id), ['control-balance-ar']);
+    assert.match(without[0].description, /-\$1\.33|−\$1\.33|\$-1\.33|\(\$1\.33\)/);
   });
 
   test('EG-10 settlement-ledger agrees for every document; without the reversal row it would not', async () => {

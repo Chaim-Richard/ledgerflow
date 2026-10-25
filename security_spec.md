@@ -36,7 +36,7 @@ Do **not** claim every row has a universal `uid = auth.uid()` invariant. Workspa
 
 Many tables have browser writes allowed for eligible workspace writers. Consequently, do **not** claim all client writes to `transactions` are categorically disabled merely because the posting service exists. The actual RLS policies, `lf_guard` rules, and the server posting door must be checked together. Unbalanced, backdated or direct-posting paths require focused verification rather than assurances inferred from a policy label.
 
-**Migration rule:** each new JSONB collection requires a corresponding table, applicable RLS policy, trigger/rules entry, and migration test; see `AGENTS.md`, `src/lib/entityFramework.ts`. A source migration that exists in Git does not establish its presence in the live database. Check the applied migration history and row security in each environment.
+**Migration rule:** each new JSONB collection requires a corresponding table, applicable RLS policy, trigger/rules entry, and migration test; see `AGENTS.md` and the existing `supabase/migrations/` patterns. A source migration that exists in Git does not establish its presence in the live database. Check the applied migration history and row security in each environment.
 
 ## 4. Server-side route authorization and money boundaries
 

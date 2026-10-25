@@ -18,7 +18,7 @@ function keyedLedgerEntries(entries: ReturnType<typeof computeGeneralLedger>['ac
   });
 }
 
-export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
+export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate, embedded = false }: { startDate?: string; endDate?: string; embedded?: boolean } = {}) {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
 
@@ -57,7 +57,9 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
             <BookOpen aria-hidden="true" className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>
+            {embedded
+              ? <h2 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h2>
+              : <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>}
             <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Complete itemized transaction ledger for all chart of accounts
             </p>

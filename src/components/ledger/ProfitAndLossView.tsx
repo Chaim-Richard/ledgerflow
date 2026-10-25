@@ -22,6 +22,8 @@ import { lineHasLabel } from '../../lib/dimensionUtils';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
+import ReportEmptyState from '../reporting/ReportEmptyState';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -126,7 +128,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange, basis]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const toggleSort = (field: 'code' | 'name' | 'balance') => {
@@ -331,6 +333,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       <ReportProvenanceNote id="pl-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.pl} />
 
       {/* Period navigation/actions and aligned report filters. */}
+      {/* A-220: the period these figures cover, written the way the reader's locale writes dates */}
+      <ReportPeriodHeading
+        className="text-sm font-medium text-[var(--muted)] tabular-nums"
+        startDate={dateRange.start}
+        endDate={dateRange.end}
+      />
+
       <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <MonthNavigator 
@@ -378,6 +387,10 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
           </div>
         </div>
       </div>
+
+      {incomeGroups.rows.length === 0 && expenseGroups.rows.length === 0 && Object.keys(data.cogs?.accounts || {}).length === 0 && (
+        <ReportEmptyState title="No report rows in this period" description="Add an entry, clear any label filter, or choose another period." />
+      )}
 
       {/* KPI Matrix */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

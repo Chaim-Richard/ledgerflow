@@ -32,6 +32,12 @@ describe('Account Statement screen', () => {
   });
   afterEach(() => cleanup());
 
+  test('an embedded statement keeps the Reports page heading hierarchy', () => {
+    render(<StatementView embedded startDate="2026-03-01" endDate="2026-03-31" />);
+    assert.ok(screen.getByRole('heading', { name: 'Account Statement', level: 2 }));
+    assert.equal(screen.queryByRole('heading', { name: 'Account Statement', level: 1 }), null);
+  });
+
   test('opening balance, the entries in the period and the closing balance for the chosen customer', () => {
     render(<StatementView startDate="2026-03-01" endDate="2026-03-31" />);
     fireEvent.change(screen.getByLabelText(/Select Customer/), { target: { value: 'c1' } });

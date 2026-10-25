@@ -11,6 +11,8 @@ import DrillDownModal from '../layout/DrillDownModal';
 import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
+import ReportEmptyState from '../reporting/ReportEmptyState';
 
 export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
   // Account groups (K-14): the same accounts, a group's children indented under their parent with a
@@ -37,6 +39,14 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
     <div className="space-y-6">
       {/* AUD-10: where these figures come from */}
       <ReportProvenanceNote id="bs-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.balanceSheet} />
+      {/* A-220: the as-of date in the reader's own date style */}
+      <ReportPeriodHeading
+        asOf
+        className="text-sm font-medium text-[var(--muted)] tabular-nums"
+        startDate={columnStartDate}
+        endDate={asOfDate}
+        compareEndDate={isComparative ? priorDate : undefined}
+      />
       {serverAsOf && <p data-testid="bs-balances-source" className="text-xs text-[var(--muted)]">Balances include every entry through {serverAsOf} as summed by the server, plus the loaded entries after it.</p>}
 
 
@@ -100,6 +110,10 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
           </div>
         </div>
       </div>
+
+      {accounts.length === 0 && (
+        <ReportEmptyState title="No accounts yet" description="Set up the chart of accounts, then add an entry or choose another date." />
+      )}
 
       {/* Balance check Card */}
       <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-900 rounded-xl text-white shadow-sm relative overflow-hidden border border-slate-950 gap-4">

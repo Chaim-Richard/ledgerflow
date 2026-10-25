@@ -40,12 +40,12 @@ function useTransactionGridModel() {
       useUIStore.getState().setFilterCriteria({ ...current, startDate: linkedList.from, endDate: linkedList.to });
     }
   }, [linkedList]);
-  const onFilterApplied = (c: FilterCriteria) => useUIStore.getState().setFilterCriteria(c);
+  const onFilterApplied = useCallback((c: FilterCriteria) => useUIStore.getState().setFilterCriteria(c), []);
   const { handleAction: onAction } = useCommandDispatcher();
   const txActions = useTransactionActions();
   const { updateEntity, deleteEntity } = useEntityOperations();
   const onUpdate = useCallback((id: string, updates: Partial<Transaction>) => txActions?.handleUpdateTransaction ? txActions.handleUpdateTransaction(id, updates) : updateEntity('transactions', id, updates), [txActions, updateEntity]);
-  const onVoid = (id: string) => deleteEntity('transactions', id);
+  const onVoid = useCallback((id: string) => deleteEntity('transactions', id), [deleteEntity]);
   const onNewEntry = () => { txActions.handleQuickAdd?.({}); onAction("quick-entry"); };
   const isProMode = useUIStore(s => s.isProMode);
   const isCompactMode = useUIStore(s => s.isCompactMode);
@@ -54,7 +54,7 @@ function useTransactionGridModel() {
 
   const { saveRule } = useAutoRules();
   // "Create rule" from a row: future transactions with this description go to this row's account
-  const onCreateRule = async (tx: Transaction) => {
+  const onCreateRule = useCallback(async (tx: Transaction) => {
     if (!tx || !tx.description) return;
     const accountId = tx.lines?.[0]?.accountId;
     const accountName = tx.lines?.[0]?.accountName || 'Unassigned';
@@ -77,7 +77,7 @@ function useTransactionGridModel() {
       action: { targetNodeId: accountId },
     });
     if (saved) toast.success(`Rule saved: "${pattern.slice(0, 25)}" → ${accountName}`);
-  };
+  }, [saveRule]);
   const dateFormat = 'MMM dd, yyyy';
   // Defensive array checks
   const safeTransactions = useMemo(() => Array.isArray(transactions) ? transactions : [], [transactions]);
@@ -95,14 +95,15 @@ function useTransactionGridModel() {
   const [isReverseModeModal, setIsReverseModeModal] = useState(false);
   // A record link (#transactions/transaction/<id>, e.g. from Data Health) opens that entry once it has loaded
   const focusedTxId = useRecordFocus('transaction', { ready: false });
-  const openedFocusId = useRef<string | null>(null);
-  useEffect(() => {
-    if (!focusedTxId || openedFocusId.current === focusedTxId) return;
+  const [openedFocusId, setOpenedFocusId] = useState<string | null>(null);
+  if (focusedTxId && openedFocusId !== focusedTxId) {
     const tx = safeTransactions.find(t => t.id === focusedTxId);
-    if (!tx) return;
-    openedFocusId.current = focusedTxId;
-    setEditingDetailsTx(tx);
-  }, [focusedTxId, safeTransactions]);
+    if (tx) {
+      // Open a loaded record link once, without an extra effect-driven render.
+      setOpenedFocusId(focusedTxId);
+      setEditingDetailsTx(tx);
+    }
+  }
   const lockDate = useLedgerStore(state => state.lockDate);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const toggleSelectAll = () => {
@@ -342,7 +343,7 @@ function useTransactionGridModel() {
     });
   }, []);
 
-  const onProjectClick = (projectName: string) => onFilterApplied({ ...filterCriteria, project: projectName });
+  const onProjectClick = useCallback((projectName: string) => onFilterApplied({ ...filterCriteria, project: projectName }), [filterCriteria, onFilterApplied]);
 
   const pivotData = useMemo(() => {
     const groups: Record<string, { total: number, count: number }> = {};
@@ -514,10 +515,10 @@ function useTransactionGridModel() {
     isTabletGrid,
     handleToggleFlag,
     dateFormat,
-    formatCurrency,
     gridCols,
     hiddenColumns,
-    columnLayout
+    columnLayout,
+    handleDuplicateTransaction
   ]);
 
   const itemKey = useCallback((index: number, data: VirtualRowProps['data']) => {

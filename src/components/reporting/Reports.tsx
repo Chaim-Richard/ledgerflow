@@ -18,6 +18,9 @@ import { getCachedReport, setCachedReport } from '../../lib/reportCache';
 import { ViewErrorBoundary } from '../common/ViewErrorBoundary';
 import ReportTotalExplainer from './ReportTotalExplainer';
 import ReportPicker from './ReportPicker';
+import PrintLayoutControl from './PrintLayoutControl';
+import ReportPeriodHeading from './ReportPeriodHeading';
+import { countPrintedColumns } from '../../lib/printLayout';
 
 
 
@@ -58,6 +61,18 @@ const Reports = React.memo(() => {
   const [customPeriod, setCustomPeriod] = useState(() => linked.startDate && linked.endDate ? { startDate: linked.startDate, endDate: linked.endDate } : undefined);
   const [compareMode, setCompareMode] = useState<CompareMode>(linked.compare);
   const [packPeriod, setPackPeriod] = useState<{ startDate: string; endDate: string }>();
+  /**
+   * A-218: the columns the report on screen actually has, measured when Print is pressed, so a wide
+   * table (balance sheet with comparison, trial balance with many accounts) turns the sheet instead
+   * of printing its last columns off the paper.
+   */
+  const [printColumns, setPrintColumns] = useState(0);
+  const printReport = React.useCallback(() => {
+    const root = typeof document === 'undefined' ? null : document.querySelector('[data-print-root]');
+    setPrintColumns(countPrintedColumns(root));
+    // let the paper rule (portrait → landscape) reach the DOM before the print dialog opens
+    requestAnimationFrame(() => window.print());
+  }, []);
   const [drillDownAccount, setDrillDownAccount] = useState<string | null>(null);
   // N-12: a report that knows the figure's filter gets it explained from the server
   const [drillDownExplain, setDrillDownExplain] = useState<ExplainRequest | undefined>(undefined);
@@ -187,7 +202,9 @@ const Reports = React.memo(() => {
   }, [transactions, period]);
 
   const periodLabel = useMemo(() => {
-    if (customPeriod) return `Custom range: ${customPeriod.startDate} to ${customPeriod.endDate}`;
+    // A-220: the dates themselves come from ReportPeriodHeading below, in the reader's own date
+    // style, so this line does not repeat them in the storage format.
+    if (customPeriod) return 'Custom range';
     const fy = fiscalYearStartMonth === 1 ? String(selectedYear) : `FY${selectedYear}`;
     if (timeframe === 'month') return `${monthNames[selectedMonth]} ${period.startDate.slice(0, 4)}`;
     if (timeframe === 'quarter') return `${quarterNames[selectedQuarter]} ${fy}`;
@@ -213,23 +230,46 @@ const Reports = React.memo(() => {
       {/* Printed / PDF heading: the report and its period */}
       <div className="hidden print:block">
         <h1 className="text-xl font-bold">{(REPORT_TABS_REGISTRY.find(t => t.id === activeTab)?.label as Record<string, string> | undefined)?.en || 'Report'}</h1>
-        <p className="text-sm">{customPeriod ? "Custom range" : periodLabel} · {period.startDate} to {period.endDate}{comparePeriod ? ` · compared with ${comparePeriod.startDate} to ${comparePeriod.endDate}` : ''}</p>
+        <p className="text-sm">{customPeriod ? "Custom range" : periodLabel}</p>
+        {/* A-220: the printed period in the reader's own date format, with the comparison when there is one */}
+        <ReportPeriodHeading
+          className="text-sm"
+          startDate={period.startDate}
+          endDate={period.endDate}
+          compareStartDate={comparePeriod?.startDate}
+          compareEndDate={comparePeriod?.endDate}
+        />
       </div>
       <section data-print-hide data-testid="reports-heading" aria-label="Reports heading" className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold text-[var(--text)]">Reports</h1>
-          <p className="text-sm text-[var(--muted)]">{periodLabel}</p>
+          {/* A-220: the period in the workspace's own date style, on the line the page already had
+              (a second line would grow the heading past the 120 px the UI guide allows) */}
+          <p className="text-sm text-[var(--muted)]">
+            {periodLabel}{' · '}
+            <ReportPeriodHeading
+              as="span"
+              className="tabular-nums"
+              startDate={period.startDate}
+              endDate={period.endDate}
+              compareStartDate={comparePeriod?.startDate}
+              compareEndDate={comparePeriod?.endDate}
+            />
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => onAction('export')} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Download size={16} aria-hidden="true" /> Export
           </button>
-          <button onClick={() => window.print()} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
+          <button onClick={printReport} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Printer size={16} aria-hidden="true" /> Print / PDF
           </button>
         </div>
       </section>
       <div data-print-hide role="region" aria-label="Report period" className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 [&_select]:min-h-11 [&_button]:min-w-11">
+            {/* A-218: which paper this report prints on, beside the period controls so the page
+                heading stays within the 120 px the UI guide allows on a phone */}
+            <PrintLayoutControl columnCount={printColumns} />
             <button onClick={() => onAction('generate')} className="px-3.5 py-1.5 rounded-lg text-sm font-medium bg-[var(--surface)] text-[var(--text)] border border-[var(--line)] hover:border-[var(--brass)] transition-all shadow-xs cursor-pointer">
               Generate
             </button>
@@ -330,6 +370,8 @@ const Reports = React.memo(() => {
               // We pass all possible props to the dynamic component. 
               // React ignores extra props, and components grab what they need.
               const standardProps = {
+                // Embedded reports keep the page's single h1; standalone registry views still own their h1.
+                embedded: true,
                 transactions: filteredReportTransactions,
                 allTransactions: transactions,
                 accounts,

@@ -14,6 +14,7 @@ import {
 } from '../server/reports/computeReports';
 import { reportVariance } from './reportColumns';
 import { addToDateISO, monthBoundsISO, parseAmountToCents } from './utils';
+import { balanceEntries, opensForPeriod, opensFromServer, periodEntries, type ServerOpening } from './serverBalances';
 
 /** A change is a "big move" when it is at least this percent of the month it is compared with. */
 export const CLOSE_COMPARISON_PERCENT = 20;
@@ -46,12 +47,23 @@ export interface CloseComparisonRow {
   bigMove: boolean;
   /** Change vs the same month last year passed the threshold and the percent rule. */
   bigMoveYear: boolean;
+  /**
+   * L-123 step 3d: false when this month or the one compared with is incomplete (`CloseComparisonStatement.incomplete`):
+   * the change is then not a real move, so its percent is null and it is never a big move.
+   */
+  comparablePreviousMonth: boolean;
+  comparablePreviousYear: boolean;
 }
 
 export interface CloseComparisonStatement {
   id: 'pl' | 'bs';
   title: string;
   rows: CloseComparisonRow[];
+  /**
+   * L-123 step 3d: per column, true when its figures come from the loaded entries alone while the browser's list is
+   * capped (the server's balances do not cover that month end or period start), so older entries may be missing.
+   */
+  incomplete: Record<CloseComparisonPeriodId, boolean>;
 }
 
 export interface CloseComparisonResult {
@@ -181,6 +193,8 @@ function buildRow(
     percentPreviousYear: previousYearVariance.percent,
     bigMove: isBigMove(changePreviousMonth, values.previousMonth, thresholdCents, percent),
     bigMoveYear: isBigMove(changePreviousYear, values.previousYear, thresholdCents, percent),
+    comparablePreviousMonth: true,
+    comparablePreviousYear: true,
   };
 }
 
@@ -217,6 +231,14 @@ export function buildCloseComparison(input: {
   transactions: Transaction[];
   thresholdCents?: number;
   percent?: number;
+  /**
+   * L-123 step 3d: the server's balances through the oldest loaded day (useLedgerStore.serverOpening). Each month end
+   * on or after that day reads them (`balanceEntries`), and each month that starts after it (`periodEntries`).
+   */
+  opening?: ServerOpening | null;
+  workspaceId?: string;
+  /** The browser's list of entries is capped (truncatedCollections.transactions): a column the server does not cover is incomplete. */
+  capped?: boolean;
 }): CloseComparisonResult {
   const month = (input.month || '').slice(0, 7);
   const thresholdCents = input.thresholdCents ?? CLOSE_COMPARISON_THRESHOLD_CENTS;
@@ -232,15 +254,19 @@ export function buildCloseComparison(input: {
     previousYear: period('previousYear', previousYearMonth),
   } as Record<CloseComparisonPeriodId, CloseComparisonPeriod>;
 
+  const opening = input.opening || null;
+  const plEntries = (p: CloseComparisonPeriod) => periodEntries(transactions, opening, p.startDate, input.workspaceId);
+  const bsEntries = (date: string) => balanceEntries(transactions, opening, date, input.workspaceId);
+
   const plPeriods = [
-    profitAndLossValues(accounts, transactions, periods.current),
-    profitAndLossValues(accounts, transactions, periods.previousMonth),
-    profitAndLossValues(accounts, transactions, periods.previousYear),
+    profitAndLossValues(accounts, plEntries(periods.current), periods.current),
+    profitAndLossValues(accounts, plEntries(periods.previousMonth), periods.previousMonth),
+    profitAndLossValues(accounts, plEntries(periods.previousYear), periods.previousYear),
   ] as [StatementValues, StatementValues, StatementValues];
   const bsPeriods = [
-    balanceSheetValues(accounts, transactions, periods.current.endDate),
-    balanceSheetValues(accounts, transactions, periods.previousMonth.endDate),
-    balanceSheetValues(accounts, transactions, periods.previousYear.endDate),
+    balanceSheetValues(accounts, bsEntries(periods.current.endDate), periods.current.endDate),
+    balanceSheetValues(accounts, bsEntries(periods.previousMonth.endDate), periods.previousMonth.endDate),
+    balanceSheetValues(accounts, bsEntries(periods.previousYear.endDate), periods.previousYear.endDate),
   ] as [StatementValues, StatementValues, StatementValues];
 
   const plRows: CloseComparisonRow[] = [];
@@ -345,6 +371,19 @@ export function buildCloseComparison(input: {
     percent,
   ));
 
+  // L-123 step 3d: a column the server's balances do not cover, while the list is capped, is incomplete
+  const ids: CloseComparisonPeriodId[] = ['current', 'previousMonth', 'previousYear'];
+  const plIncomplete = Object.fromEntries(ids.map(id => [id, !!input.capped && !opensForPeriod(transactions, opening, periods[id].startDate, input.workspaceId)])) as Record<CloseComparisonPeriodId, boolean>;
+  const bsIncomplete = Object.fromEntries(ids.map(id => [id, !!input.capped && !opensFromServer(transactions, opening, periods[id].endDate, input.workspaceId)])) as Record<CloseComparisonPeriodId, boolean>;
+  const markIncomplete = (rows: CloseComparisonRow[], incomplete: Record<CloseComparisonPeriodId, boolean>) => {
+    for (const row of rows) {
+      if (incomplete.current || incomplete.previousMonth) Object.assign(row, { comparablePreviousMonth: false, percentPreviousMonth: null, bigMove: false });
+      if (incomplete.current || incomplete.previousYear) Object.assign(row, { comparablePreviousYear: false, percentPreviousYear: null, bigMoveYear: false });
+    }
+  };
+  markIncomplete(plRows, plIncomplete);
+  markIncomplete(bsRows, bsIncomplete);
+
   const bigMoves = [...plRows, ...bsRows]
     .filter(row => row.bigMove || row.bigMoveYear)
     .sort((a, b) => Math.max(Math.abs(b.changePreviousMonth), Math.abs(b.changePreviousYear))
@@ -357,8 +396,8 @@ export function buildCloseComparison(input: {
     periods,
     thresholdCents,
     percent,
-    profitAndLoss: { id: 'pl', title: 'Profit & loss', rows: plRows },
-    balanceSheet: { id: 'bs', title: 'Balance sheet', rows: bsRows },
+    profitAndLoss: { id: 'pl', title: 'Profit & loss', rows: plRows, incomplete: plIncomplete },
+    balanceSheet: { id: 'bs', title: 'Balance sheet', rows: bsRows, incomplete: bsIncomplete },
     bigMoves,
   };
 }

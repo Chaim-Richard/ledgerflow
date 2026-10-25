@@ -98,6 +98,6 @@ describe('Auto-apply credits (database)', { skip: !url && 'LF_TEST_DATABASE_URL 
     assert.equal(all.body.data?.totalCents, 500, 'only CN-2 was left, for its own customer');
     assert.equal((await get('invoices', 'i3')).amountPaidCents, 500);
     const again = await run('owner-1', { kind: 'customer' });
-    assert.deepEqual(again.body.data, { applications: [], totalCents: 0 });
+    assert.deepEqual(again.body.data, { applications: [], totalCents: 0, fxTransactionIds: [] });
   });
 });

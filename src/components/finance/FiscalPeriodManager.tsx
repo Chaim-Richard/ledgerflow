@@ -19,7 +19,9 @@ import { cn, formatCurrency } from '../../lib/utils';
 import { useUIStore } from '../../stores/useUIStore';
 import { getIdToken } from '../../firebase';
 import { monthCloseState } from '../../lib/periodLock';
-import { isPostable, calculateTransactionImpact, lineAmount } from '../../lib/txFilters';
+import { isPostable, calculateTransactionImpact, lineAmount, isRevenueAccount, isExpenseAccount } from '../../lib/txFilters';
+import { useServerActivity } from '../../hooks/useServerActivity';
+import { countActivity, sumActivity } from '../../lib/periodActivity';
 
 export default function FiscalPeriodManager() {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
@@ -76,7 +78,18 @@ export default function FiscalPeriodManager() {
     }
   };
 
+  // L-123 step 3e: when the loaded entries are capped, a month they may miss is audited from the server's sums
+  const { activity, serverMonths } = useServerActivity(periods[periods.length - 1]?.startDate || '', periods[0]?.endDate || '');
+
   const runPeriodAudit = (period: { id: string; startDate: string; endDate: string; label: string; isLocked: boolean }) => {
+    if (serverMonths) {
+      const accountMap = new Map(accounts.map(a => [a.id, a]));
+      const profitLine = (id: string) => { const a = accountMap.get(id); return isRevenueAccount(a) || isExpenseAccount(a); };
+      const { entries, unbalanced } = countActivity(activity, period.id, period.id);
+      // calculateTransactionImpact: minus each revenue and expense line
+      const netImpact = -sumActivity(activity, period.id, period.id, profitLine, a => a.net);
+      return { txCount: entries, netImpact, isBalanced: unbalanced === 0, unbalancedCount: unbalanced };
+    }
     const periodTxs = transactions.filter(t => 
       isPostable(t) && 
       t.date >= period.startDate && 

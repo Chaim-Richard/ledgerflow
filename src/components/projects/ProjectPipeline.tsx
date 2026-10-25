@@ -117,7 +117,7 @@ export default function ProjectPipeline({ projects, onUpdateProject }: ProjectPi
   }, [projects, transactions]);
 
   return (
-    <div className="flex gap-4 overflow-x-auto min-h-[700px] pb-8 custom-scrollbar pt-6">
+    <div className="flex gap-4 overflow-x-auto min-h-[700px] pb-8 custom-scrollbar pt-6" role="region" aria-label="Project pipeline stages" tabIndex={0}>
       {STAGES.map((stage) => {
         const stageProjects = grouped[stage.id];
         const totalBudget = stageProjects.reduce((sum, p) => sum + (p.budgetCents || 0), 0);

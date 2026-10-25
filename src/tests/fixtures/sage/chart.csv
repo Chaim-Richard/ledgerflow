@@ -1,0 +1,12 @@
+Account ID,Account Description,Inactive,Account Type,Current Balance
+10100,Operating Checking,False,0,"112,300.00"
+11000,Accounts Receivable,False,1,"8,450.00"
+14000,Inventory Asset,False,2,"0.00"
+15000,Office Equipment,False,5,"12,000.00"
+15300,Accum. Depr. - Equipment,False,6,"(3,000.00)"
+20000,Accounts Payable,False,10,"2,140.00"
+23100,Note Payable - Bank,False,14,"40,000.00"
+30000,Common Stock,False,16,"10,000.00"
+4000-01,Product Sales,False,21,"0.00"
+50000,Cost of Sales,False,23,"0.00"
+60000,Office Supplies Expense,False,24,"530.00"
