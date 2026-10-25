@@ -1566,8 +1566,8 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] BI-15 Restaurant Z-report
 - [ ] BI-16 Marketplace settlement
 - [ ] BJ-01 SOC 2 evidence export
-- [ ] BJ-02 Audit evidence pack
-- [ ] BJ-03 Access review report
+- [x] BJ-02 Audit evidence pack (codex, 25 Oct, `codex/c35-c36-access-evidence`): Settings → Security → Audit evidence pack downloads one ZIP for a chosen period — audit trail, period locks, approvals, approval rules and the access review, each a CSV, plus a README of its limits. Browser-built; no server, schema or posting change. See `docs/verification/ai2-c35-c36-2026-10-25.md`.
+- [x] BJ-03 Access review report (codex, 25 Oct, same branch): Settings → Security → Access review lists every person with role, last recorded sign-in, two-step login and last role change, CSV and print, owners and accountants, read-only; limits (500-entry trail window, another person's authenticator not readable) said on screen. See `docs/verification/ai2-c35-c36-2026-10-25.md`.
 - [ ] BJ-07 Breach notification
 - [ ] BJ-10 ISO 27001 mapping
 - [ ] BK-02 QBO API import
