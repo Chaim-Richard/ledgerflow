@@ -66,10 +66,12 @@ No P0 is reachable in the **stage-A synthetic beta**: AF-001 needs real bank cre
 by the stage-A rules), and AF-002-F1 is blocked by the `amount <= 0` posting guards. Stage B (real
 bank connections) must close AF-001-F1…F3 first — it is gate G-10.
 
-**GitHub write status (2026-10-25):** the session token can push the fork branch but receives
-`403 Resource not accessible by integration` when creating the cross-fork PR, issues or comments on
-`shmuelbiller1/ledgerflow` (fork issues are disabled). Ready-to-paste PR/issue/comment text and the
-one-click compare URL are in [`issue-drafts/`](issue-drafts/README.md).
+**GitHub write status (2026-10-25):** the session token is a fine-grained GitHub App token that can
+push the fork branch but receives `403 Resource not accessible by integration` when creating the
+cross-fork PR, issues or comments on `shmuelbiller1/ledgerflow` (fork issues are disabled). The work
+is reviewable as fork PR **[#9](https://github.com/Chaim-Richard/ledgerflow/pull/9)**; the
+one-click upstream compare URL and ready-to-paste issue/comment text are in
+[`issue-drafts/`](issue-drafts/README.md).
 
 ## Tests actually executed (this environment, no DB)
 
