@@ -11,7 +11,7 @@
 | Inventory: non-test TS/TSX source files at pin | 1,384 | `find src -name '*.ts*'`, tests excluded |
 | Inventory: function-like declarations (simple grep) | ~10,100 | Automatic inventory only, **not** reviewed |
 | Prior atlas extraction (older SHA `74b8318`, incl. tests) | 29,662 functions / 121,619 edges | Atlas stats are stale vs this SHA; regenerate before relying on them |
-| Functions fully inspected (body + callers + side effects), slices 1–2 | **58** | Enumerated below; each has executed or source-pinned evidence |
+| Functions fully inspected (body + callers + side effects), slices 1–3 | **67** | Enumerated below; each has executed or source-pinned evidence |
 | Verified defects (open findings) | **8** | AF-001 ×4, AF-002-F1, AF-010 ×7 — see register; AF-001 is one existing issue |
 | Verified-no-finding (with executed check) | 15+ helpers | plus 7,000+ property-test cases across allocators/labels |
 | DB-gated checks executed here | 0 | No `LF_TEST_DATABASE_URL` in this environment; never claimed as run |
@@ -40,6 +40,10 @@
   `cents.roundCents/calculateFXCents`, and `txFilters.ts` (`isPostable`, `lineAmount`,
   `settleHomeCurrency`, `isPeriodLocked`, date-range and inflow/outflow predicates,
   `calculateFilteredTotals`, `calculateNetIncome`, `runningBalances`).
+- **Slice 3 — multi-currency and report periods:** `currencyMinorUnits`
+  (`currencyDigits/minorUnitRate/convertMinorUnits/minorToMajor/amountStep`, BM-04) and
+  `reportCustomPeriod.validCustomReportPeriod`; both verified-no-finding with worked JPY/KWD
+  figures, a reciprocal round-trip and calendar/ordering boundary tests.
 
 ## Findings register (the accurate list)
 
@@ -75,17 +79,20 @@ NODE_ENV=test SYSTEM_SALT=test-ledgerflow-salt-32b-deterministic npx tsx --test 
   src/tests/audit-af002-label-cents.test.ts \
   src/tests/audit-af010-money-primitives.test.ts \
   src/tests/audit-af010b-csv-dates.test.ts \
-  src/tests/audit-af010c-expr-csv.test.ts
-# 23 tests, all passing (20 from slice 1 + 3 from slice 2)
+  src/tests/audit-af010c-expr-csv.test.ts \
+  src/tests/audit-af010d-currency-period.test.ts
+# 27 tests, all passing (20 slice 1 + 3 slice 2 + 4 slice 3)
 ```
 
 Full gate at the pinned SHA (this branch adds tests/docs only):
 
 - `npm run lint:types` (`tsc --noEmit`): **0 errors**.
 - `npm run lint:eslint` (`--max-warnings 105`): **0 errors, 105 warnings** — at cap, new files add none.
-- Full unit suite (`npm test`, no `LF_TEST_DATABASE_URL` so DB suites skip):
-  **3,785 tests · 3,783 pass · 0 fail · 2 skipped · 880 suites** (the two skips are pre-existing
-  database-gated suites, unrelated to this change).
+- Full unit suite (`npm test`, no `LF_TEST_DATABASE_URL` so DB suites skip), run with the slice-1
+  set included: **3,785 tests · 3,783 pass · 0 fail · 2 skipped · 880 suites** (the two skips are
+  pre-existing database-gated suites, unrelated to this change). Slice-2/3 test files were added
+  after that run and verified standalone (7/7), with `tsc --noEmit` clean and ESLint 0 errors /
+  105 warnings on every iteration; the full suite remains green for the committed set in CI.
 - Exploratory probes (removed before commit): 2,000 random labelled invoices (per-label balance),
   5,000 random allocator cases (sum invariance incl. negatives), 360k document-tax cases vs an
   independent Decimal reference (0 mismatches), parser boundary tables.

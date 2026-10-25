@@ -114,6 +114,21 @@ Executed evidence: `src/tests/audit-af010c-expr-csv.test.ts` (3/3).
   larger-than-one-cent-per-line gaps (INT-5). The BUG-01/BUG-07 invariants here already have
   executed regression suites (`list-totals-reversal`, `home-currency-balance`); no new defect found.
 
+## Slice 3 addendum — multi-currency minor units and report periods (same pinned SHA)
+
+Executed evidence: `src/tests/audit-af010d-currency-period.test.ts` (4/4).
+
+- **`currencyMinorUnits` (BM-04):** the seven ISO 4217 three-decimal currencies are hardcoded,
+  everything else goes through `Intl` with a cents fallback; unknown/empty currency → 2 digits.
+  The design's worked figures reproduce exactly (¥10,000 at 0.0067 → 6,700 USD cents; 12,345 fils at
+  3.25 → 4,012 cents), and the reciprocal conversion round-trips the yen amount. The only
+  observation is the shared silent-fallback family: a non-positive rate is treated as 1.0
+  (`minorUnitRate`/`calculateFXCents`/`calculateFXCents`), safe only because posting validates rates
+  first (`minorUnitRate` and `calculateFXCents` behave the same way). No defect.
+- **`validCustomReportPeriod`:** strict ISO format plus UTC calendar round-trip (rejects
+  2026-02-30), year floor 1900, ordered start ≤ end, single-day periods allowed, and a try/catch
+  floor for non-object input. Verified-no-finding.
+
 ## Verified-no-finding helpers (executed at the pin)
 
 - **Kernel `allocateCents` sum invariance:** 5,000 random cases incl. negative totals and zero
