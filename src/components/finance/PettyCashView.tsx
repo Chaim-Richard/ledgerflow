@@ -36,6 +36,7 @@ import {
   topUpProblem,
 } from '../../lib/pettyCash';
 import type { ChartAccount, Transaction } from '../../types';
+import { useBalanceEntries } from '../../hooks/useBalanceEntries';
 
 const inputClass = 'w-full p-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] text-sm text-[var(--text)]';
 const labelClass = 'block text-xs font-semibold text-[var(--muted)] mb-1';
@@ -126,7 +127,9 @@ export default function PettyCashView() {
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const balance = box ? pettyCashBalanceCents(box.id, ledger) : 0;
+  // L-123 step 3c: the box's balance reads the server's sum through the oldest loaded day (the movements stay the loaded entries)
+  const { entries: balanceLedger } = useBalanceEntries(ledger, undefined, workspaceId || undefined);
+  const balance = box ? pettyCashBalanceCents(box.id, balanceLedger) : 0;
   const movements = useMemo(
     () => (boxAccountId ? pettyCashMovements(boxAccountId, transactions || []).slice(0, 20) : []),
     [boxAccountId, transactions],

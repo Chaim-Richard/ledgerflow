@@ -14,6 +14,7 @@ import type { ReportColumnMode } from '../../lib/reportColumns';
 import { getFiscalYearBounds } from '../../lib/fiscalCalendar';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
+import { balanceEntries, opensFromServer, SERVER_OPENING_ENTRY_ID } from '../../lib/serverBalances';
 
 interface BalanceSheetViewProps {
   accounts: ChartAccount[];
@@ -142,7 +143,10 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     }
   }, [businessType]);
 
+  // L-123 step 3c: balances as of a day on or after the oldest loaded day read the server's sums through that day
+  const serverOpening = useLedgerStore(state => state.serverOpening);
   const getPeriodBalances = useCallback((dateCutoff: string) => {
+    const entries = balanceEntries(transactions, serverOpening, dateCutoff);
     const assets: { [id: string]: number } = {};
     const liabilities: { [id: string]: number } = {};
     const equity: { [id: string]: number } = {};
@@ -168,12 +172,14 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     const orphanedLines: Array<{ accountId: string; transactionId?: string; date?: string; amountCents: number }> = [];
 
     // Sum transactions before or on cutoff date
-    transactions.forEach(tx => {
+    entries.forEach(tx => {
       if (!isPostable(tx) || !isTransactionInDateRange(tx, undefined, dateCutoff)) return;
       tx.lines?.forEach(line => {
         const id = line.accountId;
         const acc = accountMap.get(id) || (line.accountName ? accountMap.get(line.accountName) : undefined);
         if (!acc) {
+          // the server's sum for an account not in the loaded chart is no entry to open
+          if (tx.id === SERVER_OPENING_ENTRY_ID) return;
           orphanedLines.push({
             accountId: id || line.accountName || 'unknown',
             transactionId: tx.id,
@@ -199,7 +205,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     const totalAssets = Object.values(assets).reduce((sum, v) => sum + v, 0);
     const totalLiabilities = Object.values(liabilities).reduce((sum, v) => sum + v, 0);
     const totalEquity = Object.values(equity).reduce((sum, v) => sum + v, 0);
-    const { netIncome } = calculateNetIncome(transactions, accounts, "1970-01-01", dateCutoff);
+    const { netIncome } = calculateNetIncome(entries, accounts, "1970-01-01", dateCutoff);
 
     const totalClaims = totalLiabilities + totalEquity + netIncome;
 
@@ -215,7 +221,7 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
       isBalanced: totalAssets === totalClaims,
       orphanedLines
     };
-  }, [transactions, accounts]);
+  }, [transactions, accounts, serverOpening]);
 
   const localCalculation = useMemo(() => {
     const current = getPeriodBalances(asOfDate);
@@ -361,7 +367,9 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
     return { diff, pct };
   };
 
-  return { columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget: openDrill, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
+  const folds = useMemo(() => opensFromServer(transactions, serverOpening, asOfDate), [transactions, serverOpening, asOfDate]);
+  const serverAsOf = folds && basis === 'accrual' && !(isServerAuthoritative && serverData) ? serverOpening?.asOf || '' : '';
+  return { serverAsOf, columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget: openDrill, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct };
 }
 
 export type BalanceSheetModel = ReturnType<typeof useBalanceSheetModel>;

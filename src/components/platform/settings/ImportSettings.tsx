@@ -16,6 +16,10 @@ import type { FieldMapping, ImportIssue, ImportKind } from '../../../lib/recordI
 import { downloadCsv } from '../../../lib/csvExport';
 import { normalizeFreshBooksCsv } from '../../../lib/freshBooksImport';
 import { normalizeQuickBooksCsv } from '../../../lib/quickBooksCsvImport';
+import { normalizeXeroCsv } from '../../../lib/xeroChartContactsImport';
+import { normalizeWaveCsv } from '../../../lib/waveImport';
+import { normalizeZohoBooksCsv } from '../../../lib/zohoBooksImport';
+import { normalizeSage50Csv } from '../../../lib/sage50Import';
 import { readIif, type IifReadResult } from '../../../lib/iifImport';
 import {
   contactImportDuplicates, googleContactsToContactTable, isGoogleContactsHeader, vCardToContactTable,
@@ -36,10 +40,14 @@ const readCsvUpload = (text: string): string[][] => {
   return parseCsvChecked(text);
 };
 
-type CsvSource = 'generic' | 'freshbooks' | 'quickbooks' | 'iif';
+type CsvSource = 'generic' | 'freshbooks' | 'quickbooks' | 'iif' | 'xero' | 'wave' | 'zoho' | 'sage';
 const normalizeSourceTable = (source: CsvSource, kind: ImportKind, cells: string[][]): string[][] =>
   source === 'freshbooks' ? normalizeFreshBooksCsv(kind, cells) :
-  source === 'quickbooks' ? normalizeQuickBooksCsv(kind, cells) : cells;
+  source === 'quickbooks' ? normalizeQuickBooksCsv(kind, cells) :
+  source === 'xero' ? normalizeXeroCsv(kind, cells) :
+  source === 'wave' ? normalizeWaveCsv(kind, cells) :
+  source === 'zoho' ? normalizeZohoBooksCsv(kind, cells) :
+  source === 'sage' ? normalizeSage50Csv(kind, cells) : cells;
 // E-29: an IIF carries several list sections at once, so the file is read once and its section for
 // the chosen kind is used (readIif in src/lib/iifImport.ts).
 
@@ -334,7 +342,8 @@ export default function ImportSettings() {
         <div className="flex flex-wrap gap-3 items-end">
           <label className="text-xs font-bold flex flex-col gap-1">CSV source
             <select aria-label="CSV source" value={source} onChange={e => {
-              const next: CsvSource = e.target.value === 'freshbooks' ? 'freshbooks' : e.target.value === 'quickbooks' ? 'quickbooks' : e.target.value === 'iif' ? 'iif' : 'generic';
+              const next: CsvSource = (['freshbooks', 'quickbooks', 'iif', 'xero', 'wave', 'zoho', 'sage'] as const).includes(e.target.value as never)
+                ? e.target.value as CsvSource : 'generic';
               if (next !== 'iif') setIif(null);
               setContactFile(null);
               setPhoneCountry('');
@@ -344,12 +353,16 @@ export default function ImportSettings() {
               setMapping(converted.length ? guessMapping(kind, converted[0]) : {});
               resetResults();
             }} className="min-h-11 border rounded px-3 bg-[var(--panel)] text-sm">
-              <option value="generic">Standard spreadsheet / Wave</option><option value="freshbooks">FreshBooks CSV</option><option value="quickbooks">QuickBooks Online CSV</option><option value="iif">QuickBooks Desktop IIF</option>
+              <option value="generic">Standard spreadsheet / CSV template</option><option value="freshbooks">FreshBooks CSV</option><option value="quickbooks">QuickBooks Online CSV</option><option value="iif">QuickBooks Desktop IIF</option><option value="xero">Xero CSV (chart or contacts)</option><option value="wave">Wave customers CSV</option><option value="zoho">Zoho Books CSV</option><option value="sage">Sage 50 CSV</option>
             </select>
           </label>
           {source === 'freshbooks' && <p className="text-xs text-[var(--muted)]">Choose a FreshBooks Clients, Vendors, or Items export. We combine name and address columns for preview, then use the normal validated import. No transactions are imported. <a className="underline" href="https://support.freshbooks.com/hc/en-us/articles/360032628152-How-do-I-export-my-data" target="_blank" rel="noopener noreferrer">Export instructions</a>.</p>}
           {source === 'iif' && <p className="text-xs text-[var(--muted)]">Choose the <strong>.iif</strong> file QuickBooks Desktop writes (File → Utilities → Export → Lists). Accounts, customers, vendors and items are read; the file&rsquo;s journals, invoices, bills and payments are <strong>not</strong> imported — a list import never posts. Nothing is guessed: a row with an unknown account type or no name is listed with its line number.</p>}
           {source === 'quickbooks' && <p className="text-xs text-[var(--muted)]">Choose a QuickBooks Online Account List, Customer Contact List, Vendor Contact List, or Products &amp; Services export. Put headers on the first row; review mappings and check before importing. Account balances, existing stock quantities and transactions are not carried over. <a className="underline" href="https://quickbooks.intuit.com/learn-support/en-us/help-article/list-management/export-reports-lists-data-quickbooks-online/L1xleDrLp_US_en_US" target="_blank" rel="noopener noreferrer">QBO export instructions</a>.</p>}
+          {source === 'xero' &&<p className="text-xs text-[var(--muted)]">Choose a Xero <strong>Chart of Accounts export</strong> (Accounting → Chart of accounts → Export) as &ldquo;Accounts&rdquo;, or a Xero <strong>contacts</strong> CSV as &ldquo;Customers&rdquo; or &ldquo;Vendors&rdquo; — a Xero contacts file is mixed, and you pick the list. Columns are read by their documented names; required columns missing from a re-arranged file fail the check rather than being guessed. Xero invoice/bill exports use the panel below instead. No balances, YTD figures or transactions are imported. <a className="underline" href="https://central.xero.com/0/article/Export-or-print-your-chart-of-accounts" target="_blank" rel="noopener noreferrer">Xero Central export steps</a>.</p>}
+          {source === 'wave' && <p className="text-xs text-[var(--muted)]">Choose the customers CSV Wave exports (Sales &amp; Payments → Customers → Import or Export) as &ldquo;Customers&rdquo;. Wave has no vendor CSV export to key on, and a Wave chart-of-accounts CSV already reads through the standard spreadsheet source — its account-type names are recognised. Wave&rsquo;s accountants&rsquo; download is transactions, never imported here. <a className="underline" href="https://support.waveapps.com/hc/en-us/articles/208623076-Import-a-customer-list" target="_blank" rel="noopener noreferrer">Wave&rsquo;s customer CSV columns</a>.</p>}
+          {source === 'zoho' && <p className="text-xs text-[var(--muted)]">Choose a Zoho Books export (Customers, Vendors, Items, or Chart of Accounts). Zoho&rsquo;s export fields are the user&rsquo;s choice, so the reader keys on Zoho&rsquo;s documented field names; an export whose fields don&rsquo;t include a required column fails the check instead of being guessed, and a Zoho-specific account type (for example Payment Clearing Account) is listed as a row to fix, never reclassified. Item prices and purchase rates import as catalogue figures — stock quantities are never staged. <a className="underline" href="https://www.zoho.com/us/books/help/import-export/export.html" target="_blank" rel="noopener noreferrer">Zoho export steps</a>.</p>}
+          {source === 'sage' && <p className="text-xs text-[var(--muted)]">Choose a Sage 50 (US) export written by Select Import/Export (CUSTOMER.CSV, VENDOR.CSV, CHART.CSV or ITEM.CSV). The chart&rsquo;s numeric account-type code is translated only through Sage&rsquo;s documented table; codes with no LedgerFlow counterpart (retainage, accumulated depreciation) are left for you to fix in the preview, and the export-only columns (current balance, period totals) are never imported. <a className="underline" href="https://help-sage50.na.sage.com/en-us/2023/Content/Importing_Exporting/Import_Export_Fields/IEFIELDS_Chart_of_Accounts.htm" target="_blank" rel="noopener noreferrer">Sage 50 export field lists</a>.</p>}
 
           {contactFile && (
             <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 space-y-1" role="status">
