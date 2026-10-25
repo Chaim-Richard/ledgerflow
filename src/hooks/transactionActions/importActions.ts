@@ -1,10 +1,10 @@
 import { validateReceiptPayload, mapReceiptToCoordinates } from '../../lib/receiptIngestion';
-import { collection, doc, getDocs, query, where } from '../../lib/db/firestore';
+import { collection, doc } from '../../lib/db/firestore';
 import { db } from '../../firebase';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { MatchingEngine } from '../../lib/MatchingEngine';
-import { Transaction, AutoRule, ChartAccount } from '../../types';
+import { Transaction, ChartAccount } from '../../types';
 import { toast } from 'sonner';
 import { aiService } from '../../services/aiService';
 import { DoubleEntryAuditor } from '../../services/auditor';
@@ -17,7 +17,7 @@ import type { EntryActions } from './entryActions';
 
 /** Bringing entries in: statement/file import and receipt reading. (F-05, moved from useTransactionActions.) */
 export function createImportActions(ctx: ActionContext, posting: PostingHelpers, entries: EntryActions) {
-  const { user, currentWorkspaceId, getCurrentWorkspace, setTransactions, setAccounts, accounts, analyticalPatternCache, matchingThreshold, dimensionNodes, userKey, setIsSyncing, generateFileHash, isPeriodLocked } = ctx;
+  const { user, currentWorkspaceId, getCurrentWorkspace, setTransactions, accounts, matchingThreshold, dimensionNodes, userKey, setIsSyncing, generateFileHash, isPeriodLocked } = ctx;
   const { recordRulePattern, balanceTransactionLines } = posting;
   const { handleQuickAdd, handleUpdateTransaction } = entries;
 
@@ -35,23 +35,12 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
     try {
       const txsToMatch = newTransactions.filter(tx => !existingIds.has(tx.bankTransactionId) && !existingIds.has(tx.id) && !isPeriodLocked(tx.date));
 
-      // Fetch rules once for the import batch
-      const qRules = query(
-        collection(db, 'autoRules'), 
-        where('workspaceId', '==', currentWorkspaceId),
-        where('uid', '==', user.uid)
-      );
-      const rulesSnap = await getDocs(qRules);
-      const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AutoRule));
-      const engine = new MatchingEngine(activeRules, analyticalPatternCache, user.uid, matchingThreshold, existingTransactions, dimensionNodes, accounts);
-
       const accountsByName = new Map<string, ChartAccount>();
       const accountsById = new Map<string, ChartAccount>();
       accounts.forEach(a => {
         accountsByName.set(a.name, a);
         accountsById.set(a.id, a);
       });
-      let ccAccountPrecomputed = accounts.find(a => (a.type === 'liability' || a.type === 'asset') && (a.subtype === 'Credit Card' || (a.name || '').toLowerCase().includes('card')));
 
       const processedTxs: Transaction[] = [];
       const bankLineRecords: ImportedBankLine[] = [];
@@ -59,9 +48,9 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
       const toLearn: Array<Parameters<typeof recordRulePattern>> = [];
 
       txsToMatch.forEach(tx => {
-        const defaultAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
-        let lines = tx.lines && tx.lines.length > 0 ? tx.lines : [{ accountId: defaultAccId, accountName: 'Uncategorized Expense', amountCents: tx.amountCents }];
-        
+        // EG-9: a line with no account chosen is no longer posted to a default expense account
+        const lines = tx.lines && tx.lines.length > 0 ? tx.lines : [];
+
         const isPreCategorized = lines.length > 0 && 
           Boolean(lines[0].accountId) &&
           lines[0].accountId !== 'uncategorized' && 
@@ -69,79 +58,11 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
           lines[0].accountName !== 'Uncategorized' && 
           lines[0].accountName !== 'Manual Review';
 
-        if (!isPreCategorized) {
-          // Priority 1: Deterministic Integrity (Rules and Local Engine) over AI
-          let targetCategoryResult = engine.resolveCategory(tx.description);
-          let usedAI = false;
-          let isSmartTransfer = false;
-
-          // Priority 1.5: Deep Economic Transfer/Payment Detection
-          // If the user pays a credit card, it isn't an expense, it's a transfer to a liability account.
-          const descLower = (tx.description || '').toLowerCase();
-          if (!targetCategoryResult && (
-              descLower.includes('payment to credit card') || 
-              descLower.includes('thank you for your payment') ||
-              descLower.includes('payment thank you') ||
-              descLower.includes('tfr to') ||
-              descLower.includes('transfer to') ||
-              descLower.match(/to\s+.*card/) ||
-              descLower.match(/from\s+checking/) ||
-              (descLower.includes('payment') && descLower.includes('card'))
-          )) {
-              // Find a liability account (credit card)
-              let ccAccount = ccAccountPrecomputed;
-              if (!ccAccount) {
-                 const newAccId = 'auto_cc_' + crypto.randomUUID().split('-')[0];
-                 ccAccount = {
-                   id: newAccId,
-                   uid: user.uid,
-                   workspaceId: currentWorkspaceId,
-                   code: '2100',
-                   name: 'Corporate Credit Card',
-                   type: 'liability',
-                   category: 'Credit Card',
-                   subtype: 'Credit Card',
-                   balanceCents: 0
-                 } as ChartAccount;
-                 if (ccAccount) {
-                    setAccounts([...accounts, ccAccount]);
-                    accountsByName.set(ccAccount.name, ccAccount);
-                    accountsById.set(ccAccount.id, ccAccount);
-                    ccAccountPrecomputed = ccAccount;
-                 }
-              }
-              
-              if (ccAccount) {
-                  targetCategoryResult = { accountName: ccAccount.name };
-                  isSmartTransfer = true;
-              }
-          }
-
-          // If we didn't find a match through the deterministic algorithm or smart transfer, it uses Manual Review.
-          if (!targetCategoryResult) {
-            usedAI = false;
-          }
-
-          if (targetCategoryResult) {
-            const account = accountsByName.get(targetCategoryResult.accountName) || accountsById.get(targetCategoryResult.accountName);
-            const fallbackAccId = accounts.find(a => a.type === 'expense' || a.category === 'Operations')?.id || accounts[0]?.id || '';
-            lines = [{
-              accountId: account?.id || fallbackAccId,
-              accountName: account?.name || targetCategoryResult.accountName,
-              amountCents: tx.amountCents || 0,
-              tags: targetCategoryResult.tags || (isSmartTransfer ? ['Auto-Transfer'] : []),
-              dimensions: targetCategoryResult.dimensions || undefined,
-              description: isSmartTransfer ? 'Auto-Transfer Detection' : (usedAI ? 'Auto-categorized by AI' : 'Auto-categorized by Rule Engine')
-            }];
-          }
-        }
-
-        const balancedLines = balanceTransactionLines(lines, tx.amountCents || 0);
-
-        let isResolvedCategory = false;
-        if (balancedLines[0].accountId !== 'uncategorized' && balancedLines[0].accountName !== 'Uncategorized' && balancedLines[0].accountName !== 'Manual Review') {
-          isResolvedCategory = true;
-        }
+        // EG-9: a line the person did not categorise in the review is sent as a pending bank line.
+        // The server runs the bank rules on it (src/lib/bankRules.ts) and stores what they suggest;
+        // nothing is posted until a person accepts the suggestion.
+        const balancedLines = isPreCategorized ? balanceTransactionLines(lines, tx.amountCents || 0) : [];
+        const isResolvedCategory = isPreCategorized;
 
         // 1. ALWAYS inject into the BankLines validation layer
         const bankLineRef = doc(collection(db, 'bankLines'));
@@ -154,6 +75,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
           amountCents: tx.amountCents || 0,
           status: isResolvedCategory ? 'matched' : 'pending',
           matchedTransactionId: null as string | null,
+          // EG-9: the statement's fingerprint; the server keeps one bank line per fingerprint
+          ...(tx.importIdentity ? { importIdentity: tx.importIdentity } : {}),
           createdAt: new Date().toISOString()
         };
 
@@ -219,6 +142,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
 
       // Bank lines and their ledger entries go to the server together (one database transaction;
       // the browser isn't allowed to write bank lines itself)
+      let skipped = 0;
+      let storedTxs = processedTxs;
       if (processedTxs.length > 0 || bankLineRecords.length > 0) {
         const token = await user.getIdToken();
         const res = await fetch('/api/v1/transactions/bulk', {
@@ -230,13 +155,21 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
           body: JSON.stringify({
             workspaceId: currentWorkspaceId,
             transactions: processedTxs,
-            bankLines: bankLineRecords.map(({ id, date, description, amountCents, status, matchedTransactionId }) => ({ id, date, description, amountCents, status, matchedTransactionId }))
+            bankLines: bankLineRecords.map(({ id, date, description, amountCents, status, matchedTransactionId, importIdentity }) => ({ id, date, description, amountCents, status, matchedTransactionId, ...(importIdentity ? { importIdentity } : {}) }))
           })
         });
 
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.error || 'Server rejected bulk transaction import.');
+        }
+        // EG-9: lines of the statement already imported are skipped by the server, with their entries
+        const answer = await res.json().catch(() => ({})) as { skippedDuplicates?: number; transactions?: Array<{ id?: string }> };
+        skipped = Number(answer.skippedDuplicates) || 0;
+        const saved = answer.transactions;
+        if (skipped > 0 && Array.isArray(saved)) {
+          const written = new Set(saved.map(t => t.id));
+          storedTxs = processedTxs.filter(t => written.has(t.id));
         }
       }
 
@@ -248,8 +181,8 @@ export function createImportActions(ctx: ActionContext, posting: PostingHelpers,
         return true;
       }
       const current = useLedgerStore.getState().transactions;
-      setTransactions([...processedTxs, ...current]);
-      toast.success(`Imported ${newTransactions.length} transactions with heuristic mapping.`, { id: loader });
+      setTransactions([...storedTxs, ...current]);
+      toast.success(`Imported ${newTransactions.length - skipped} transactions${skipped ? ` (${skipped} already imported, skipped)` : ''}.`, { id: loader });
       return true;
     } catch (error) {
       // PREV-5: handleFirestoreError rethrows, so this message never showed and the import rejected

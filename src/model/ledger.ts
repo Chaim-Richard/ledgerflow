@@ -305,6 +305,8 @@ export interface AutoRule {
     targetAccountId?: string;
     targetTransactionKind?: 'expense' | 'transfer';
     bankAccountId?: string;
+    /** EG-9: the customer or vendor a matching bank line is suggested for */
+    contactId?: string;
     targetNodeId?: string;
     targetProject?: string;
     targetCategory?: string;
@@ -427,6 +429,10 @@ export interface BankStatementLine {
   exchangeRate?: number;
   matchedTransactionId?: string;
   status: 'pending' | 'matched' | 'ignored';
+  /** EG-9: the statement line's source fingerprint; one bank line per fingerprint */
+  importIdentity?: string;
+  /** EG-9: what the bank rules suggest (server-written; nothing is posted until accepted) */
+  suggestion?: import('../lib/bankRules').BankRuleSuggestion | null;
 }
 
 export interface FilterCriteria {

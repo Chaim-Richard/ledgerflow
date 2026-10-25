@@ -106,7 +106,7 @@ export interface RuleActionResult { modifiedTx: Transaction; changes: string[]; 
 export const hasFinancialRuleAction = (rule: AutoRule): boolean => !!(rule.action?.targetAccountId || rule.action?.targetTransactionKind);
 
 export const hasOrdinaryRuleAction = (rule: AutoRule): boolean => Object.entries(rule.action).some(([key, value]) =>
-  !['targetAccountId', 'targetTransactionKind', 'bankAccountId', 'setAmountCents', 'deleteTransaction'].includes(key) && value !== undefined && value !== false && value !== '' && (!Array.isArray(value) || value.length > 0));
+  !['targetAccountId', 'targetTransactionKind', 'bankAccountId', 'contactId', 'setAmountCents', 'deleteTransaction'].includes(key) && value !== undefined && value !== false && value !== '' && (!Array.isArray(value) || value.length > 0));
 
 /** Preview the existing recategorize contract; money and the bank-side line never change. */
 function previewFinancialAction(rule: AutoRule, tx: Transaction, context?: RuleActionContext): RuleActionResult {

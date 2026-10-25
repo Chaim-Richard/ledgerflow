@@ -4,6 +4,7 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, Check, AlertCircle, Loader2, ArrowRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Transaction, ChartAccount, AutoRule } from '../../types';
+import { suggestFromRules } from '../../lib/bankRules';
 import { cn, reportError, OperationType, formatCurrency } from '../../lib/utils';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
@@ -128,8 +129,8 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
       // Fetch automated rules for local deterministic evaluation
       const qRules = query(
         collection(db, 'autoRules'),
-        where('workspaceId', '==', workspaceId),
-        where('uid', '==', user.uid)
+        // EG-9: the workspace's rules, whoever made them (the server suggests from the same rules)
+        where('workspaceId', '==', workspaceId)
       );
       const rulesSnap = await getDocs(qRules);
       const activeRules = rulesSnap.docs.map(d => ({ id: d.id, ...d.data() } as AutoRule));
@@ -174,6 +175,14 @@ const BankFeedImport: React.FC<BankFeedImportProps> = ({
             });
             continue;
           }
+        }
+
+        // Step A.5 (EG-9): the bank rules, the same pure function the server runs on every imported line
+        const ruled = suggestFromRules(activeRules, { description: t.description, amountCents: t.amountCents, date: t.date }, { accounts });
+        const ruledAcct = ruled?.accountId ? accounts.find(a => a.id === ruled.accountId) : undefined;
+        if (ruled && ruledAcct) {
+          resolvedBatch.push({ ...t, accountId: ruledAcct.id, category: ruledAcct.name, confidence: 1, matchSource: `Rule: ${ruled.ruleIds[0]}`, dimensions: Object.keys(ruled.dimensions).length ? ruled.dimensions : undefined });
+          continue;
         }
 
         // Step B: Match with high-efficiency local rule engine OR dynamic Bayesian classification
