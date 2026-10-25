@@ -15,7 +15,7 @@
 | Tenant isolation and row-level security | A.5.15, A.8.3 | CC6 | `supabase/tests/rls.test.sql`; `src/tests/server-write-roles.test.ts`; `src/server/db/pgFirestore.ts`; `src/server/auth/requestUser.ts` | Run against migrations in a clean database and retain results; independent multi-tenant isolation assessment not attached | Code + test |
 | Secure posting, validation and period locks | A.8.3, A.8.15, A.8.24 | CC6, CC8, PI1 | `src/kernel/validation/DoubleEntryValidator.ts`; `src/tests/security-audit.test.ts`; `src/tests/backup-restore.test.ts`; `src/services/LedgerPostService.ts` | Test authorization and period locks end-to-end against a deployed test environment, including exception and reversal paths | Code + test |
 | Encryption and key protection | A.8.24, A.8.25 | CC6 | `src/services/securityService.ts`; `src/tests/security-audit.test.ts` exercises authenticated encryption round-trip, tamper rejection and scrubbing | Verify actual secrets management and rotation, production configuration and access logs; `docs/FOR_YOU.md` still calls for deployment secrets and DB CA | Code + test |
-| HTTP security and abuse prevention | A.8.20–A.8.23 | CC6, CC7 | `src/server/http/securityMiddleware.ts` (CORS, headers); `src/server/middleware/rateLimiters.ts`; `src/server/middleware/csrf.ts`; `src/tests/api-key-rate-limit.test.ts` | Review production CSP exceptions, reverse-proxy trust, actual limiter storage across multiple server instances, and external security testing | Code + test |
+| HTTP security and abuse prevention | A.8.20–A.8.23 | CC6, CC7 | `src/server/http/securityMiddleware.ts` (CORS, headers); `src/server/http/contentSecurityPolicy.ts` and the report-only rollout below (S-23); `src/server/middleware/rateLimiters.ts`; `src/server/middleware/csrf.ts`; `src/tests/api-key-rate-limit.test.ts`, `src/tests/csp-report-only.test.ts` | Review production CSP exceptions, reverse-proxy trust, actual limiter storage across multiple server instances, and external security testing. The enforced policy still allows `'unsafe-inline'` scripts: it is tightened only in report-only mode until the summary below is empty | Code + test |
 | Security logging and auditability | A.8.15, A.8.16, A.8.17 | CC4, CC7 | `src/server/services/auditLogService.ts`; `src/server/services/authAuditService.ts`; `src/tests/audit-format.test.ts`; `e2e/forensics-and-audit.spec.ts` | Verify durable event delivery, restricted log access, retention, immutability, anomaly triage, clock sync, alert ownership and incident response evidence | Code + test |
 | Vulnerability and dependency management | A.8.8, A.8.28 | CC7, CC8 | `.github/workflows/ci.yml` executes `npm audit --audit-level=high` plus lint, types, unit coverage, RLS tests | Track accepted exceptions, remediation SLAs, alerts, supply-chain inventory/SBOM and dependency review; an audit job is not a historical remediation record | Code + CI |
 | Secure SDLC, testing, change management | A.8.25–A.8.32 | CC8 | `.github/workflows/ci.yml`; `docs/COORDINATION.md`; `src/tests/`; `e2e/`; `docs/adr/` | Prove required reviews and protected branches in GitHub settings, release approvals, deploy rollback, test evidence and change tickets. Source code alone does not establish enforcement | Code + CI |
@@ -26,6 +26,49 @@
 | Privacy, retention and deletion | A.5.31–A.5.34, A.8.10 | P1–P8 (if applicable) | `docs/privacy/RETENTION.md`; `docs/privacy/PERSONAL_DATA.md`; `src/lib/retention.ts`; `src/tests/retention.test.ts` | Determine legal retention obligations by jurisdiction, validate real deletion runs, lawful processing notices, request handling evidence and audit log retention; unresolved choices in `docs/FOR_YOU.md` | Code + test / gap |
 | People and awareness | A.6.1–A.6.8 | CC1, CC2 | No hiring/training/awareness evidence in this repository | Assign responsibilities; retain acknowledgements, training, screening as appropriate, termination checklist and device policies | Gap |
 | Physical and environmental controls | A.7.1–A.7.14 | CC6, A1 | Infrastructure described in `docs/privacy/SUBPROCESSORS.md` | Obtain provider evidence and decide physical-scope responsibilities; repository code cannot certify data center controls | Gap |
+
+## Tightening the Content-Security-Policy, report-only first (S-23)
+
+The enforced policy still contains `script-src … 'unsafe-inline'`, which is what makes an injected
+`<script>` run at all. Removing it in one step is the usual way a CSP takes a working page down, so
+the tightened policy is measured before it is obeyed. Three stages, chosen by `CSP_TIGHTEN`:
+
+| `CSP_TIGHTEN` | `Content-Security-Policy` | `Content-Security-Policy-Report-Only` | What it is for |
+|---|---|---|---|
+| `off` | today's policy | — | roll back instantly, no deploy needed |
+| unset / `report-only` (default in production) | today's policy, unchanged | the tightened policy + `report-uri /api/csp-report` | collect evidence; nothing can break, because nothing is enforced |
+| `enforce` | the tightened policy (keeps `report-uri`) | — | the goal, once the summary is empty |
+
+**The tightened policy** (`tightenedCspDirectives` in `src/server/http/contentSecurityPolicy.ts`)
+drops `'unsafe-inline'` from `script-src` and names index.html's one inline script by SHA-256 hash
+instead (`APP_INLINE_SCRIPT_HASHES`; `csp-report-only.test.ts` recomputes it from `index.html`, so
+editing that script without updating the constant fails the suite). It also adds `form-action
+'self'` and `manifest-src 'self'`. `style-src` keeps `'unsafe-inline'` on purpose: React writes
+`style={{…}}` attributes while rendering, and no hash or nonce can cover a style *attribute*.
+
+**Both places that send a policy are covered.** Vercel serves the built pages itself, so
+`vercel.json` — not helmet — is what the browser reads for a document; `npm run csp:vercel` writes
+both headers into it and `npm run build` fails if the committed file disagrees. The helmet headers
+in `securityMiddleware.ts` cover the standalone server and `/api` responses.
+
+**Reading the evidence.** Browsers post to `POST /api/csp-report`. It takes no sign-in and no CSRF
+token (a user agent has neither), always answers `204`, and only increments counters held in
+memory: grouped by directive + blocked origin + document path, capped at 200 groups, nothing
+written to the database. A blocked URI is reduced to its parsed origin, so a look-alike host is
+never filed as the host it imitates, and a document URI keeps its path only, so an invite token in
+a query string cannot reach the summary.
+
+```
+GET    /api/csp-report/summary    # platform admin: {rollout, total, dropped, groups[]}
+DELETE /api/csp-report/summary    # start the measurement again after a fix
+```
+
+**Promotion checklist.** Deploy; leave it at `report-only` for a full billing-cycle's worth of
+traffic (every screen, Plaid Link, Stripe, the public invoice pages); read the summary; fix or
+allow each group; `DELETE` the summary and wait again; when it stays empty, set
+`CSP_TIGHTEN=enforce`, run `npm run csp:vercel`, commit `vercel.json` and deploy. Roll back with
+`CSP_TIGHTEN=off`. Counters live in one process's memory, so a summary reflects the instance that
+answered — read it more than once on a multi-instance deployment.
 
 ## Highest-priority evidence work
 
