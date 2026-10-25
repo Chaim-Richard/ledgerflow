@@ -2,7 +2,7 @@ import express from 'express';
 import { z } from 'zod';
 import type { Firestore } from '../db/firestore';
 import { getDb, validateWorkspaceMember } from '../db/firestore';
-import { applyUnappliedPayment, createPaymentAtomic, createPaymentIdempotent, PaymentApplyError } from '../services/paymentService';
+import { applyUnappliedPayment, createPaymentAtomic, createPaymentIdempotent, PaymentApplyError, voidPayment } from '../services/paymentService';
 import { extractCanonicalOperationId } from '../utils/idempotency';
 import { getLocalDateISO } from '../../lib/utils';
 import { getWorkspaceUserRole, AuthenticatedRequest, requireWorkspaceRole } from './workspaceRoutes';
@@ -224,6 +224,35 @@ paymentRouter.post('/:paymentId/apply', async (req, res) => {
       workspaceId: parsed.data.workspaceId, uid: authReq.user.uid, paymentId: String((req.params as Record<string, string>).paymentId),
       allocations: parsed.data.allocations, date: parsed.data.date || getLocalDateISO(),
       operationId: extractCanonicalOperationId({ headers: req.headers }),
+    });
+    res.json({ status: 'success', data: result });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (err instanceof PaymentApplyError) return res.status(err.status).json({ status: 'error', message });
+    if (/Period Locked/i.test(message)) return res.status(409).json({ status: 'error', message });
+    if (/not a member|Forbidden|Unauthorized/i.test(message)) return res.status(403).json({ status: 'error', message });
+    res.status(400).json({ status: 'error', message });
+  }
+});
+
+const voidSchema = z.object({
+  workspaceId: z.string().min(1),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  reason: z.string().max(300).optional(),
+}).strict();
+
+/** EG-2 step 4: void a payment: its entries reversed, its ledger rows reversed, its documents due again. A retry posts nothing. */
+paymentRouter.post('/:paymentId/void', async (req, res) => {
+  const authReq = req as unknown as Partial<AuthenticatedRequest>;
+  if (!authReq.user?.uid) return res.status(401).json({ status: 'error', message: 'Sign in required' });
+  const parsed = voidSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ status: 'error', message: 'Invalid request', details: parsed.error.issues });
+  try {
+    const db = getDb();
+    await validateWorkspaceMember(db, parsed.data.workspaceId, authReq.user);
+    const result = await voidPayment(db, {
+      workspaceId: parsed.data.workspaceId, uid: authReq.user.uid, paymentId: String((req.params as Record<string, string>).paymentId),
+      date: parsed.data.date, reason: parsed.data.reason,
     });
     res.json({ status: 'success', data: result });
   } catch (err) {
