@@ -193,8 +193,9 @@ test('A-72: the note says the three things a reader must know', () => {
 // ---- Codex review findings on PR #403 ------------------------------------------------------------
 
 test('A-72 review: a credit with no source document and no label belongs with the unlabelled documents', () => {
-  const credit = { id: 'CN-1', amountCents: 2000, date: '2026-03-06', status: 'open' };
-  const sourceOf = (c: { invoiceId?: string }) => c.invoiceId;
+  type CreditLike = { id: string; amountCents: number; date: string; status: string; invoiceId?: string };
+  const credit: CreditLike = { id: 'CN-1', amountCents: 2000, date: '2026-03-06', status: 'open' };
+  const sourceOf = (c: CreditLike) => c.invoiceId;
   const unlabelled = scopeStatementDocuments(
     { invoices, bills: [], payments: [], credits: [credit] }, UNLABELLED_ENTITY, 'world', { creditSourceId: sourceOf },
   );
@@ -204,7 +205,7 @@ test('A-72 review: a credit with no source document and no label belongs with th
   const a = scopeStatementDocuments({ invoices, bills: [], payments: [], credits: [credit] }, 'Entity A', 'world', { creditSourceId: sourceOf });
   assert.deepEqual(a.credits, []);
   // a credit with a source still follows its invoice
-  const linked = { ...credit, id: 'CN-2', invoiceId: 'INV-A' };
+  const linked: CreditLike = { ...credit, id: 'CN-2', invoiceId: 'INV-A' };
   const a2 = scopeStatementDocuments({ invoices, bills: [], payments: [], credits: [linked] }, 'Entity A', 'world', { creditSourceId: sourceOf });
   assert.deepEqual(a2.credits.map(c => c.id), ['CN-2']);
   const n2 = scopeStatementDocuments({ invoices, bills: [], payments: [], credits: [linked] }, UNLABELLED_ENTITY, 'world', { creditSourceId: sourceOf });
