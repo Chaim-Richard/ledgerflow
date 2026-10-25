@@ -875,15 +875,15 @@ screen, no change to how money is calculated or posted (AI #1's). Lane: the scre
 they read correctly in Hebrew, on a phone and with a keyboard, and stay fast with a year of data.
 
 - [ ] **H-1 Right-to-left check of the ten busiest screens** (Overview, Invoices, Bills, Banking, Reconcile, P&L, Balance sheet, Trial balance, VAT report, Settings) in Hebrew: numbers, dates and minus signs read the right way, columns line up, no text cut off. One browser test per screen with a screenshot baseline.
-- [ ] **H-2 Phone layout of the same ten screens** (390 px wide): no sideways scrolling of the page, tables scroll inside their box, buttons at least 44 px. Browser test per screen.
-- [ ] **H-3 Keyboard-only journey**: create a customer, an invoice, record its payment and open the P&L without a mouse; every control reachable and its focus visible. One browser test.
+- [ ] ~~moved to AI #3 as A-225 (25 Oct)~~ **H-2 Phone layout of the same ten screens** (390 px wide): no sideways scrolling of the page, tables scroll inside their box, buttons at least 44 px. Browser test per screen.
+- [ ] ~~moved to AI #3 as A-226 (25 Oct)~~ **H-3 Keyboard-only journey**: create a customer, an invoice, record its payment and open the P&L without a mouse; every control reachable and its focus visible. One browser test.
 - [ ] **H-4 Screen-reader names**: every icon-only button on the ten screens has a label; tables have captions; the axe scan in `view-registry-coverage.spec.ts` passes with no "serious" finding on them.
-- [ ] **H-5 Speed with a year of data**: a generated workspace with 12 months (≈5,000 entries, 600 invoices); the ten screens each open in under 1.5 s on the local build; a test that fails when one gets slower than that.
+- [ ] ~~moved to AI #3 as A-229 (25 Oct)~~ **H-5 Speed with a year of data**: a generated workspace with 12 months (≈5,000 entries, 600 invoices); the ten screens each open in under 1.5 s on the local build; a test that fails when one gets slower than that.
 - [ ] **H-6 Empty and error states**: each of the ten screens with no data shows what to do next; each with a failed load shows a retry, not a blank page. Tests per screen.
 - [ ] **H-7 Printing**: P&L, balance sheet, trial balance and an invoice print on A4 and Letter without cut columns; print stylesheet tests (page width, hidden navigation).
 - [ ] **H-8 Dates and numbers per locale**: en-US, en-GB and he-IL show dates and amounts the way that country writes them on every report header and total; tests per locale.
 - [ ] **H-9 Help links**: every screen's help button opens a page that exists (`screenHelp.ts` against `docs/help/`); a test that lists missing pages.
-- [ ] **H-10 Dark mode contrast** on the ten screens: text and figures at least 4.5:1; axe scan in dark mode.
+- [ ] ~~moved to AI #3 as A-227 (25 Oct)~~ **H-10 Dark mode contrast** on the ten screens: text and figures at least 4.5:1; axe scan in dark mode.
 
 ## New tasks from the bookkeeping-first plan (Claude, 20 Oct; PLAN §17)
 
