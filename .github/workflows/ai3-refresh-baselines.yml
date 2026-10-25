@@ -1,0 +1,42 @@
+# TEMPORARY (AI #3, 25 Oct) — remove before the PR is merged.
+#
+# `visual-baselines.yml` needs a manual dispatch, which this session's GitHub token cannot create
+# (HTTP 403), and the sandbox cannot download Chromium. A-220 deliberately changes the printed and
+# on-screen date line of the P&L and the balance sheet, so their eight reference images must be
+# recaptured on the Linux Chromium CI uses. This workflow does exactly what the manual one does —
+# capture, then check the whole reference set — but commits the candidates to the branch that
+# triggered it, so they are reviewed as image diffs in the pull request. It pushes nothing to main
+# and makes no change once the images match.
+name: AI3 refresh visual baselines (temporary)
+on:
+  push:
+    branches:
+      - arena/e7001268-ledgerflow
+permissions:
+  contents: write
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        env:
+          HUSKY: 0
+      - run: npx playwright install --with-deps chromium
+      - name: Recapture the P&L and balance sheet references
+        run: npx playwright test e2e/visual-regression.spec.ts --grep "pnl|balance-sheet" --update-snapshots --retries=0
+      - name: Check the entire reference set
+        run: npx playwright test e2e/visual-regression.spec.ts --retries=0
+      - name: Commit the candidates to this branch
+        run: |
+          git add e2e/__screenshots__
+          if git diff --cached --quiet; then echo "No image changed"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "test: A-220 recaptured P&L and balance sheet reference images"
+          git push

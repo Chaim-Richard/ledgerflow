@@ -202,7 +202,9 @@ const Reports = React.memo(() => {
   }, [transactions, period]);
 
   const periodLabel = useMemo(() => {
-    if (customPeriod) return `Custom range: ${customPeriod.startDate} to ${customPeriod.endDate}`;
+    // A-220: the dates themselves come from ReportPeriodHeading below, in the reader's own date
+    // style, so this line does not repeat them in the storage format.
+    if (customPeriod) return 'Custom range';
     const fy = fiscalYearStartMonth === 1 ? String(selectedYear) : `FY${selectedYear}`;
     if (timeframe === 'month') return `${monthNames[selectedMonth]} ${period.startDate.slice(0, 4)}`;
     if (timeframe === 'quarter') return `${quarterNames[selectedQuarter]} ${fy}`;
