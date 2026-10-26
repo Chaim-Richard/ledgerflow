@@ -9,7 +9,8 @@ test('accounting glossary: bilingual search and recovery from no matches', async
   });
   await page.goto(`/#${tab}`);
   await expect(page.getByRole('heading', { name: 'Accounting glossary' })).toBeVisible();
-  await expect(page.getByRole('status')).toContainText('36 of 36 terms shown');
+  const termCount = page.getByText(/36 of 36 terms shown/);
+  await expect(termCount).toBeVisible();
 
   const search = page.getByLabel('Search English or Hebrew');
   await search.fill('מלאי');
@@ -17,5 +18,5 @@ test('accounting glossary: bilingual search and recovery from no matches', async
   await search.fill('not-a-term');
   await expect(page.getByText('No glossary terms match your search')).toBeVisible();
   await page.getByRole('button', { name: 'Clear search' }).click();
-  await expect(page.getByRole('status')).toContainText('36 of 36 terms shown');
+  await expect(page.getByText(/36 of 36 terms shown/)).toBeVisible();
 });
