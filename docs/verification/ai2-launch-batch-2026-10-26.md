@@ -1,6 +1,7 @@
 # AI #2 — launch-readiness batch (26 Oct 2026)
 
 **Branch:** `arena/63bdffa0-ledgerflow`, from `main` `116ee530`.
+**Review:** [PR #414](https://github.com/shmuelbiller1/ledgerflow/pull/414) (open; not merged by AI #2).
 **Queue:** `docs/COORDINATION.md` → “Tasks for Codex — AI #2”.
 **Lane:** screens, reports, settings lists, presentation and documentation only. No change to money
 calculation, posting, tax maths, `src/server/`, database schema, migrations, dependencies or
