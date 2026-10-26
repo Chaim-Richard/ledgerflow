@@ -77,7 +77,7 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   }, [fetchCashFlow, dateRange.start, dateRange.end, isComparative, getPrevPeriod]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const workspaces = useAuthStore(s => s.workspaces);

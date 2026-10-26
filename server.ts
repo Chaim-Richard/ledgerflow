@@ -7,6 +7,7 @@ import { registerAdminRoutes } from "./src/server/routes/adminRoutes.ts";
 import { registerLogsUploadRoutes } from "./src/server/routes/logsUploadRoutes.ts";
 import { registerLabelingRoutes } from "./src/server/routes/labelingRoutes.ts";
 import { registerAuthRoutes } from "./src/server/routes/authRoutes.ts";
+import { registerCspReportRoutes } from "./src/server/routes/cspReportRoutes.ts";
 import { registerStripeWebhookRoutes } from "./src/server/routes/stripeWebhookRoutes.ts";
 import { registerLedgerMatchRoutes } from "./src/server/routes/ledgerMatchRoutes.ts";
 import { registerTelemetryRoutes } from "./src/server/routes/telemetryRoutes.ts";
@@ -47,12 +48,7 @@ import { applySecurityMiddleware } from "./src/server/http/securityMiddleware.ts
 import { apiRequestLogger } from "./src/server/http/apiRequestLog.ts";
 import { serveApp } from "./src/server/http/serveApp.ts";
 
-import { 
-  publicInvoiceLimiter, 
-  pdfGenerationLimiter, 
-  brainRateLimiter,
-  createAppRateLimiters
-} from "./src/server/middleware/rateLimiters.ts";
+import { publicInvoiceLimiter, pdfGenerationLimiter, brainRateLimiter, createAppRateLimiters } from "./src/server/middleware/rateLimiters.ts";
 
 loadServerEnv();
 
@@ -74,6 +70,10 @@ async function buildApp(): Promise<{ app: express.Express; port: number }> {
 
   // Stripe Webhook needs raw body
   registerStripeWebhookRoutes(app, routeContext);
+
+  // S-23: the browser's own Content-Security-Policy reports — before the API limit, CSRF and the
+  // 50 mb JSON parser, because the user agent sends them with no token and its own content type.
+  registerCspReportRoutes(app);
 
   // Stripe receives its raw body first; other API traffic is checked before JSON parsing.
   app.use("/api/", limiter);

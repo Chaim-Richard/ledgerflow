@@ -11,6 +11,7 @@ import AsyncButton from '../ui/AsyncButton';
 import BankLineActionDialog from './BankLineActionDialog';
 import BankLineName from '../ui/BankLineName';
 import { useDialog } from '../../hooks/useDialog';
+import { useUIStore } from '../../stores/useUIStore';
 
 import type { useReconciliationModel } from './useReconciliationModel';
 
@@ -209,7 +210,8 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-[var(--pos)] mb-3" />
                      <h2 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Nothing to review</h2>
-                     <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">Every bank statement line is matched</p>
+                     <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">{searchQuery ? 'No bank lines match this search; clear it to see the others' : 'Import a statement from Bank Connections, or review the matched history'}</p>
+                     {!searchQuery && <button type="button" onClick={() => useUIStore.getState().setActiveTab('banking')} className="mt-4 min-h-11 rounded-xl border border-[var(--line)] px-4 py-2 text-xs font-bold text-[var(--text)]">Open Bank Connections</button>}
                   </div>
                 )}
              </div>
@@ -265,7 +267,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-indigo-500 mb-3" />
                      <h2 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">No ledger entries to match</h2>
-                     <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">All posted entries are cleared</p>
+                     <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">{searchQuery ? 'Clear the search to see uncleared entries' : 'All posted entries are cleared; add a new entry from Overview when there is more work'}</p>
                   </div>
                 )}
              </div>

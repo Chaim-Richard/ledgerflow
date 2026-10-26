@@ -1,7 +1,7 @@
 import { currencyDigits, minorToMajor, minorUnitRate } from '../../lib/currencyMinorUnits';
 import { useDialog } from '../../hooks/useDialog';
 import { operationIdFor } from '../../lib/serverAction';
-import React, { useRef, useState, useMemo, useEffect } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { X, DollarSign, Sparkles } from 'lucide-react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isUndepositedFundsAccount } from '../../lib/accountUtils';
@@ -13,6 +13,7 @@ import { describeError } from '../../lib/errorRemedies';
 import { savedInOtherWorkspace, workspaceChangedSince } from '../../lib/saveWorkspace';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useSuggestedRate } from '../../hooks/useSuggestedRate';
+import { usePageSyncedState } from '../../hooks/usePageSyncedState';
 import WithholdingField, { type Withholding } from '../purchases/WithholdingField';
 
 const cn = (...classes: (string | false | null | undefined)[]) => classes.filter(Boolean).join(' ');
@@ -44,8 +45,9 @@ export default function ReceivePaymentModal({
 
   // #114: the same payment retried after a lost reply is recorded once (server idempotency)
   const paymentOps = useRef(new Map<string, string>());
-  const [direction, setDirection] = useState<'received' | 'made'>(defaultDirection);
-  const [contactId, setContactId] = useState<string>(defaultContactId);
+  const defaultsKey = JSON.stringify([defaultDirection, defaultContactId, isOpen]);
+  const [direction, setDirection] = usePageSyncedState<'received' | 'made'>(defaultsKey, defaultDirection, defaultDirection);
+  const [contactId, setContactId] = usePageSyncedState(defaultsKey, defaultContactId, defaultContactId);
   const [date, setDate] = useState<string>(getLocalDateISO());
   const [amountDollars, setAmountDollars] = useState<string>('');
   const [method, setMethod] = useState<'cash' | 'check' | 'bank_transfer' | 'card' | 'other'>('bank_transfer');
@@ -70,17 +72,7 @@ export default function ReceivePaymentModal({
     );
   }, [accounts]);
 
-  // Set default deposit account
-  useEffect(() => {
-    if (cashAccounts.length > 0 && !depositAccountId) {
-      setDepositAccountId(cashAccounts[0].id);
-    }
-  }, [cashAccounts, depositAccountId]);
-
-  useEffect(() => {
-    setDirection(defaultDirection);
-    setContactId(defaultContactId);
-  }, [defaultDirection, defaultContactId, isOpen]);
+  const selectedDepositAccountId = depositAccountId || cashAccounts[0]?.id || '';
 
   // Filter target open documents
   // oldest first, so a payment settles the oldest invoices/bills first (the store lists newest first)
@@ -121,17 +113,17 @@ export default function ReceivePaymentModal({
     }
   }, [direction, contactId, invoices, bills, homeCurrency]);
 
-  // Pre-fill default document allocation
-  useEffect(() => {
-    if (defaultDocumentId && openDocs.some(d => d.id === defaultDocumentId)) {
-      const target = openDocs.find(d => d.id === defaultDocumentId);
-      if (target) {
-        const own = currencyDigits(target.currency);
-        setAmountDollars(minorToMajor(target.remainingCents, target.currency).toFixed(own));
-        setAllocationsMap({ [defaultDocumentId]: minorToMajor(target.remainingCents, target.currency).toFixed(own) });
-      }
+  // Pre-fill the requested document once for each document list/default combination.
+  const [prefillSource, setPrefillSource] = useState<{ documentId: string; documents: typeof openDocs } | null>(null);
+  if (defaultDocumentId && (prefillSource?.documentId !== defaultDocumentId || prefillSource.documents !== openDocs)) {
+    setPrefillSource({ documentId: defaultDocumentId, documents: openDocs });
+    const target = openDocs.find(d => d.id === defaultDocumentId);
+    if (target) {
+      const own = currencyDigits(target.currency);
+      setAmountDollars(minorToMajor(target.remainingCents, target.currency).toFixed(own));
+      setAllocationsMap({ [defaultDocumentId]: minorToMajor(target.remainingCents, target.currency).toFixed(own) });
     }
-  }, [defaultDocumentId, openDocs]);
+  }
 
   // the currency of what is being paid: the documents chosen (one payment is one currency)
   const payDoc = openDocs.find(d => parseFloat(allocationsMap[d.id] || '') > 0) || openDocs.find(d => d.id === defaultDocumentId);
@@ -177,7 +169,7 @@ export default function ReceivePaymentModal({
       toast.error('Payment amount must be greater than zero');
       return;
     }
-    if (!depositAccountId) {
+    if (!selectedDepositAccountId) {
       toast.error('Please select a Bank / Cash Account');
       return;
     }
@@ -222,7 +214,7 @@ export default function ReceivePaymentModal({
           customerId: contactType === 'customer' ? contactId : undefined,
           vendorId: contactType === 'vendor' ? contactId : undefined,
           entityName: contactName,
-          cashAccountId: depositAccountId,
+          cashAccountId: selectedDepositAccountId,
           ...(isForeign && dayRate ? { paymentExchangeRate: dayRate, paymentRateSource: dayRateSource } : {}),
           ...(direction === 'made' && withholding ? { withheldCents: withholding.withheldCents, withholdingRatePercent: withholding.ratePercent, ...(withholding.certificate ? { withholdingCertificate: withholding.certificate } : {}) } : {}),
           allocations: allocations.map(a => ({
@@ -409,7 +401,7 @@ export default function ReceivePaymentModal({
               </label>
               <select
                 id="pay-deposit-acc"
-                value={depositAccountId}
+                value={selectedDepositAccountId}
                 onChange={e => setDepositAccountId(e.target.value)}
                 required
                 className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"

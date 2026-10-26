@@ -1,0 +1,3 @@
+Customer ID,Customer Name,Prospect,Inactive,Bill to Contact First Name,Bill to Contact Last Name,Bill to Address-Line One,Bill to Address-Line Two,Bill to City,Bill to State,Bill to Zip,Bill to Country,Customer Type,Telephone 1,Telephone 2,Fax Number,Customer Email,Customer Web Site
+DELTA01,Delta Bakery,False,False,Dan,Fischer,41 Main St,,Buffalo,NY,14203,US,RETAIL,+1-716-555-0100,,,delta@example.com,www.deltabakery.example
+OMEGA99,Old Client Co,False,True,Ruth,Adler,1 Old Rd,,Albany,NY,12201,US,,+1-518-555-0199,,,ruth@oldclient.example,

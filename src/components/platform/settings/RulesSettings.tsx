@@ -314,8 +314,8 @@ function useRulesSettingsModel() {
         rule: generatedRule,
         affectedCount: dryRunRes.summary.totalMatched
       });
-    } catch (err: any) {
-      setAiError(err.message || 'Failed to generate AI rule');
+    } catch (err) {
+      setAiError(err instanceof Error && err.message ? err.message : 'Failed to generate AI rule');
     } finally {
       setIsGeneratingAiRule(false);
     }

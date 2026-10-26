@@ -90,3 +90,19 @@ export function opensFromServer(transactions: Transaction[], opening: ServerOpen
   if (workspaceId && opening.workspaceId !== workspaceId) return false;
   return !(asOfDate && asOfDate < opening.asOf);
 }
+
+/**
+ * L-123 step 3d: the entries a period screen sums (a P&L-type figure over `startDate`…, together with balances at its
+ * end or the day before it starts, e.g. a ratio's opening receivables). The server's answer is folded in only when
+ * `balanceEntries` would fold it in and the period starts after the server's day: every entry of such a period is
+ * loaded, and every balance it reads (the day before the start onwards) is then the server's. A period that starts on
+ * or before that day keeps the loaded entries (`periodBeforeOpening`).
+ */
+export function periodEntries(transactions: Transaction[], opening: ServerOpening | null, startDate: string, workspaceId?: string): Transaction[] {
+  return opensForPeriod(transactions, opening, startDate, workspaceId) ? foldServerOpening(transactions, opening) : transactions;
+}
+
+/** Whether `periodEntries` folds the server's answer in for these arguments. */
+export function opensForPeriod(transactions: Transaction[], opening: ServerOpening | null, startDate: string, workspaceId?: string): opening is ServerOpening {
+  return !!startDate && opensFromServer(transactions, opening, startDate, workspaceId) && !periodBeforeOpening(startDate, opening);
+}

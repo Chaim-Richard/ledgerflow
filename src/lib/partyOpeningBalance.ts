@@ -74,6 +74,27 @@ const amountCents = (text: string): number => {
   return Math.round(Number(clean) * 100);
 };
 
+const csvCell = (v: string) => (/[",\r\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+
+/**
+ * EG-14: the pasted lines (contact · number · date · due date (optional) · amount still owed) as the CSV the
+ * server's open-item import reads (POST /api/v1/open-items/preview and /confirm). The amount still owed is both
+ * the amount and the amount still open; the currency is left empty, so the workspace's is used. `lines[i]` is the
+ * pasted line of the CSV's row i + 2 (the heading is row 1), so the server's per-row results map back to the paste.
+ */
+export function openingRowsCsv(text: string): { csv: string; lines: number[] } {
+  const pasted = text.split(/\r?\n/).map((l, i) => ({ l, i: i + 1 })).filter(({ l }) => l.trim());
+  if (pasted.length && /amount|customer|vendor|number|date/i.test(pasted[0].l) && !/\d{4}-\d{2}-\d{2}/.test(pasted[0].l)) pasted.shift();
+  const out = ['contact,number,date,due date,currency,amount,amount still open'];
+  for (const { l } of pasted) {
+    const [contact = '', number = '', date = '', fourth = '', fifth = ''] = cells(l);
+    const hasDue = fifth !== '';
+    const owed = hasDue ? fifth : fourth;
+    out.push([contact, number, date, hasDue ? fourth : '', '', owed, owed].map(csvCell).join(','));
+  }
+  return { csv: pasted.length ? out.join('\n') : '', lines: pasted.map(p => p.i) };
+}
+
 export function parseOpeningRows(text: string, startDate?: string): OpeningRow[] {
   const lines = text.split(/\r?\n/).map((l, i) => ({ l, i: i + 1 })).filter(({ l }) => l.trim());
   if (lines.length && /amount|customer|vendor|number|date/i.test(lines[0].l) && !/\d{4}-\d{2}-\d{2}/.test(lines[0].l)) lines.shift();

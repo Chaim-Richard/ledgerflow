@@ -1,0 +1,10 @@
+Account Name,Account Code,Account Type,Description
+Petty Cash,1010,Cash,Office cash box
+Business Bank,1020,Bank,Main operating account
+Accounts Receivable,1100,Accounts Receivable,
+Accounts Payable,2000,Accounts Payable,
+Undeposited Funds,1200,Other Current Asset,
+Sales,4000,Income,Product income
+Cost of Goods Sold,5000,Cost Of Goods Sold,
+Advertising Expense,6100,Expense,
+Payment Clearing Account,1300,Payment Clearing Account,Zoho-specific; preview must name the row

@@ -115,7 +115,8 @@ export interface WorkspaceArchiveResult {
   manifest: JsonObject;
 }
 
-export async function buildWorkspaceArchive(payload: unknown, workspaceId: string): Promise<WorkspaceArchiveResult> {
+/** The verified backup's structure, after format and checksum checks. Throws with a reason otherwise. */
+async function verifyWorkspaceBackupPayload(payload: unknown, workspaceId: string): Promise<JsonObject> {
   if (!obj(payload) || payload.schemaVersion !== 1 || !obj(payload.workspace)
     || payload.workspace.id !== workspaceId || !obj(payload.metadata)) {
     throw new Error('The server backup belongs to a different workspace or has an unsupported format.');
@@ -126,27 +127,34 @@ export async function buildWorkspaceArchive(payload: unknown, workspaceId: strin
     || !Number.isFinite(Date.parse(payload.exportedAt))) {
     throw new Error('A verified server-authored backup is required; cached browser records are not sufficient.');
   }
-
-  const checksum = meta.checksum;
   if (!await backupChecksumMatches(payload)) throw new Error('Server backup checksum verification failed.');
+  return payload;
+}
 
-  const keys = Object.keys(meta.counts).sort();
+export async function buildWorkspaceArchive(payload: unknown, workspaceId: string): Promise<WorkspaceArchiveResult> {
+  const backup = await verifyWorkspaceBackupPayload(payload, workspaceId);
+  const meta = backup.metadata as JsonObject;
+
+  const checksum = String(meta.checksum);
+
+  const keys = Object.keys(meta.counts as JsonObject).sort();
   if (!keys.length || !keys.includes('transactions') || !keys.includes('accounts')) {
     throw new Error('The backup is missing required ledger collections.');
   }
-  const topArrays = Object.keys(payload).filter(key => Array.isArray(payload[key])).sort();
+  const topArrays = Object.keys(backup).filter(key => Array.isArray(backup[key])).sort();
   if (JSON.stringify(topArrays) !== JSON.stringify(keys)) {
     throw new Error('Backup collection inventory is incomplete or differs from its counts.');
   }
   const collections: WorkspaceArchiveResult['collections'] = [];
   const files: ZipEntry[] = [
-    { path: 'backup.json', content: JSON.stringify(payload, null, 2) },
-    { path: 'workspace.json', content: JSON.stringify(payload.workspace, null, 2) },
+    { path: 'backup.json', content: JSON.stringify(backup, null, 2) },
+    { path: 'workspace.json', content: JSON.stringify(backup.workspace, null, 2) },
   ];
   for (const key of keys) {
     if (!safeKey(key) || key === 'workspace' || key === 'metadata') throw new Error('Invalid collection name in backup.');
-    const count = meta.counts[key];
-    const records = payload[key] as unknown[];
+    const counts = meta.counts as JsonObject;
+    const count = counts[key];
+    const records = backup[key] as unknown[];
     if (!Array.isArray(records) || typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0 || records.length !== count) {
       throw new Error('Backup row count mismatch for ' + key + '.');
     }
@@ -161,7 +169,7 @@ export async function buildWorkspaceArchive(payload: unknown, workspaceId: strin
   const manifest: JsonObject = {
     format: 'ledgerflow-backup-archive-v1',
     workspaceId,
-    exportedAt: payload.exportedAt,
+    exportedAt: backup.exportedAt,
     sourceChecksumSha256: checksum,
     source: 'verified server workspace JSON backup',
     collections,
@@ -179,6 +187,20 @@ export async function buildWorkspaceArchive(payload: unknown, workspaceId: strin
   };
   files.unshift({ path: 'manifest.json', content: JSON.stringify(manifest, null, 2) });
   return { blob: makeStoredZip(files), collections, manifest };
+}
+
+/**
+ * E-53: the complete collections of the verified server backup, for read-only exports that must
+ * not fall back to the possibly-incomplete browser cache (same checks as the archive: format,
+ * workspace, server metadata and SHA-256 checksum). Returns the top-level arrays keyed by name.
+ */
+export async function verifiedBackupCollections(payload: unknown, workspaceId: string): Promise<Record<string, unknown[]>> {
+  const backup = await verifyWorkspaceBackupPayload(payload, workspaceId);
+  const collections: Record<string, unknown[]> = {};
+  for (const key of Object.keys(backup)) {
+    if (Array.isArray(backup[key])) collections[key] = backup[key] as unknown[];
+  }
+  return collections;
 }
 
 /** The stored entries of a ZIP made by makeStoredZip, CRC-checked, by name. */
