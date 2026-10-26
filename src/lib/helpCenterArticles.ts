@@ -32,7 +32,7 @@ export interface HowToArticle {
 export const SCREEN_HELP_DOCS: readonly ScreenHelpDoc[] = [
   {
     slug: 'overview',
-    screenIds: ['dashboard', 'overview', 'practice', 'help', 'support', 'accept-invite'],
+    screenIds: ['dashboard', 'overview', 'practice', 'help', 'glossary', 'support', 'accept-invite'],
     docPath: 'docs/help/overview.md',
     titleEn: 'Overview & Dashboard',
     titleHe: 'סקירה כללית ולוח בקרה',

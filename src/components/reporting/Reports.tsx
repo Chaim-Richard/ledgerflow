@@ -3,6 +3,7 @@ import { usePerformanceTrace } from '../../hooks/usePerformanceTrace';
 import { Transaction } from '../../types';
 import { 
   Download,
+  Link2,
   Loader2,
   Printer
 } from 'lucide-react';
@@ -30,6 +31,9 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { getComparePeriod, getReportPeriod } from '../../lib/fiscalCalendar';
 import type { CompareMode } from '../../lib/fiscalCalendar';
 import { reportStateFromParams, reportStateToParams } from '../../lib/reportPermalink';
+import type { ReportUrlState } from '../../lib/reportPermalink';
+import { copyReportLink } from '../../lib/reportViews';
+import ReportViewsControls from './ReportViewsControls';
 import { isTransactionInDateRange } from '../../lib/txFilters';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
@@ -76,6 +80,7 @@ const Reports = React.memo(() => {
   const [drillDownAccount, setDrillDownAccount] = useState<string | null>(null);
   // N-12: a report that knows the figure's filter gets it explained from the server
   const [drillDownExplain, setDrillDownExplain] = useState<ExplainRequest | undefined>(undefined);
+  const [linkNotice, setLinkNotice] = useState('');
   const availableYears = useMemo(() => {
     if (!transactions || transactions.length === 0) return [...new Set([workspaceYearMonth().year, ...(linked.year ? [linked.year] : [])])].sort((a, b) => b - a);
     const yearsSet = new Set<number>(linked.year ? [linked.year] : []);
@@ -132,6 +137,16 @@ const Reports = React.memo(() => {
   });
 
   const [selectedQuarter, setSelectedQuarter] = useState<number>(() => (linked.quarter >= 0 ? linked.quarter : 0));
+  /** C-85/C-96: one state object backs the named views and the exact share link. */
+  const reportState = useMemo<ReportUrlState>(() => ({
+    report: activeTab,
+    year: selectedYear,
+    timeframe,
+    quarter: selectedQuarter,
+    month: selectedMonth,
+    compare: compareMode,
+    ...(customPeriod || {}),
+  }), [activeTab, selectedYear, timeframe, selectedQuarter, selectedMonth, compareMode, customPeriod]);
 
   // The dates every report uses (fiscal-year aware) and the comparison period
   const period = useMemo(
@@ -264,7 +279,21 @@ const Reports = React.memo(() => {
           <button onClick={printReport} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
             <Printer size={16} aria-hidden="true" /> Print / PDF
           </button>
+          <button type="button" onClick={() => {
+            const writeText = (text: string) => {
+              if (!navigator.clipboard?.writeText) return Promise.reject(new Error('Clipboard unavailable'));
+              return navigator.clipboard.writeText(text);
+            };
+            void copyReportLink(reportState, window.location.href, writeText).then(result => {
+              setLinkNotice(result.ok
+                ? 'Report link copied. Paste it to open this report with the same period and comparison.'
+                : 'Could not copy automatically. The address bar already contains this report link; copy it from there.');
+            });
+          }} className="min-h-11 px-3 flex items-center gap-2 text-sm text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brass)]">
+            <Link2 size={16} aria-hidden="true" /> Copy link
+          </button>
         </div>
+        {linkNotice && <p role="status" className="w-full text-xs text-[var(--muted)]">{linkNotice}</p>}
       </section>
       <div data-print-hide role="region" aria-label="Report period" className="flex flex-wrap items-center gap-2 [&_button]:min-h-11 [&_select]:min-h-11 [&_button]:min-w-11">
             {/* A-218: which paper this report prints on, beside the period controls so the page
@@ -346,6 +375,15 @@ const Reports = React.memo(() => {
             <div className="h-4 w-px bg-[var(--line)]" />
             
             <button className="min-h-11 px-3 border border-[var(--line)] rounded-md text-xs" onClick={() => setPackPeriod({ startDate: period.startDate, endDate: period.endDate })}>Report pack</button>
+            <ReportViewsControls state={reportState} onUse={next => {
+              setActiveTab(next.report);
+              setSelectedYear(next.year);
+              setTimeframe(next.timeframe);
+              setSelectedQuarter(next.quarter);
+              setSelectedMonth(next.month);
+              setCompareMode(next.compare);
+              setCustomPeriod(next.startDate && next.endDate ? { startDate: next.startDate, endDate: next.endDate } : undefined);
+            }} />
       </div>
 
       {packPeriod && <React.Suspense fallback={<p role="status">Loading report pack…</p>}><ReportPackDialog {...packPeriod} onClose={() => setPackPeriod(undefined)} /></React.Suspense>}

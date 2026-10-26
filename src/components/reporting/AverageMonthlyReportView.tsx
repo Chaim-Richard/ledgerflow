@@ -3,6 +3,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, workspaceYearMonth } from '../../lib/utils';
 import { computeMonthlyAverages } from '../../lib/reportGenerators';
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import ReportEmptyState from './ReportEmptyState';
 
 interface Props {
   selectedYear?: number;
@@ -17,6 +18,7 @@ export const AverageMonthlyReportView: React.FC<Props> = ({
   const summary = useMemo(() => {
     return computeMonthlyAverages(accounts, transactions, selectedYear);
   }, [accounts, transactions, selectedYear]);
+  const noActivity = summary.monthlyData.every(month => month.incomeCents === 0 && month.expenseCents === 0);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6" id="monthly-averages-report">
@@ -31,6 +33,8 @@ export const AverageMonthlyReportView: React.FC<Props> = ({
           </p>
         </div>
       </div>
+      {noActivity && <ReportEmptyState title="No income or expenses in this year"
+        description="Choose another year, or record posted sales and expense entries first. The twelve months remain visible at zero so the selected period is clear." />}
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

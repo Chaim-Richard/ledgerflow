@@ -11,7 +11,7 @@ import { useUIStore } from '../../stores/useUIStore';
 import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import type { AlgoInput } from '../../lib/algorithms/types';
 import { buildAlgorithmContext } from '../../lib/algorithms/types';
-import { exportToExcel } from '../../lib/excelExport';
+import { currentReportExportContext, exportToExcel, reportTitleRows } from '../../lib/excelExport';
 import { getLocalDateISO } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { downloadCsv } from '../../lib/csvExport';
@@ -132,7 +132,12 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
     const sanitizedName = algorithm.name.replace(/[^a-zA-Z0-9_-]/g, '_');
     await exportToExcel(columns, results.rows, {
       sheetName: 'Report',
-      fileName: `${sanitizedName}_${getLocalDateISO()}.xlsx`
+      fileName: `${sanitizedName}_${getLocalDateISO()}.xlsx`,
+      titleRows: reportTitleRows(currentReportExportContext(
+        algorithm.name,
+        `Algorithm inputs as of ${getLocalDateISO()}`,
+        'Loaded workspace records and algorithm preview',
+      ))
     });
   };
 

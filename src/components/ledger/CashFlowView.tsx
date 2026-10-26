@@ -3,13 +3,14 @@ import React, { useId, useState, useMemo, useCallback, useEffect, useRef } from 
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { getComparePeriod } from '../../lib/fiscalCalendar';
 import { formatCurrency, cn, getLocalDateISO, monthBoundsISO } from '../../lib/utils';
-import { exportToExcel } from '../../lib/excelExport';
+import { currentReportExportContext, exportToExcel, reportTitleRows } from '../../lib/excelExport';
 import { computeCashFlow } from '../../server/reports/computeReports';
 import { Calendar, FileSpreadsheet, Waves, SplitSquareHorizontal } from 'lucide-react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerCashFlowData } from '../../hooks/useFinancialReporting';
 import MonthNavigator from '../ui/MonthNavigator';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import ReportEmptyState from '../reporting/ReportEmptyState';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
 
@@ -167,6 +168,8 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   // AUD-10: the server's answer, or the figures worked out here
   const provenance = isServerAuthoritative && serverData ? provenanceFromResponse(serverData)
     : serverFailed || browserFigures.completeness !== 'complete' ? browserFigures : null;
+  const noCashMovement = !loadingStates.cf && [currentData.operating, currentData.investing, currentData.financing]
+    .every(section => section.inflow === 0 && section.outflow === 0 && section.total === 0);
 
   const prevData = useMemo(() => {
     if (isServerAuthoritative && serverPrevData) {
@@ -189,10 +192,11 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
       { header: isComp ? 'Variance %' : '', key: 'variance', width: 15 },
     ];
 
-    const titleRows = [
-      [labels.title],
-      [`Period: ${dateRange.start} to ${dateRange.end}`]
-    ];
+    const titleRows = reportTitleRows(currentReportExportContext(
+      labels.title,
+      `${dateRange.start} to ${dateRange.end}`,
+      'Posted cash movements',
+    ));
 
     const rows = [
       {
@@ -229,6 +233,8 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
     <div className="space-y-6">
       {/* AUD-10: where these figures come from */}
       <ReportProvenanceNote id="cf-statement-provenance" provenance={provenance} onRefresh={() => loadServerReport()} busy={loadingStates.cf} />
+      {noCashMovement && <ReportEmptyState title="No cash movement in this period"
+        description="Choose another period, or record a posted receipt or payment on a cash or bank account. This statement reads posted cash movements only." />}
 
 
       {/* Date Range & Controls */}

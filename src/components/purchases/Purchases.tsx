@@ -36,6 +36,7 @@ import { deleteWithUndo } from '../../lib/undoableDelete';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 import { EmptyState } from '../ui/EmptyState';
+import ListColumnChooser from '../ui/ListColumnChooser';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
 import ExpectedBills from './ExpectedBills';
 import type { ExpectedBill } from '../../lib/expectedBills';
@@ -319,7 +320,9 @@ export default function Purchases() {
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {activeSubTab === 'bills' ? (
           // the header and the totals stay in view while the list scrolls (I-14)
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[70vh]" data-list-columns="purchase-bills">
+            <ListColumnChooser scope="purchase-bills" label="Bills"
+              columns={['Selection', 'Vendor', 'Bill #', 'Date', 'Due Date', 'Status', 'Amount', 'Actions']} />
             {pdfWorkspaceId && (
               <DocumentBulkBar type="bill" noun="bill" ids={[...pickedBills].filter(id => filteredBills.some(b => b.id === id))}
                 documents={filteredBills.filter(b => pickedBills.has(b.id))}
@@ -483,7 +486,9 @@ export default function Purchases() {
             </table>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-list-columns="purchase-vendors">
+            <ListColumnChooser scope="purchase-vendors" label="Vendors"
+              columns={['Vendor Name', 'Category', 'Email', 'Phone', 'Outstanding balance', ...(canEditContacts ? ['Actions'] : [])]} />
             <TagFilter tags={vendorTags} value={vendorTag} onChange={setVendorTag} label="Show vendors with the tag" />
             <ShowArchivedToggle count={archivedVendors} on={showArchivedVendors} onChange={setShowArchivedVendors} noun="vendor" />
             {canEditContacts && (

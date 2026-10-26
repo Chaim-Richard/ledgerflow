@@ -12,6 +12,7 @@ import { motion } from 'motion/react';
 import InvoiceModal from './InvoiceModal';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { EmptyState } from '../ui/EmptyState';
+import ListColumnChooser from '../ui/ListColumnChooser';
 import CustomerModal from './CustomerModal';
 import TagFilter from '../common/TagFilter';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
@@ -387,7 +388,9 @@ export default function Sales() {
               workspaceId={currentWorkspaceId} onClear={() => setPickedInvoices(new Set())} />
           )}
           {/* the header and the totals stay in view while the list scrolls (I-14) */}
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[70vh]" data-list-columns="sales-invoices">
+            <ListColumnChooser scope="sales-invoices" label="Invoices"
+              columns={['Selection', 'Number', 'Customer', 'Date', 'Due', 'Amount', 'State', 'Actions']} />
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Invoices</caption>
               <thead className="sticky top-0 z-10 bg-[var(--surface)]">
@@ -661,7 +664,9 @@ export default function Sales() {
             <EmailStatementsButton className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-50" />
             <ShowArchivedToggle count={archivedCustomers} on={showArchivedCustomers} onChange={setShowArchivedCustomers} noun="customer" />
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-list-columns="sales-customers">
+            <ListColumnChooser scope="sales-customers" label="Customers"
+              columns={['Customer Profile', 'Contact', 'Net Receivable', 'Actions']} />
             {canEditContacts && (
               <InlineAdd className="px-4 md:px-8 pt-4" label="New customer name" placeholder="Add a customer: type a name and press Enter"
                 existing={customers.map(c => c.name)} onAdd={name => addEntity('customers', { name, status: 'active' }, `Customer "${name}" added`)} />

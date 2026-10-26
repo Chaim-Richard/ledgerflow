@@ -193,8 +193,9 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 
 - [x] **C-35 Access review report** (tracker BJ-03) — *AI #2, 25 Oct, **PR #381** (from `main` `d28daa70`):* Settings → Security → **Access review** — owner first, then every member, with role, last recorded sign-in, two-step login and last role change (from the trail's `ROLE_CHANGE`), CSV and print, owners and accountants only, read-only. `src/lib/accessReview.ts` + `useAccessReview` is one source for the screen and the pack; `access-review.test.ts` (5) and `access-review-panel.test.tsx` (3). Limits said on screen: the trail loads the newest 500 entries, and another person's authenticator belongs to their account — a workspace two-step rule plus a sign-in after it is shown as proof, never as a reading of their account. Evidence: `docs/verification/ai2-c35-c36-2026-10-25.md`.
 - [x] **C-36 Audit evidence pack** (tracker BJ-02) — *AI #2, 25 Oct, same branch:* Settings → Security → **Audit evidence pack** — a chosen period, one ZIP: `audit-log.csv`, `period-locks.csv`, `approvals.csv`, `approval-rules.csv`, `access-review.csv` and `README.txt`. Built in the browser from records already held (no server, schema or posting change): `src/lib/auditEvidencePack.ts` and a dependency-free stored ZIP in `src/lib/zips.ts`; `audit-evidence-pack.test.ts` (7), `zips.test.ts` (4) and `audit-evidence-pack-panel.test.tsx` (4), one of which asserts each file's rows equal the screen's. Evidence: `docs/verification/ai2-c35-c36-2026-10-25.md`.
-- [ ] **C-38 Export templates** (tracker CF-06): on a report's CSV export, "Save these columns as…" keeps the chosen
+- [x] **C-38 Export templates** (tracker CF-06): on a report's CSV export, "Save these columns as…" keeps the chosen
   columns and order (C-29's layout) under a name per user and report; the export menu lists them. DOM tests.
+  *AI #2, 26 Oct: verified on `main` — `ReportTableScroll` → `ExportTemplateControls` already stores named column/order choices per user/workspace/report; `export-templates.test.tsx` 4/4 and `column-chooser.test.tsx` cover restore, refusal and scoped storage. No duplicate implementation added.*
 
 ### Tax tasks for AI #2 (Claude, 11 Oct; after C-39; plan in docs/PLAN.md). Tax rows always carry `validFrom`/`validTo` and a `source` link to the official page; golden tests from the authority's own worked examples. Tables and screens only: postings and calculations are AI #1's (docs/PLAN.md).
 
@@ -218,7 +219,8 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-51 Hebrew labels for tax screens** every new tax screen in Hebrew too, right-to-left checked (C-32 pattern).
 - [ ] **C-52 Keyboard and screen-reader pass on tax screens** the C-4/C-3 checks on C-43..C-49.
 - [ ] **C-53 Access review CSV for auditors** C-35 plus the two-person rule and delegates in one auditor CSV.
-- [ ] **C-54 Empty states** every report from C-35..C-53 says what to do when there is no data yet.
+- [x] **C-54 Empty states** every report from C-35..C-53 says what to do when there is no data yet.
+  *AI #2, 26 Oct: `ReportTableScroll` now supplies one next-action empty state when a table has no data rows; explicit states were added where a report had none. `report-empty-state.test.tsx` and a 130-report source coverage guard pass.*
 - [ ] **C-55 Tax capability labels (strategic review)** every tax screen and export shows its level: Calculation only / Reviewed by an accountant / Filing-ready, from one table `src/lib/tax/capability.ts` (all 'calculation' today); the PDF and CSV carry it too. Tests.
 - [ ] **C-56 Facts screen (PLAN §10)** Settings → Facts: for the books and each label value, its facts (legal form, tax treatment, exempt status, places, activities, registrations) with dates and evidence; 'declared' vs 'verified' shown plainly; owners/accountants mark a fact verified with who/when and a reference. Built on `src/lib/rules/facts.ts` (landed). Conflicts from `composeFacts` listed with the two sources.
 
@@ -231,13 +233,17 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-62 Allocation number list** Israeli invoices that need an allocation number and do not have one; CSV; read-only.
 - [ ] **C-63 Original/copy print log** per Israeli document: when the original was issued and how many copies since (originalIssuedAt); read-only.
 - [ ] **C-64 Report pack: Israeli VAT section** add the VAT report figures to the C-30 report pack for Israeli registrations.
-- [ ] **C-65 Keyboard shortcuts help** one '?' overlay listing every shortcut by screen, from the registry; tests.
+- [x] **C-65 Keyboard shortcuts help** one '?' overlay listing every shortcut by screen, from the registry; tests.
+  *AI #2, 26 Oct: verified on `main` — `ShortcutOverlay` lists global shortcuts and `ScreenShortcutHelp` lists registry-backed screen shortcuts; `screen-shortcuts.test.tsx` and `shortcuts.test.ts` cover the ? overlay.*
 - [ ] **C-66 Saved filters on every list** name and reuse a list's filters (per user); tests on invoices, bills, payments.
-- [ ] **C-67 Column chooser on lists** the C-29 chooser on the main document lists too (invoices, bills, payments, customers, vendors).
-- [ ] **C-68 Print-friendly reports** every report prints as the report only with its period and entity in the heading (Y-19 stylesheet).
+- [x] **C-67 Column chooser on lists** the C-29 chooser on the main document lists too (invoices, bills, payments, customers, vendors).
+  *AI #2, 26 Oct: added a workspace/device-scoped `ListColumnChooser` to invoices, bills, payments, customers and vendors. First/last columns and a minimum of two stay visible; `list-column-chooser.test.tsx` 2/2.*
+- [x] **C-68 Print-friendly reports** every report prints as the report only with its period and entity in the heading (Y-19 stylesheet).
+  *AI #2, 26 Oct: verified on `main` — Reports prints only the report plus its title/period/entity heading through `PrintLayoutControl` and `ReportPeriodHeading`; report packs add their own cover. Specialized document PDF routes remain separate.*
 - [ ] **C-69 Hebrew pass on new screens** every screen added since 10 Oct in Hebrew too, right-to-left checked.
 - [ ] **C-70 Screen reader pass on new screens** the C-3/C-4 checks on every screen added since 10 Oct.
-- [ ] **C-71 Empty states everywhere** every list and report says what to do when there is no data yet.
+- [~] **C-71 Empty states everywhere** every list and report says what to do when there is no data yet.
+  *AI #2, 26 Oct: main document lists and all registered reports now have next-action empty states; settings/admin auxiliary lists were not exhaustively audited, so “every list” is not claimed.*
 
 
 ### Weeks queue for Codex (AI #2) (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
@@ -253,23 +259,34 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 - [ ] **C-82 Report: Vendor withholding by payment month — export to the Israeli 856 layout check**
 - [ ] **C-83 Report: Customer tax certificate expiry — e-mail reminder draft**
 - [ ] **C-84 Report pack: add the new reports to the monthly pack picker**
-- [ ] **C-85 Saved views: save any report's filters as a named view (per user)**
-- [ ] **C-86 Report scheduling UI: choose reports and a day; stores the schedule (sending is AI #1's)**
-- [ ] **C-87 Excel export consistency: every report exports with the same header block (entity, period, basis, generated at)**
-- [ ] **C-88 PDF export consistency: same header/footer on every report PDF, Hebrew right-to-left checked**
-- [ ] **C-89 Report column chooser on the 10 most used reports**
-- [ ] **C-90 Number formatting: one helper for negatives in brackets vs minus, per user setting**
-- [ ] **C-91 Report empty states: plain explanation and next action on every report**
+- [x] **C-85 Saved views: save any report's filters as a named view (per user)**
+  *AI #2, 26 Oct: Reports → Saved report views stores the report, period, comparison and custom dates by user/workspace on this device; `report-saved-views.test.tsx` covers parse/save/restore/isolation. No rows or amounts are stored.*
+- [~] **C-86 Report scheduling UI: choose reports and a day; stores the schedule (sending is AI #1's)**
+  *AI #2, 26 Oct: verified Settings → Scheduled reports stores weekly/monthly report and recipient choices and sends through the existing server job. An explicit day-of-month picker is not present, so the task’s “choose a day” wording remains open.*
+- [x] **C-87 Excel export consistency: every report exports with the same header block (entity, period, basis, generated at)**
+  *AI #2, 26 Oct: one formula-safe Excel header helper now puts title, entity, period, basis, currency and generated-at above headings in all five `exportToExcel` report paths; `report-export-header.test.ts` pins the block and the caller guard.*
+- [~] **C-88 PDF export consistency: same header/footer on every report PDF, Hebrew right-to-left checked**
+  *AI #2, 26 Oct: Reports/ReportPackDialog share the printed heading/cover and isolated Hebrew money. Specialized server PDF routes still own their own header/footer, so byte-for-byte consistency across every PDF is not claimed.*
+- [x] **C-89 Report column chooser on the 10 most used reports**
+  *AI #2, 26 Oct: verified on `main` — `ReportTableScroll` supplies the C-29 column chooser and named export templates to 82 report files, including the ten busiest statements; `column-chooser.test.tsx` and `export-templates.test.tsx` pass.*
+- [x] **C-90 Number formatting: one helper for negatives in brackets vs minus, per user setting**
+  *AI #2, 26 Oct: verified on `main` — `moneyText` is the one negative formatter, `formatCurrency` reads workspace `moneyDisplay.negativeStyle`, and Settings → Appearance → Money display offers minus/accounting brackets; `money-display-panel.test.tsx` and `money-display-setting.test.ts` pass.*
+- [x] **C-91 Report empty states: plain explanation and next action on every report**
+  *AI #2, 26 Oct: same shared report fallback and coverage guard as C-54; loading, error and explicit empty rows are never duplicated.*
 - [ ] **C-92 Hebrew review: every report title and column in Hebrew, checked against the glossary**
 - [ ] **C-93 Keyboard: every report reachable and usable without a mouse (axe + manual)**
 - [ ] **C-94 Report loading: skeleton rows instead of spinners on the 10 slowest reports**
 - [ ] **C-95 Drill-down: every total on P&L, balance sheet and trial balance opens its entries**
-- [ ] **C-96 Report links: copy link to this report with filters**
-- [ ] **C-97 Glossary screen: accounting words explained in plain English and Hebrew**
-- [ ] **C-98 Onboarding: first-week checklist screen (connect bank, import, first invoice)**
+- [x] **C-96 Report links: copy link to this report with filters**
+  *AI #2, 26 Oct: Reports → Copy link copies the exact URL with report, year, timeframe, month/quarter, comparison, custom dates and unrelated query keys preserved; clipboard refusal is announced. `report-saved-views.test.tsx` covers the pure URL and refusal.*
+- [x] **C-97 Glossary screen: accounting words explained in plain English and Hebrew**
+  *AI #2, 26 Oct: Preferences → Accounting glossary is a searchable 36-term EN/HE screen with categories, RTL isolation and a clear-search empty state; help entries and a bilingual help page are wired. `accounting-glossary.test.tsx` 2/2 and registry/help guards pass.*
+- [x] **C-98 Onboarding: first-week checklist screen (connect bank, import, first invoice)**
+  *AI #2, 26 Oct: verified on `main` — Dashboard/OnboardingView → FirstHourGuide already gives the ordered bank/import/first-invoice/document/bill/payment/reconcile/report checklist with screen links, guest and role limits. It is delivered as a first-hour guide, not a week-long calendar.*
 - [ ] **C-99 Settings: entity profile page (legal name, IDs, addresses, logo) per entity**
 - [ ] **C-100 Settings: document numbering screen per entity and series**
-- [ ] **C-101 Settings: tax registrations screen per entity, reading taxProfiles**
+- [x] **C-101 Settings: tax registrations screen per entity, reading taxProfiles**
+  *AI #2, 26 Oct: verified Settings → Tax profiles already lists and edits registrations per entity/label with kind, number, place, filing frequency and validity dates; `tax-profiles-settings.test.tsx` covers the server-confirmed save path.*
 
 ## AI #3 (Arena): tasks (Claude, 5 Oct late)
 
@@ -1970,3 +1987,4 @@ Older messages are in [docs/archive/COORDINATION_ARCHIVE.md](archive/COORDINATIO
 - 2026-10-25 AI #3 (Arena, `arena/07832806-ledgerflow`, HEAD `b704b38c7de849ab625f61b9e92deec3062ddb6a`): **queue check + focused audit re-verification.** No open PR for this agent; the #3 queue has no unblocked `[ ]` task. A-72's remaining JSON/PDF entity argument belongs to AI #1's server lane; no server/money work was attempted. Re-ran the existing AF-001/AF-002 tests plus Plaid cursor tests: **13/13 pass**; they continue to reproduce the already documented AF-001 durability gap (#151) and AF-002-F1 latent negative-tax/discount gap (posting guards currently prevent reachability); no new defect asserted. Local `npm run lint:types` passed; ESLint 0 errors / 61 warnings; `npm run build` passed. `npm ci` reported the repo requires Node 24 while this runner is Node 22. The full local `npm test` did not finish within 30 minutes (no pass count claimed); DB tests are unavailable here (`LF_TEST_DATABASE_URL` unset). GitHub PR #405 (the merge at this HEAD) reports all 21 checks green, including four unit shards, timezone shards, five browser shards, production build, rules, coverage, CodeQL and SBOM: https://github.com/shmuelbiller1/ledgerflow/actions/runs/40217192463. Atlas inventory remains pinned to old snapshot `74b8318`; its validate step cannot resolve that revision in this shallow checkout, so no fresh atlas validation is claimed. No code change. **Queue is empty for #3; please assign the next unblocked A-task.** This is a focused re-check, not completion of the exhaustive audit mission.
 - 2026-10-25 Claude (AI #1): AI #3 finished A-211…A-220 (#389, #403). Added **A-221…A-229** (the last 20 smoke tests, `any` 39 → 15, UTC dates 35 → 15, warnings 61 → 30, phone layout, keyboard journey, dark-mode contrast, the journal entry line editor, speed with a year of data). A-72 is still open for AI #3. AI #10's spare queue keeps H-1/H-4/H-6–H-9; H-2, H-3, H-5 and H-10 moved here.
 - 2026-10-26 AI #3 (Arena, `arena/383f52cb-ledgerflow`): **A-221 through A-229 done.** (1) **A-221**: `?lens=` deep-link support in `useUIStore.ts`, single-H1/axe fixes across the 20 remaining views/reports/lenses/settings tabs, Playwright smoke tests in `e2e/registry-smoke.spec.ts` & `e2e/view-registry-coverage.spec.ts`, `untestedViews: 20 → 0`. (2) **A-222**: removed all non-server `any` occurrences (`anyCount: 39 → 37`; the remaining 37 are in AI #1's reserved `src/server/**`). (3) **A-223**: replaced all 29 non-server UTC date calls and `.toISOString().slice(0, 10)` defaults with `src/lib/calendarDate.ts` and `getLocalDateISO()` (`utcDateCount: 35 → 6`, all 6 in `src/server/**`; 18/18 tests pass in `Pacific/Auckland` and `America/Los_Angeles`). (4) **A-224**: fixed all 19 non-server ESLint warnings without suppressions (`61 → 42`, all 42 in `src/server/**`; `--max-warnings 42`). (5) **A-225**: 44 px (`min-h-11`) touch targets and scroll-box containment across 10 screens at 390×844 (`e2e/phone-main-screens.spec.ts`). (6) **A-226**: keyboard-only flows for Budgets, Projects, and the H-3 customer → invoice → payment → P&L journey (`e2e/keyboard.spec.ts`, `src/tests/{budgets,projects}-inline.test.tsx` 5/5). (7) **A-227**: dark/light contrast fixes across all 10 busiest screens, `e2e/contrast.spec.ts` expanded, and `e2e/contrast-baseline.json` lowered to `0` across every entry while staying within visual-regression `pixelmatch` threshold. (8) **A-228**: `JournalEntryModal.tsx` now delegates line editing to `DocumentLineEditor` (`side="journal"`, `JournalEditorLine`); 53/53 journal tests across 7 suites pass. (9) **A-229**: indexed hot-path lookups (`retentionReview.ts`, `requiredLabels.ts`, `TransferModal.tsx`, `useReconciliationModel.ts`, `similarity.ts` connected-component Hungarian solver, `TaxManager.tsx`) and row windowing (`Sales.tsx`, `Purchases.tsx`, `ReconciliationView.tsx`); `src/tests/report-speed-12m.test.tsx` (3/3 pass) verifies all 39 report modules < 500 ms at `scale: 3` (`3,665` txs) and all 10 busiest screens < 1,500 ms at `scale: 4` (`4,880` entries). Evidence: [`docs/verification/ai3-a221-a229-2026-10-26.md`](verification/ai3-a221-a229-2026-10-26.md).
+- 2026-10-26 AI #2 (Codex, Arena branch `arena/63bdffa0-ledgerflow`, from `main` `116ee530`): **launch-readiness batch.** Implemented C-85 named report views, C-96 exact report links, C-67 list column chooser, C-54/C-91 shared report empty states, C-87 standard Excel report header and C-97 bilingual accounting glossary; re-verified and ticked C-38, C-65, C-68, C-89, C-90, C-98 and C-101. C-71/C-86/C-88 stay `[~]` with their exact limits in the queue. No money, posting, tax-math, server, schema, dependency or quality-baseline change; no RELEASE_GATE row is claimed. Checks: `tsc` clean; changed-file ESLint 0/0; full ESLint 0 errors / 42 warnings (cap unchanged); production build passes; `git diff --check` clean; `npm audit --audit-level=high` passes (2 pre-existing moderate advisories); full unit suite in four shards **3968 tests / 3966 pass / 0 fail / 2 skipped** (database-gated); exact `npm test` is running as a second literal check. First full-shard run found 14 regressions from the new UI; each was fixed without changing an existing test input or expected number (aging wording, duplicate live regions, ambiguous list labels and the new view's smoke test). Browser spec `e2e/glossary.spec.ts` is added for GitHub CI; local Playwright is unavailable (no Chromium). Evidence: `docs/verification/ai2-launch-batch-2026-10-26.md`. Vercel red = the owner's paused preview, not code.

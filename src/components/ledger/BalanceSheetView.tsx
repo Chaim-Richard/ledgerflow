@@ -4,7 +4,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useId, useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { ChartAccount, Transaction } from '../../types';
 import { getLocalDateISO, addToDateISO } from '../../lib/utils';
-import { exportToExcel } from '../../lib/excelExport';
+import { currentReportExportContext, exportToExcel, reportTitleRows } from '../../lib/excelExport';
 import { isPostable, isTransactionInDateRange, lineAmount, calculateNetIncome } from '../../lib/txFilters';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useFinancialReporting, ServerBalanceSheetData } from '../../hooks/useFinancialReporting';
@@ -262,10 +262,11 @@ function useBalanceSheetModel({ accounts = [], formatCurrency, asOfDate: pageAsO
       { header: isComparative ? 'Variance %' : '', key: 'variancePct', width: 15 },
     ];
 
-    const titleRows = [
-      ['Balance Sheet Statement'],
-      [`Reporting Date: As of ${asOfDate}`, isComparative ? `Prior Reference: As of ${priorDate}` : '']
-    ];
+    const titleRows = reportTitleRows(currentReportExportContext(
+      'Balance Sheet Statement',
+      `As of ${asOfDate}${isComparative ? ` · prior reference ${priorDate}` : ''}`,
+      basis === 'cash' ? 'Cash' : 'Accrual',
+    ));
 
     const rows: (Record<string, string | number | null> | string[])[] = [];
 

@@ -8,7 +8,7 @@ import {
   Calendar, FileSpreadsheet 
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { exportToExcel } from '../../lib/excelExport';
+import { currentReportExportContext, exportToExcel, reportTitleRows } from '../../lib/excelExport';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
@@ -318,7 +318,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
     await exportToExcel(columns, rows, {
       sheetName: 'Trial Balance',
-      fileName: `trial_balance_as_of_${asOfDate}.xlsx`
+      fileName: `trial_balance_as_of_${asOfDate}.xlsx`,
+      titleRows: reportTitleRows(currentReportExportContext('Trial Balance', `As of ${asOfDate}`, 'Accrual posted entries'))
     });
   };
 

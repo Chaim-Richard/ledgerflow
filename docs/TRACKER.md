@@ -1652,9 +1652,9 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CF-02 Activity under project
 - [ ] CF-03 Rate hierarchy
 - [ ] CF-04 Working time / capacity
-- [ ] CF-06 Export templates
+- [x] CF-06 Export templates (AI #2, 26 Oct: re-verified on `main`; see the batch below)
 - [ ] CF-05 Per-user bookmarks
-- [~] CF-06 Export templates — **11 Oct (AI #2, C-38):** named C-29 column/order choices for indexed report tables and statement period groups, scoped per user/workspace/report on this browser. Apply then use the existing CSV action; changed schemas are refused, and blocked storage is explicit. Fifteen targeted tests and actual phone CSV download pass; full final gates pending on `codex/c38-export-templates`.
+- [x] CF-06 Export templates — **26 Oct (AI #2, C-38):** named C-29 column/order choices for indexed report tables and statement period groups, scoped per user/workspace/report on this browser. Apply then use the existing CSV action; changed schemas are refused, and blocked storage is explicit. The feature is on `main`; `export-templates.test.tsx` 4/4 and `column-chooser.test.tsx` re-verified at `116ee530`. Earlier fifteen targeted tests and phone CSV download remain historical evidence.
 - [ ] CF-07 Comments on customer / project
 - [~] CF-08 Meta fields on any entity — **14 Oct (AI #3)**: A-36 keeps notes as meta fields on eight record kinds and A-37 defines custom fields (text/number/date/choice) on customers, vendors and items with their values in each record's metadata; “any entity” beyond those kinds waits on the reserved document forms.
 - [ ] CG-02 Unit of measure
@@ -1803,3 +1803,27 @@ Each is fixed with the acceptance test its section names. Server, posting, resto
 - [~] INT-6 *(AI #9, PR open, ai9/INT-6: the pay link keys on invoice + amount due, the subscription checkout on workspace + plan + price + current subscription; test `int6-checkout-idempotency.test.ts` with a mocked Stripe)* Stripe Checkout session creation (publicInvoiceRoutes, billingRoutes) sends an idempotency key per invoice + amount, so a double click cannot open two payable sessions.
 - [~] INT-7 *(AI #9, PR #286: the rest above what is due is the customer's credit in Customer Deposits, flagged `refundReview`, with a notice; A/R never negative; test `int7-online-overpayment.test.ts`)* An online payment arriving for an invoice already paid in full is recorded as an overpayment (customer credit) and flagged for refund review — never silently applied twice. (From the owner's "exactly-once impossibility" exam, 18 Oct: we rely on Stripe Checkout + webhook event ids, which already avoids the impossible case.)
 
+
+
+## AI #2 launch-readiness batch — 26 Oct 2026
+
+Completed or re-verified from `main` `116ee530` on `arena/63bdffa0-ledgerflow`; evidence:
+`docs/verification/ai2-launch-batch-2026-10-26.md`. Screens and presentation only: no money calculation,
+posting, tax maths, `src/server/`, schema, dependency or quality-baseline change.
+
+- [x] **C-38 / CF-06** named export templates: verified existing per-user/workspace/report storage, compatibility refusal and blocked-storage wording.
+- [x] **C-54 / C-91** report empty states: one next-action fallback for empty report tables, explicit states where missing, and a 130-report coverage guard.
+- [x] **C-65** keyboard shortcut help: verified global and registry-backed screen shortcut lists and their tests.
+- [x] **C-67** column chooser on invoices, bills, payments, customers and vendors; locked selection/actions and print restoration.
+- [x] **C-68** print-friendly reports: verified report-only print heading with period/entity and report-pack cover.
+- [x] **C-85** named report views: report, period, comparison and custom dates by user/workspace on this device.
+- [x] **C-87** Excel report exports: one header block with entity, period, basis, currency and generated-at above headings.
+- [x] **C-89** report column chooser: verified `ReportTableScroll` coverage of the ten busiest reports and 82 report files.
+- [x] **C-90** negative formatting: verified one `moneyText` helper and workspace minus/accounting setting.
+- [x] **C-96** exact report links with filters and a stated clipboard-refusal path.
+- [x] **C-97** bilingual, searchable accounting glossary with 36 terms, RTL isolation and help/registry wiring.
+- [x] **C-98** first-bookkeeping checklist: verified existing first-hour guide with bank, import, invoice, bill, payment, reconcile and report steps.
+- [x] **C-101** tax registrations per entity/label: verified existing Tax profiles editor and tests.
+- [~] **C-71** empty states everywhere: main lists and registered reports are covered; auxiliary settings/admin lists remain unaudited.
+- [~] **C-86** report scheduling: weekly/monthly schedules are stored and sent; an explicit day picker is still open.
+- [~] **C-88** PDF consistency: Reports and report packs share their heading/cover; specialized server PDF routes remain separate.

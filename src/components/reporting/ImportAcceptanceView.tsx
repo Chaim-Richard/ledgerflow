@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { compareImport, readSourceTrialBalance, type LedgerRow, type SourceTrialBalance } from '../../lib/importAcceptance';
+import ReportEmptyState from './ReportEmptyState';
 
 const field = 'px-2 py-1.5 border border-[var(--line)] rounded bg-[var(--panel)] text-[var(--text)]';
 
@@ -56,6 +57,8 @@ export default function ImportAcceptanceView() {
       {source && source.data.lines.length === 0 && <p role="alert" className="text-sm text-rose-600">{source.data.problems[0] || 'The file has no account lines'}</p>}
       {key && !shown && <p className="text-sm text-[var(--muted)]">Loading…</p>}
       {shown?.error && <p role="alert" className="text-sm text-rose-600">{shown.error}</p>}
+      {!source && !key && <ReportEmptyState title="No source trial balance yet"
+        description="Export a trial balance CSV from the old system for the move date, choose that date here, then upload the file. The comparison is read-only and does not change the books." />}
       {acceptance && source && source.data.lines.length > 0 && (
         <div className="space-y-3" data-testid="import-acceptance">
           <p role="status" className={`text-sm font-semibold ${acceptance.accepted ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'}`}>
