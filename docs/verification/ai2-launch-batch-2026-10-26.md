@@ -67,7 +67,10 @@ changing test inputs or expectations:
    guest-browser smoke journey (bilingual search, no-match recovery and clear search).
 
 The final four-shard run is **3,968 tests / 3,966 pass / 0 fail / 2 skipped**; the two skips are the
-database-gated suites without `LF_TEST_DATABASE_URL`.
+database-gated suites without `LF_TEST_DATABASE_URL`. The literal `npm test` later reproduced exactly
+the same totals in one process. GitHub CI’s first browser shard also caught a strict-mode locator in
+the new glossary spec (`getByRole('status')` matched app-wide banners); the spec now targets the
+glossary’s own result-count text. No application assertion was weakened.
 
 ## 5. Checks
 
@@ -81,7 +84,7 @@ database-gated suites without `LF_TEST_DATABASE_URL`.
 | `npm run build` | passes (Vite + PWA + `build/server.cjs`) |
 | `git diff --check` | clean |
 | `npm audit --audit-level=high` | passes: 0 high/critical; 2 pre-existing moderate advisories in the transitive `typed-rest-client` → `qs` tree, not a dependency change in this branch |
-| `npm test` (literal single command) | see the final check line appended below after the background run |
+| `npm test` (literal single command) | **passes: 3,968 tests / 3,966 pass / 0 fail / 2 skipped**, 896 suites, ~32 min on Node 22; the same two database-gated skips |
 | `npm run test:rules` | not run: no `LF_TEST_DATABASE_URL`/test Postgres; no SQL, route or RLS change |
 | Playwright | `e2e/glossary.spec.ts` added; not run locally because this sandbox has no Chromium. GitHub CI runs the browser spec |
 
