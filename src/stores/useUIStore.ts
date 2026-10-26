@@ -209,7 +209,13 @@ export const useUIStore = create<UIState>((set) => ({
     }
   })(),
   isQuietMode: false,
-  activeIntelChannel: 'radar',
+  activeIntelChannel: (() => {
+    try {
+      return (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lens') : null) || 'radar';
+    } catch {
+      return 'radar';
+    }
+  })(),
   activeSettingsTab: 'billing',
   activeReportTab: 'pnl',
   lexiconOverrides: (() => {

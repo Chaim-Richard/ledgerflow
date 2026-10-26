@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { PayRun } from '../types';
-import { UsW2Review, exactW2Cents } from '../components/hr/UsW2Review';
+import { UsW2Review } from '../components/hr/UsW2Review';
+import { exactW2Cents } from '../lib/tax/usW2Review';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
 

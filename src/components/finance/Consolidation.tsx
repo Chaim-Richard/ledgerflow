@@ -24,7 +24,7 @@ export default function Consolidation() {
 
   return (
     <div className="h-full flex flex-col bg-[var(--ink)] text-[var(--text)]">
-      <div className="px-8 py-6 bg-[var(--surface)] border-b border-[var(--line)] text-[var(--text)] flex justify-between items-start shadow-sm">
+      <div className="px-4 sm:px-8 py-6 bg-[var(--surface)] border-b border-[var(--line)] text-[var(--text)] flex flex-col sm:flex-row justify-between items-start gap-4 shadow-sm">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-3 text-[var(--text)]">
             <Layers className="w-6 h-6 text-[var(--brass)]" />
@@ -34,20 +34,20 @@ export default function Consolidation() {
             Dynamic coordinate-based sub-ledgers with automatic intercompany transfer elimination.
           </p>
         </div>
-        <div className="flex gap-3">
-          <div className="bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2 text-xs font-mono text-slate-300">
+        <div className="flex flex-wrap gap-3">
+          <div className="bg-slate-800/80 min-h-11 px-3 py-1.5 rounded-xl border border-slate-700 flex items-center gap-2 text-xs font-mono text-slate-300">
             <Globe className="w-3.5 h-3.5 text-emerald-400" />
             <span>Worlds: {summary.worldStatements.length}</span>
           </div>
-          <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 h-10 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors" type="button" disabled aria-describedby="consolidation-export-help" title="Export is unavailable until complete consolidated history is supported." aria-label="Export Report">
+          <div className="min-w-0 space-y-1"><button className="disabled:cursor-not-allowed disabled:opacity-50 min-h-11 px-4 bg-purple-500 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-purple-400 transition-colors" type="button" disabled aria-describedby="consolidation-export-help" title="Export is unavailable until complete consolidated history is supported." aria-label="Export Report">
             <Download className="w-4 h-4" /> Export Report
           </button>
             <p id="consolidation-export-help" className="text-xs text-[var(--muted)] max-w-sm">Export is unavailable until complete consolidated history is supported.</p></div>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-8">
-        <div className="flex p-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-max">
+      <div className="flex-1 overflow-auto p-4 sm:p-8">
+        <div className="flex flex-wrap p-1 bg-[var(--surface)] border border-[var(--line)] rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 mb-6 w-full sm:w-max">
           {[
             { id: 'matrix', label: 'Consolidated Matrix', icon: BarChart3 },
             { id: 'adjustments', label: 'Top-Level Adjustments', icon: TrendingUp }
@@ -56,7 +56,7 @@ export default function Consolidation() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as unknown as React.SetStateAction<"matrix" | "adjustments">)}
                 className={cn(
-                   "px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
+                   "min-h-11 px-4 sm:px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all",
                    activeTab === tab.id ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-[var(--ink)]"
                 )}
              >
@@ -67,7 +67,7 @@ export default function Consolidation() {
 
         {activeTab === 'matrix' && (
           <div className="bg-[var(--surface)] border border-[var(--line)] rounded-2xl overflow-hidden shadow-sm">
-            <div className="p-4 bg-[var(--ink)] border-b border-[var(--line)] text-xs font-bold text-slate-700 uppercase tracking-wider flex justify-between items-center">
+            <div className="p-4 bg-[var(--ink)] border-b border-[var(--line)] text-xs font-bold text-slate-700 uppercase tracking-wider flex flex-wrap justify-between items-center gap-2">
               <span>Entity / World Sub-Ledgers</span>
               <span className="text-rose-600 font-mono text-[11px] tabular-nums">Intercompany Eliminations: {formatCurrency(summary.eliminatedTransferCents)}</span>
             </div>

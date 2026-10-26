@@ -9,10 +9,10 @@ import {
   setLineDescription,
   taxCodeToFillFromItem,
 } from '../../lib/invoiceLines';
-import { formatCurrency } from '../../lib/utils';
+import { cn, formatCurrency } from '../../lib/utils';
 import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import { useAuthStore } from '../../stores/useAuthStore';
-import type { ChartAccount, EntityMetadata, InventoryItem } from '../../types';
+import type { ChartAccount, DimensionDefinition, EntityMetadata, InventoryItem } from '../../types';
 import { BudgetLeft } from './BudgetLeft';
 import { LineLabels } from './LineLabels';
 
@@ -43,21 +43,35 @@ export interface BillEditorLine extends LineBase {
   orderQuantity?: number;
 }
 
-export type DocumentEditorLine = InvoiceEditorLine | BillEditorLine;
+export interface JournalEditorLine extends LineBase {
+  accountName: string;
+  debit: number;
+  credit: number;
+  quantity?: number;
+  class?: string;
+  location?: string;
+  project?: string;
+}
+
+export type DocumentEditorLine = InvoiceEditorLine | BillEditorLine | JournalEditorLine;
 
 function isInvoiceLine(line: DocumentEditorLine): line is InvoiceEditorLine {
   return 'rateCents' in line && typeof line.rateCents === 'number' && typeof line.quantity === 'number';
 }
 
+function isJournalLine(line: DocumentEditorLine): line is JournalEditorLine {
+  return 'debit' in line && 'credit' in line;
+}
+
 interface DocumentLineEditorProps<T extends DocumentEditorLine> {
-  side: 'invoice' | 'bill';
+  side: 'invoice' | 'bill' | 'journal';
   lines: T[];
   onChange: (lines: T[]) => void;
   createLine: () => T;
   accounts: ChartAccount[];
   currency: string;
   date: string;
-  inventoryItems: InventoryItem[];
+  inventoryItems?: InventoryItem[];
   fieldErrors?: Record<string, string>;
   /** Invoice-only item pricing and tax-code autofill. */
   customerId?: string;
@@ -69,6 +83,11 @@ interface DocumentLineEditorProps<T extends DocumentEditorLine> {
   documentId?: string;
   /** The existing repeat-last action stays beside the Add button. */
   repeatAction?: ReactNode;
+  /** Journal-only dimension toggle and columns. */
+  showDimensions?: boolean;
+  onShowDimensionsChange?: (show: boolean) => void;
+  dimensionsShown?: boolean;
+  activeDimensions?: DimensionDefinition[];
 }
 
 function EditorFieldError({ id, errors }: { id: string; errors: Record<string, string> }) {
@@ -89,7 +108,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
   accounts,
   currency,
   date,
-  inventoryItems,
+  inventoryItems = [],
   fieldErrors = {},
   customerId,
   taxCodeIds = [],
@@ -98,6 +117,10 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
   exchangeRate = 1,
   documentId,
   repeatAction,
+  showDimensions = false,
+  onShowDimensionsChange,
+  dimensionsShown = false,
+  activeDimensions = [],
 }: DocumentLineEditorProps<T>) {
   const invoice = side === 'invoice';
   const updateAt = (index: number, update: (line: T) => T) => {
@@ -111,6 +134,181 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
     onChange(next);
   };
   const money = (cents: number) => formatCurrency(cents, currency);
+
+  if (side === 'journal') {
+    const sortedAccounts = [...accounts].sort((a, b) => a.code.localeCompare(b.code));
+    const totalDebit = lines.reduce((sum, l) => sum + (isJournalLine(l) ? l.debit || 0 : 0), 0);
+    const totalCredit = lines.reduce((sum, l) => sum + (isJournalLine(l) ? l.credit || 0 : 0), 0);
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest">Entry Lines</h3>
+          <div className="flex items-center gap-4">
+            <label htmlFor="je-show-dim" className="flex items-center gap-2 cursor-pointer">
+              <input
+                id="je-show-dim"
+                type="checkbox"
+                checked={showDimensions}
+                onChange={e => onShowDimensionsChange?.(e.target.checked)}
+                className="rounded border-[var(--line)] text-[var(--brass)] focus:ring-[var(--brass)]"
+              />
+              <span className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Show Dimensions</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => onChange([...lines, createLine()])}
+              className="flex items-center gap-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
+              aria-label="Add Line"
+            >
+              <Plus size={14} /> Add Line
+            </button>
+          </div>
+        </div>
+
+        <div className="border border-[var(--line)] rounded-xl overflow-hidden overflow-x-auto custom-scrollbar">
+          <table className="w-full border-collapse text-sm min-w-[600px]">
+            <caption className="sr-only">Journal Entry Lines</caption>
+            <thead>
+              <tr className="text-left border-b border-[var(--line)] bg-[var(--ink)]/50">
+                <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]">Account</th>
+                {dimensionsShown && activeDimensions.map(dim => (
+                  <th scope="col" key={dim.id} className={cn('p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]', dim.isWorld && 'text-[var(--brass)]')}>
+                    {dim.name}
+                  </th>
+                ))}
+                <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
+                <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
+                <th scope="col" className="p-3.5 w-12"><span className="sr-only">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--line)]">
+              {lines.map((line, idx) => {
+                if (!isJournalLine(line)) return null;
+                const matchedAcc = accounts.find(a => a.id === line.accountId);
+                return (
+                  <tr key={line.id} className="group hover:bg-[var(--ink)]/50 transition-colors">
+                    <td className="p-2.5">
+                      <div className="relative">
+                        <input
+                          required
+                          id={`je-line-acc-${idx}`}
+                          aria-label={`Account for line ${idx + 1}`}
+                          list={`je-account-${idx}`}
+                          value={matchedAcc ? `${matchedAcc.code} - ${matchedAcc.name}` : line.accountId || ''}
+                          onChange={e => {
+                            const acc = accounts.find(a => `${a.code} - ${a.name}` === e.target.value || a.id === e.target.value);
+                            updateAt(idx, current => ({
+                              ...current,
+                              accountId: acc ? acc.id : e.target.value,
+                              accountName: acc?.name || '',
+                            }) as T);
+                          }}
+                          placeholder="Select Account..."
+                          className="w-full px-3 py-2 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
+                        />
+                        <datalist id={`je-account-${idx}`}>
+                          {sortedAccounts.map(acc => (
+                            <option key={acc.id} value={`${acc.code} - ${acc.name}`}>{acc.name}</option>
+                          ))}
+                        </datalist>
+                      </div>
+                    </td>
+                    {dimensionsShown && activeDimensions.map(dim => (
+                      <td key={dim.id} className="p-2.5">
+                        <div className="relative">
+                          <input
+                            id={`je-dim-${dim.id}-${idx}`}
+                            aria-label={`${dim.name} for line ${idx + 1}`}
+                            value={line.dimensions?.[dim.id.toLowerCase()] || (line as unknown as Record<string, string>)[dim.id.toLowerCase()] || ''}
+                            onChange={e => updateAt(idx, current => ({
+                              ...current,
+                              dimensions: {
+                                ...(current.dimensions || {}),
+                                [dim.id.toLowerCase()]: e.target.value,
+                              },
+                            }) as T)}
+                            placeholder={`Select ${dim.name}...`}
+                            className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px] text-[var(--text)]"
+                          />
+                        </div>
+                      </td>
+                    ))}
+                    <td className="p-2.5">
+                      <input
+                        id={`je-line-debit-${idx}`}
+                        aria-label={`Debit amount for line ${idx + 1}`}
+                        type="number"
+                        step="0.01"
+                        value={line.debit > 0 ? line.debit / 100 : ''}
+                        onChange={e => {
+                          const cents = TruthEngine.parseAmountToCents(e.target.value || '0');
+                          updateAt(idx, current => {
+                            const nextCredit = cents > 0 ? 0 : (isJournalLine(current) ? current.credit : 0);
+                            return {
+                              ...current,
+                              debit: cents,
+                              credit: nextCredit,
+                              amountCents: cents > 0 ? cents : -nextCredit,
+                            } as T;
+                          });
+                        }}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
+                      />
+                    </td>
+                    <td className="p-2.5">
+                      <input
+                        id={`je-line-credit-${idx}`}
+                        aria-label={`Credit amount for line ${idx + 1}`}
+                        type="number"
+                        step="0.01"
+                        value={line.credit > 0 ? line.credit / 100 : ''}
+                        onChange={e => {
+                          const cents = TruthEngine.parseAmountToCents(e.target.value || '0');
+                          updateAt(idx, current => {
+                            const nextDebit = cents > 0 ? 0 : (isJournalLine(current) ? current.debit : 0);
+                            return {
+                              ...current,
+                              credit: cents,
+                              debit: nextDebit,
+                              amountCents: nextDebit > 0 ? nextDebit : -cents,
+                            } as T;
+                          });
+                        }}
+                        placeholder="0.00"
+                        className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
+                      />
+                    </td>
+                    <td className="p-2.5 text-center">
+                      <button
+                        type="button"
+                        aria-label={`Remove line ${idx + 1}`}
+                        onClick={() => {
+                          if (lines.length <= 2) return;
+                          onChange(lines.filter((_, i) => i !== idx));
+                        }}
+                        className="p-2 text-[var(--muted)] hover:text-rose-600 transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bg-[var(--ink)]/50 font-bold">
+                <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={dimensionsShown ? 4 : 1}>Totals</td>
+                <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{money(totalDebit)}</td>
+                <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{money(totalCredit)}</td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

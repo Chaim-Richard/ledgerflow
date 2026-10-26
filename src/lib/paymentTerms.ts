@@ -1,4 +1,5 @@
 import { getLocalDateISO } from './utils';
+import { addDaysYMD } from './calendarDate';
 
 export type PaymentTerm = 'due_on_receipt' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | 'custom';
 
@@ -6,7 +7,7 @@ export type PaymentTerm = 'due_on_receipt' | 'net_15' | 'net_30' | 'net_45' | 'n
  * Derives due date from invoice issue date and payment terms.
  */
 export function calculateDueDate(issueDateIso: string, term: PaymentTerm, customDays = 0): string {
-  const [y, m, d] = (issueDateIso || getLocalDateISO()).slice(0, 10).split('-').map(Number);
+  const baseDate = (issueDateIso || getLocalDateISO()).slice(0, 10);
   let daysToAdd = 0;
 
   switch (term) {
@@ -30,11 +31,7 @@ export function calculateDueDate(issueDateIso: string, term: PaymentTerm, custom
       break;
   }
 
-  const date = new Date(Date.UTC(y, m - 1, d + daysToAdd));
-  const year = date.getUTCFullYear();
-  const monthStr = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const dayStr = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}-${monthStr}-${dayStr}`;
+  return addDaysYMD(baseDate, daysToAdd);
 }
 
 /**

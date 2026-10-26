@@ -40,7 +40,7 @@ export const EXPENSE_POLICY_ALGO: AlgorithmDefinition = {
       
       let isRisk = false;
       const dateObj = parseLocalDate(tx.date);
-      const dayName = daysOfWeek[dateObj.getUTCDay()];
+      const dayName = daysOfWeek[dateObj.getDay()];
       
       // Check Weekend
       if (dayName === 'Saturday' || dayName === 'Sunday') {

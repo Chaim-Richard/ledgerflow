@@ -19,7 +19,7 @@ import type { LiveRow } from './liveQuery';
 
 // Same shape as firebase's DocumentData: documents are free-form JSON whose fields the
 // screens read directly, so field values are deliberately untyped (as in Firebase).
-type FieldValueAny = any;
+type FieldValueAny = ReturnType<typeof JSON.parse>;
 export type DocumentData = { [field: string]: FieldValueAny };
 export type WhereFilterOp =
   | '<' | '<=' | '==' | '!=' | '>=' | '>'

@@ -39,11 +39,35 @@ export interface MissingLabel {
 
 type LineLike = Pick<TransactionLine, 'accountId' | 'dimensions' | 'class' | 'location' | 'project' | 'department' | 'tags' | 'splitAllocations' | 'accountName'>;
 
+interface CompiledLabelRule {
+  dimensionId: string;
+  dimensionName: string;
+  accountIds: Set<string>;
+  since: string;
+  refuse: boolean;
+}
+
+const rulesCache = new WeakMap<DimensionDefinition[], CompiledLabelRule[]>();
+const accountNameCache = new WeakMap<Pick<ChartAccount, 'id' | 'name'>[], Map<string, string>>();
+
 /** The label rules of a workspace (only labels with at least one account). */
-export function requiredLabelRules(dimensions: DimensionDefinition[] | undefined) {
-  return (dimensions || []).flatMap(d => (d.id !== 'category' && d.requiredOn?.accountIds?.length
+export function requiredLabelRules(dimensions: DimensionDefinition[] | undefined): CompiledLabelRule[] {
+  if (!dimensions) return [];
+  const cached = rulesCache.get(dimensions);
+  if (cached) return cached;
+  const compiled = dimensions.flatMap(d => (d.id !== 'category' && d.requiredOn?.accountIds?.length
     ? [{ dimensionId: d.id, dimensionName: d.name || d.id, accountIds: new Set(d.requiredOn.accountIds), since: d.requiredOn.since || '', refuse: d.requiredOn.refuse === true }]
     : []));
+  rulesCache.set(dimensions, compiled);
+  return compiled;
+}
+
+function accountNamesMap(accounts: Pick<ChartAccount, 'id' | 'name'>[]): Map<string, string> {
+  const cached = accountNameCache.get(accounts);
+  if (cached) return cached;
+  const map = new Map(accounts.map(a => [a.id, a.name]));
+  accountNameCache.set(accounts, map);
+  return map;
 }
 
 function hasLabel(line: LineLike, tx: Pick<Transaction, 'tags' | 'dimensions' | 'projectId' | 'classId' | 'locationId'> | undefined, dimensionId: string): boolean {
@@ -57,7 +81,7 @@ export function missingLabels(tx: Transaction, dimensions: DimensionDefinition[]
   const rules = requiredLabelRules(dimensions);
   if (rules.length === 0 || !isPostable(tx)) return [];
   const date = String(tx.date || '').slice(0, 10);
-  const name = new Map(accounts.map(a => [a.id, a.name]));
+  const name = accountNamesMap(accounts);
   const found = new Map<string, MissingLabel>();
   for (const rule of rules) {
     if (rule.since && date < rule.since) continue;

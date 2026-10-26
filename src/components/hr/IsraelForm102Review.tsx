@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 import type { PayRun } from '../../types';
 import { getLocalDateISO, formatCurrency } from '../../lib/utils';
-import { israel102Review, type Israel102ReviewRun } from '../../lib/tax/israel102Review';
+import { exactIlsCents, israel102Review, type Israel102ReviewRun } from '../../lib/tax/israel102Review';
 
 const INPUTS = [
   { key: 'incomeTax', label: 'Income tax withheld (separate tax reporting)' },
@@ -18,14 +18,6 @@ const INPUTS = [
 
 type FieldKey = typeof INPUTS[number]['key'];
 type RunDraft = Partial<Record<FieldKey, string>> & { reviewed?: boolean };
-
-/** Converts typed ILS decimal strings to minor units; never uses floating-point rounding. */
-export function exactIlsCents(text: string | undefined): number | undefined {
-  if (text === undefined || !/^(0|[1-9]\d{0,11})(\.\d{1,2})?$/.test(text.trim())) return undefined;
-  const [whole, fraction = ''] = text.trim().split('.');
-  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-  return Number.isSafeInteger(cents) ? cents : undefined;
-}
 
 export function IsraelForm102Review({
   payRuns, homeCurrency,

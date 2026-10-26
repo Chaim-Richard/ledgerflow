@@ -48,7 +48,10 @@ const isProjectTx = (t: Transaction, p: Project) => {
 function useProjectsModel() {
   const formId = useId();
   const user = useAuthStore(s => s.user);
+  const isGuest = useAuthStore(s => s.isGuest);
+  const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const projects = useLedgerStore(s => s.projects);
+  const setProjects = useLedgerStore(s => s.setProjects);
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
   const bills = useLedgerStore(s => s.bills);
@@ -106,11 +109,29 @@ function useProjectsModel() {
     if (!newProject.name || !onAdd) return;
     setSaving(true);
     try {
-      await onAdd({
-        ...newProject,
-        uid: user?.uid || "",
-        createdAt: new Date().toISOString()
-      });
+      const createdAt = new Date().toISOString();
+      if (isGuest || !user) {
+        setProjects([
+          ...projects,
+          {
+            id: `proj_${Date.now()}`,
+            workspaceId: currentWorkspaceId || 'default',
+            uid: user?.uid || 'guest',
+            name: newProject.name,
+            description: newProject.description || '',
+            type: newProject.type || 'general',
+            status: newProject.status || 'active',
+            budgetCents: newProject.budgetCents || 0,
+            createdAt,
+          } as Project,
+        ]);
+      } else {
+        await onAdd({
+          ...newProject,
+          uid: user?.uid || "",
+          createdAt
+        });
+      }
       setIsNewProjectModalOpen(false);
       setNewProject({
         name: '',

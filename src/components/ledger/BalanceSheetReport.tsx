@@ -193,7 +193,7 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assets Column */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
         >
@@ -279,7 +279,7 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
 
         {/* Liabilities & Equity Column */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
         >

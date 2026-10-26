@@ -291,7 +291,7 @@ export default function BlueprintSettings() {
           <div className="p-5 bg-amber-50 rounded-[32px] border border-amber-200 flex items-start gap-3.5">
             <AlertTriangle aria-hidden="true" className="text-amber-600 shrink-0 mt-0.5" size={16} />
             <div className="space-y-1">
-              <h4 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Unmapped Fallback Warnings</h4>
+              <h3 className="text-xs font-bold text-amber-900 uppercase tracking-wider">Unmapped Fallback Warnings</h3>
               <p className="text-[11px] text-amber-700 leading-relaxed font-semibold uppercase tracking-wide">
                 Transactions uploaded via API or scanned via OCR cannot be saved without default fallbacks. Configure Debit Fallback (expense) and Credit Fallback (asset) immediately.
               </p>

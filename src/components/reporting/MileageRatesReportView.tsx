@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { US_MILEAGE_RATES, mileageRateOn } from '../../lib/tax/usMileageRates';
 import { downloadCsv } from '../../lib/csvExport';
+import { getLocalDateISO } from '../../lib/utils';
 import ReportTableScroll from './ReportTableScroll';
 
 const CSV_HEADERS = ['Valid from', 'Valid to', 'Tenths of a cent per mile', 'Rate per mile', 'Source', 'Note'];
@@ -17,7 +18,7 @@ function rowsToCsv(rows: typeof US_MILEAGE_RATES) {
  * Nothing posts, files or pays; a mileage claim still records the rate the person typed.
  */
 export default function MileageRatesReportView() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => getLocalDateISO());
   const active = mileageRateOn(date);
   return (
     <section aria-label="US mileage rates" className="p-4 space-y-4 min-w-0">

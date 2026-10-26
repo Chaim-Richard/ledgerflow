@@ -133,7 +133,7 @@ export function StressTestPanel({ model }: { model: SystemCommandCenterModel }) 
             <div className="bg-slate-900 text-white rounded-[32px] p-4 md:p-8 relative overflow-hidden group">
               <div className="absolute technical-grid inset-0 opacity-[0.05]" />
               <Cpu aria-hidden="true" size={32} className="text-emerald-400 mb-4" />
-              <h4 className="text-lg font-black tracking-tight italic uppercase mb-1">Decentralized Trust Hook</h4>
+              <h3 className="text-lg font-black tracking-tight italic uppercase mb-1">Decentralized Trust Hook</h3>
               <p className="text-[10px] font-medium text-white/40 leading-relaxed uppercase tracking-widest leading-loose">
                 Real-time cryptographic pipeline audits. Mutex locks prevent race overrides, securing multi-tenant ledger synchronization bounds on memory channels.
               </p>

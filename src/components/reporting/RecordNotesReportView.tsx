@@ -11,8 +11,8 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import { noteCountsByType, notePreview, recordNotesFromMetadata, searchRecordNotes, type NoteableType, type RecordNote } from '../../lib/recordNotes';
-import RecordNotesPanel, { NOTE_COLLECTIONS, type NoteCollection } from '../common/RecordNotesPanel';
+import { NOTE_COLLECTIONS, noteCountsByType, notePreview, recordNotesFromMetadata, searchRecordNotes, type NoteableType, type NoteCollection, type RecordNote } from '../../lib/recordNotes';
+import RecordNotesPanel from '../common/RecordNotesPanel';
 import ReportTableScroll from './ReportTableScroll';
 
 interface CatalogRow {

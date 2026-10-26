@@ -1,5 +1,6 @@
 
 
+import { useState, useMemo } from 'react';
 import { CreateFromBankLine } from './CreateFromBankLine';
 import { ArrowLeftRight, Sparkles, Search, AlertCircle, ArrowRight, ShieldCheck, Zap, RefreshCw, Link as LinkIcon, X, Check, Loader2, Lock, History, Info, Layers, Maximize2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,6 +21,29 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
  // Dialog contract (src/components/AGENTS.md): named title, initial focus, trapped Tab,
  // Escape to close, focus restored to the trigger.
  const batchDialog = useDialog<HTMLDivElement>(() => setShowAutoConfirm(false), showAutoConfirm);
+ const [bankLimit, setBankLimit] = useState(100);
+ const [ledgerLimit, setLedgerLimit] = useState(100);
+ const visibleBankFeed = useMemo(() => {
+   if (filteredBankFeed.length <= bankLimit) return filteredBankFeed;
+   const sliced = filteredBankFeed.slice(0, bankLimit);
+   if (selectedBankId && !sliced.some(b => b.id === selectedBankId)) {
+     const selected = filteredBankFeed.find(b => b.id === selectedBankId);
+     if (selected) sliced.push(selected);
+   }
+   return sliced;
+ }, [filteredBankFeed, bankLimit, selectedBankId]);
+ const visibleLedgerEntries = useMemo(() => {
+   if (filteredLedgerEntries.length <= ledgerLimit) return filteredLedgerEntries;
+   const sliced = filteredLedgerEntries.slice(0, ledgerLimit);
+   const possibleMatchId = selectedBankId ? optimizedMatches.get(selectedBankId) : undefined;
+   for (const id of [selectedLedgerId, possibleMatchId]) {
+     if (id && !sliced.some(l => l.id === id)) {
+       const found = filteredLedgerEntries.find(l => l.id === id);
+       if (found) sliced.push(found);
+     }
+   }
+   return sliced;
+ }, [filteredLedgerEntries, ledgerLimit, selectedLedgerId, selectedBankId, optimizedMatches]);
  return (
     <div className="flex flex-col h-full bg-[var(--surface)] overflow-hidden min-h-0 flex-1 rounded-2xl border border-[var(--line)] shadow-sm">
 
@@ -150,7 +174,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 <span className="text-[10px] font-mono font-bold bg-[var(--brass-soft)] text-[var(--brass)] px-2 py-0.5 rounded border border-[var(--brass-line)]">{filteredBankFeed.length} to review</span>
              </div>
              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
-                {filteredBankFeed.map(btx => {
+                {visibleBankFeed.map(btx => {
                   const matchedLedgerId = optimizedMatches.get(btx.id);
                   const isSelected = selectedBankId === btx.id;
 
@@ -206,11 +230,20 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                     </motion.div>
                   );
                 })}
+                {filteredBankFeed.length > visibleBankFeed.length && (
+                  <button
+                    type="button"
+                    onClick={() => setBankLimit(n => n + 200)}
+                    className="w-full py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
+                  >
+                    Show more bank lines ({visibleBankFeed.length} of {filteredBankFeed.length})
+                  </button>
+                )}
                 {filteredBankFeed.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-[var(--pos)] mb-3" />
                      <h2 className="font-bold text-sm text-[var(--text)] uppercase tracking-tight">Nothing to review</h2>
-                     <p className="text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider mt-1">{searchQuery ? 'No bank lines match this search; clear it to see the others' : 'Import a statement from Bank Connections, or review the matched history'}</p>
+                     <p className="text-[10px] font-bold text-[var(--muted)] dark:text-[#8bc19e] uppercase tracking-wider mt-1">{searchQuery ? 'No bank lines match this search; clear it to see the others' : 'Import a statement from Bank Connections, or review the matched history'}</p>
                      {!searchQuery && <button type="button" onClick={() => useUIStore.getState().setActiveTab('banking')} className="mt-4 min-h-11 rounded-xl border border-[var(--line)] px-4 py-2 text-xs font-bold text-[var(--text)]">Open Bank Connections</button>}
                   </div>
                 )}
@@ -224,7 +257,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                 <span className="text-[10px] font-mono font-bold bg-[var(--brass-soft)] text-[var(--brass)] px-2 py-0.5 rounded border border-[var(--brass-line)]">{filteredLedgerEntries.length} uncleared items</span>
              </div>
              <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-3">
-                {filteredLedgerEntries.map(ltx => {
+                {visibleLedgerEntries.map(ltx => {
                   const isSelected = selectedLedgerId === ltx.id;
                   const isPossibleMatch = selectedBankId && optimizedMatches.get(selectedBankId) === ltx.id;
 
@@ -263,11 +296,20 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                     </motion.button>
                   );
                 })}
+                {filteredLedgerEntries.length > visibleLedgerEntries.length && (
+                  <button
+                    type="button"
+                    onClick={() => setLedgerLimit(n => n + 200)}
+                    className="w-full py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
+                  >
+                    Show more ledger entries ({visibleLedgerEntries.length} of {filteredLedgerEntries.length})
+                  </button>
+                )}
                 {filteredLedgerEntries.length === 0 && (
                   <div className="h-full py-20 flex flex-col items-center justify-center p-10 text-center opacity-70">
                      <ShieldCheck aria-hidden="true" size={40} className="text-indigo-500 mb-3" />
                      <h2 className="font-extrabold text-sm text-[var(--text)] uppercase tracking-tight">No ledger entries to match</h2>
-                     <p className="text-[10px] font-medium text-[var(--muted)] uppercase tracking-widest mt-1">{searchQuery ? 'Clear the search to see uncleared entries' : 'All posted entries are cleared; add a new entry from Overview when there is more work'}</p>
+                     <p className="text-[10px] font-medium text-[var(--muted)] dark:text-[#8bc19e] uppercase tracking-widest mt-1">{searchQuery ? 'Clear the search to see uncleared entries' : 'All posted entries are cleared; add a new entry from Overview when there is more work'}</p>
                   </div>
                 )}
              </div>
@@ -646,7 +688,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                      <button
                         onClick={executeSelectedBatchMatches}
                         disabled={isProcessing}
-                        className="bg-emerald-600 hover:bg-emerald-500 cursor-pointer transition-all text-white px-8 h-12 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2.5 disabled:opacity-50"
+                        className="bg-[#018669] hover:bg-emerald-500 cursor-pointer transition-all text-white px-8 h-12 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2.5 disabled:opacity-50"
                       aria-label="Apply selected matches">
                         {isProcessing ? <Loader2 aria-hidden="true" size={16} className="animate-spin" /> : <ShieldCheck aria-hidden="true" size={16} />}
                         Apply selected matches ({Object.values(selectedBatchIds).filter(Boolean).length})

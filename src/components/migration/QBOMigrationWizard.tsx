@@ -7,6 +7,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { ChartAccount } from '../../types';
 import { getLocalDateISO } from '../../lib/utils';
+import { fromDayNumber } from '../../lib/calendarDate';
 import { parseExcelToRows } from '../../lib/excelExport';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { QBOMigrationWizardView } from './QBOMigrationWizardView';
@@ -144,13 +145,10 @@ function useQBOMigrationWizardModel({ isOpen, onClose }: { isOpen: boolean; onCl
         let dateStr = getLocalDateISO();
         if (rawDate) {
           if (typeof rawDate === 'number') {
-            // Excel serial date (days since Dec 30, 1899)
-            const jsDate = new Date(Math.round((rawDate - 25569) * 86400 * 1000));
-            if (!isNaN(jsDate.getTime())) {
-              const y = jsDate.getUTCFullYear();
-              const m = String(jsDate.getUTCMonth() + 1).padStart(2, '0');
-              const d = String(jsDate.getUTCDate()).padStart(2, '0');
-              dateStr = `${y}-${m}-${d}`;
+            // Excel serial date (days since Dec 30, 1899; 25569 = 1970-01-01)
+            const serialDays = Math.round(rawDate - 25569);
+            if (Number.isFinite(serialDays)) {
+              dateStr = fromDayNumber(serialDays);
             }
           } else {
             const s = String(rawDate).trim();

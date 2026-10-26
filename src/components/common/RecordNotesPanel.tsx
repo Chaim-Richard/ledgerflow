@@ -9,7 +9,7 @@ import React, { useMemo, useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import {
-  addRecordNote, editRecordNote, noteProblem, notePreview, recordNotesFromMetadata,
+  addRecordNote, editRecordNote, NOTE_COLLECTIONS, noteProblem, notePreview, recordNotesFromMetadata,
   RECORD_NOTES_METADATA_KEY, searchRecordNotes,
   type NoteableType, type RecordNote,
 } from '../../lib/recordNotes';
@@ -41,20 +41,6 @@ function commentThreadFromMetadata(metadata?: Record<string, unknown> | null): T
     typeof (item as ThreadComment).entityId === 'string'
   ));
 }
-
-/** The store collection each kind of noteable record lives in (src/lib/ledgerCollections.ts). */
-export const NOTE_COLLECTIONS = {
-  customer: 'customers',
-  vendor: 'vendors',
-  item: 'inventory',
-  invoice: 'invoices',
-  bill: 'bills',
-  estimate: 'estimates',
-  transaction: 'transactions',
-  project: 'projects',
-} as const satisfies Record<NoteableType, string>;
-
-export type NoteCollection = (typeof NOTE_COLLECTIONS)[NoteableType];
 
 export interface RecordNotesPanelProps {
   entityType: NoteableType;

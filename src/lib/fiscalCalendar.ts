@@ -1,14 +1,7 @@
 import { getLocalDateISO } from './utils';
+import { addDaysYMD, addMonthsYMD, dayNumber, fromDayNumber } from './calendarDate';
 
-/**
- * Formats a Date object in UTC to YYYY-MM-DD string
- */
-function toUtcYMD(d: Date): string {
-  const y = d.getUTCFullYear();
-  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
+export { addDaysYMD, addMonthsYMD, dayNumber, fromDayNumber };
 
 export interface FiscalYearBounds {
   startDate: string; // YYYY-MM-DD
@@ -61,9 +54,8 @@ export function getFiscalYearBounds(
   const startDate = `${fyStartYear}-${startMonthStr}-${startDayStr}`;
 
   // End date is 1 day before the next fiscal year start
-  const endTargetDate = new Date(Date.UTC(fyStartYear + 1, startMonth - 1, startDay));
-  endTargetDate.setUTCDate(endTargetDate.getUTCDate() - 1);
-  const endDate = toUtcYMD(endTargetDate);
+  const nextFyStart = `${fyStartYear + 1}-${startMonthStr}-${startDayStr}`;
+  const endDate = addDaysYMD(nextFyStart, -1);
 
   return {
     startDate,
@@ -80,25 +72,19 @@ export function getFiscalQuarter(
   fiscalYearStartMonth = 1,
   fiscalYearStartDay = 1
 ): FiscalQuarterInfo {
-  const dateStr = typeof targetDate === 'string' ? targetDate : getLocalDateISO(targetDate);
+  const dateStr = (typeof targetDate === 'string' ? targetDate : getLocalDateISO(targetDate)).split('T')[0];
   const bounds = getFiscalYearBounds(dateStr, fiscalYearStartMonth, fiscalYearStartDay);
-  
-  const fyStart = new Date(bounds.startDate + 'T00:00:00Z');
-  const target = new Date(dateStr + 'T00:00:00Z');
+
+  const [fyY, fyM] = bounds.startDate.split('-').map(Number);
+  const [tY, tM] = dateStr.split('-').map(Number);
 
   // Month offset from FY start
-  const monthDiff = (target.getUTCFullYear() - fyStart.getUTCFullYear()) * 12 + (target.getUTCMonth() - fyStart.getUTCMonth());
+  const monthDiff = (tY - fyY) * 12 + (tM - fyM);
   const quarterIndex = Math.min(Math.max(Math.floor(monthDiff / 3), 0), 3) as 0 | 1 | 2 | 3;
   const quarterNumber = (quarterIndex + 1) as 1 | 2 | 3 | 4;
 
-  const qStartDateObj = new Date(fyStart);
-  qStartDateObj.setUTCMonth(qStartDateObj.getUTCMonth() + quarterIndex * 3);
-  const qStartDate = toUtcYMD(qStartDateObj);
-
-  const qEndDateObj = new Date(fyStart);
-  qEndDateObj.setUTCMonth(qEndDateObj.getUTCMonth() + (quarterIndex + 1) * 3);
-  qEndDateObj.setUTCDate(qEndDateObj.getUTCDate() - 1);
-  const qEndDate = toUtcYMD(qEndDateObj);
+  const qStartDate = addMonthsYMD(bounds.startDate, quarterIndex * 3);
+  const qEndDate = addDaysYMD(addMonthsYMD(bounds.startDate, (quarterIndex + 1) * 3), -1);
 
   return {
     quarter: quarterNumber,
@@ -125,20 +111,13 @@ export function getFiscalPeriodLabel(
  * Computes the prior period date range of equivalent length preceding the given date range.
  */
 export function getPrevPeriod(startDate: string, endDate: string): { startDate: string; endDate: string } {
-  const start = new Date(startDate + 'T00:00:00Z');
-  const end = new Date(endDate + 'T00:00:00Z');
-  const diffMs = end.getTime() - start.getTime();
-  const diffDays = Math.max(1, Math.round(diffMs / (1000 * 60 * 60 * 24)));
-
-  const prevEnd = new Date(start);
-  prevEnd.setUTCDate(prevEnd.getUTCDate() - 1);
-  
-  const prevStart = new Date(prevEnd);
-  prevStart.setUTCDate(prevStart.getUTCDate() - diffDays);
+  const diffDays = Math.max(1, dayNumber(endDate) - dayNumber(startDate));
+  const prevEnd = addDaysYMD(startDate, -1);
+  const prevStart = addDaysYMD(prevEnd, -diffDays);
 
   return {
-    startDate: toUtcYMD(prevStart),
-    endDate: toUtcYMD(prevEnd)
+    startDate: prevStart,
+    endDate: prevEnd
   };
 }
 
@@ -148,48 +127,6 @@ export type CompareMode = 'none' | 'previous' | 'lastYear';
 export interface ReportPeriod {
   startDate: string;
   endDate: string;
-}
-
-// Calendar arithmetic on YYYY-MM-DD strings with plain integers (no Date object, so no time zone).
-const pad2 = (n: number) => String(n).padStart(2, '0');
-const isLeap = (y: number) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-const daysInMonth = (y: number, m: number) => [31, isLeap(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
-
-/** Days since 1970-01-01 (proleptic Gregorian). */
-export function dayNumber(ymd: string): number {
-  const [yy, m, d] = ymd.split('-').map(Number);
-  const y = m <= 2 ? yy - 1 : yy;
-  const era = Math.floor(y / 400);
-  const yoe = y - era * 400;
-  const doy = Math.floor((153 * (m + (m > 2 ? -3 : 9)) + 2) / 5) + d - 1;
-  const doe = yoe * 365 + Math.floor(yoe / 4) - Math.floor(yoe / 100) + doy;
-  return era * 146097 + doe - 719468;
-}
-
-function fromDayNumber(n: number): string {
-  const z = n + 719468;
-  const era = Math.floor(z / 146097);
-  const doe = z - era * 146097;
-  const yoe = Math.floor((doe - Math.floor(doe / 1460) + Math.floor(doe / 36524) - Math.floor(doe / 146096)) / 365);
-  const doy = doe - (365 * yoe + Math.floor(yoe / 4) - Math.floor(yoe / 100));
-  const mp = Math.floor((5 * doy + 2) / 153);
-  const d = doy - Math.floor((153 * mp + 2) / 5) + 1;
-  const m = mp + (mp < 10 ? 3 : -9);
-  const y = yoe + era * 400 + (m <= 2 ? 1 : 0);
-  return `${y}-${pad2(m)}-${pad2(d)}`;
-}
-
-/** Calendar-month arithmetic on a YYYY-MM-DD day; month-end and leap-day dates clamp to the target month. */
-export function addMonthsYMD(ymd: string, months: number): string {
-  const [y, m, d] = ymd.split('-').map(Number);
-  const total = y * 12 + (m - 1) + months;
-  const ny = Math.floor(total / 12);
-  const nm = total - ny * 12 + 1;
-  return `${ny}-${pad2(nm)}-${pad2(Math.min(d, daysInMonth(ny, nm)))}`;
-}
-
-export function addDaysYMD(ymd: string, days: number): string {
-  return fromDayNumber(dayNumber(ymd) + days);
 }
 
 /**

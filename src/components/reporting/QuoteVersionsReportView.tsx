@@ -151,14 +151,18 @@ export default function QuoteVersionsReportView() {
             <th scope="col">Version</th><th scope="col">Recorded</th><th scope="col">By</th>
             <th scope="col" className="text-right">Amount</th><th scope="col">Valid until</th><th scope="col">What changed</th>
           </tr></thead>
-          <tbody>{chosen.versions.map((version, n) => <tr key={`${version.at}-${n}`} className="border-t border-[var(--line)] align-top">
-            <th scope="row" className="text-left">{n + 1}</th>
-            <td className="tabular-nums whitespace-nowrap">{version.at.replace('T', ' ').slice(0, 16)}</td>
-            <td><bdi>{version.byName || version.by}</bdi>{version.note ? <div className="text-xs text-[var(--muted)]"><bdi>{version.note}</bdi></div> : null}</td>
-            <td className="text-right tabular-nums">{formatCurrency(version.snapshot.amountCents, (chosen.estimate as Estimate & { currency?: string }).currency || homeCurrency)}</td>
-            <td className="tabular-nums">{version.snapshot.expiryDate || '—'}</td>
-            <td className="text-xs">{changeText(quoteChangeList(n > 0 ? chosen.versions[n - 1].snapshot : null, version.snapshot))}</td>
-          </tr>)}</tbody>
+          <tbody>{chosen.versions.map(version => {
+            const versionNumber = chosen.versions.indexOf(version) + 1;
+            const prevSnapshot = versionNumber > 1 ? chosen.versions[versionNumber - 2].snapshot : null;
+            return <tr key={`v-${versionNumber}-${version.at}`} className="border-t border-[var(--line)] align-top">
+              <th scope="row" className="text-left">{versionNumber}</th>
+              <td className="tabular-nums whitespace-nowrap">{version.at.replace('T', ' ').slice(0, 16)}</td>
+              <td><bdi>{version.byName || version.by}</bdi>{version.note ? <div className="text-xs text-[var(--muted)]"><bdi>{version.note}</bdi></div> : null}</td>
+              <td className="text-right tabular-nums">{formatCurrency(version.snapshot.amountCents, (chosen.estimate as Estimate & { currency?: string }).currency || homeCurrency)}</td>
+              <td className="tabular-nums">{version.snapshot.expiryDate || '—'}</td>
+              <td className="text-xs">{changeText(quoteChangeList(prevSnapshot, version.snapshot))}</td>
+            </tr>;
+          })}</tbody>
         </table></ReportTableScroll>}
 
         {chosen.versions.length > 0 && <>
@@ -167,13 +171,19 @@ export default function QuoteVersionsReportView() {
             <label className="flex flex-col gap-1">From version
               <select aria-label="Compare from version" className={field} value={fromIndex} onChange={event => setFromIndex(event.target.value)}>
                 <option value="">Choose a version</option>
-                {chosen.versions.map((version, n) => <option key={`${version.at}-${n}`} value={String(n)}>Version {n + 1} ({version.at.slice(0, 10)})</option>)}
+                {chosen.versions.map(version => {
+                  const idx = chosen.versions.indexOf(version);
+                  return <option key={`from-${idx}-${version.at}`} value={String(idx)}>Version {idx + 1} ({version.at.slice(0, 10)})</option>;
+                })}
               </select>
             </label>
             <label className="flex flex-col gap-1">To version
               <select aria-label="Compare to version" className={field} value={toIndex} onChange={event => setToIndex(event.target.value)}>
                 <option value={CURRENT}>Current content</option>
-                {chosen.versions.map((version, n) => <option key={`${version.at}-${n}`} value={String(n)}>Version {n + 1} ({version.at.slice(0, 10)})</option>)}
+                {chosen.versions.map(version => {
+                  const idx = chosen.versions.indexOf(version);
+                  return <option key={`to-${idx}-${version.at}`} value={String(idx)}>Version {idx + 1} ({version.at.slice(0, 10)})</option>;
+                })}
               </select>
             </label>
           </div>

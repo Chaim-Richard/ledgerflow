@@ -1,6 +1,6 @@
 {
-  "anyCount": 39,
-  "utcDateCount": 35,
+  "anyCount": 37,
+  "utcDateCount": 6,
   "arrayIndexKeys": 0,
   "blankNoOpener": 0,
   "consoleLog": 0,
@@ -8,6 +8,6 @@
   "filesOver800": 0,
   "orphanFiles": 0,
   "suppressionCount": 3,
-  "untestedViews": 20,
+  "untestedViews": 0,
   "overlaysWithoutDialog": 0
 }

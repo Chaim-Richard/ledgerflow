@@ -34,9 +34,11 @@ import BudgetControlSetting from './BudgetControlSetting';
 export default function BudgetManager() {
   const formId = useId();
   const user = useAuthStore((s) => s.user);
+  const isGuest = useAuthStore((s) => s.isGuest);
   // the open workspace lives in the auth store (reading it from the ledger store always gave nothing)
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const budgets = useLedgerStore((s) => s.budgets);
+  const setBudgets = useLedgerStore((s) => s.setBudgets);
   const transactions = useLedgerStore((s) => s.transactions);
   const accounts = useLedgerStore((s) => s.accounts);
   useLedgerCollections('budgets');
@@ -53,12 +55,38 @@ export default function BudgetManager() {
 
   const handleAddBudget = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentWorkspaceId) {
+    const workspaceId = currentWorkspaceId || (isGuest ? 'default' : null);
+    if (!workspaceId) {
       toast.error('Workspace context missing');
       return;
     }
     try {
-      if (editingBudget) {
+      if (isGuest || !user) {
+        if (editingBudget) {
+          setBudgets(budgets.map(b => b.id === editingBudget ? {
+            ...b,
+            targetId: newBudget.targetId,
+            amountCents: newBudget.amountCents,
+            period: newBudget.period as Budget['period'],
+          } : b));
+          toast.success('Objective Updated');
+        } else {
+          setBudgets([
+            ...budgets,
+            {
+              id: `b_${Date.now()}`,
+              workspaceId,
+              uid: user?.uid || 'guest',
+              targetId: newBudget.targetId,
+              targetType: newBudget.targetType,
+              amountCents: newBudget.amountCents,
+              period: newBudget.period as Budget['period'],
+              createdAt: new Date().toISOString(),
+            } as Budget,
+          ]);
+          toast.success('Objective Synchronized');
+        }
+      } else if (editingBudget) {
         await updateDoc(doc(db, 'budgets', editingBudget), {
           targetId: newBudget.targetId,
           amountCents: newBudget.amountCents,
@@ -70,7 +98,7 @@ export default function BudgetManager() {
       } else {
         await addDoc(collection(db, 'budgets'), {
           ...newBudget,
-          workspaceId: currentWorkspaceId,
+          workspaceId,
           uid: user?.uid || "",
           createdAt: new Date().toISOString()
         });

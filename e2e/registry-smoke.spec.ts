@@ -13,6 +13,13 @@ const mainViews = [
   'budgets',
   'consolidation',
   'taxes',
+  'accept-invite',
+  'architecture',
+  'audit',
+  'time-machine',
+  'ask',
+  'magic',
+  'system-command-center',
 ] as const;
 
 const reports = [
@@ -34,6 +41,11 @@ const reports = [
   ['transactions-by-customer', 'TransactionsByCustomerView'],
   ['transactions-by-vendor', 'TransactionsByVendorView'],
   ['mileage-rates', 'MileageRatesReportView'],
+  ['banking-validation', 'BankingValidationReportView'],
+] as const;
+
+const lenses = [
+  ['forensics_1', 'ToolSandbox'],
 ] as const;
 
 async function openGuest(page: Page, url: string) {
@@ -86,6 +98,15 @@ for (const [id, componentName] of reports) {
   test(`A-213 report registry smoke: ${componentName}`, async ({ page }) => {
     const errors = watchCodeErrors(page);
     await openGuest(page, `/?report=${id}#reports`);
+    await expectHealthyScreen(page);
+    expect(errors).toEqual([]);
+  });
+}
+
+for (const [id, componentName] of lenses) {
+  test(`A-221 lens registry smoke: ${componentName}`, async ({ page }) => {
+    const errors = watchCodeErrors(page);
+    await openGuest(page, `/?lens=${id}#intelligence`);
     await expectHealthyScreen(page);
     expect(errors).toEqual([]);
   });

@@ -60,12 +60,13 @@ const ForensicAudit = React.memo(() => {
 
   // 2. Z-SCORE ANOMALY DETECTION
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
+  const isGuest = useAuthStore(s => s.isGuest);
   const [anomalies, setAnomalies] = useState<(import("../../types").Transaction & { zScore: number })[]>([]);
   const [, setIsScanning] = useState(false);
 
   useEffect(() => {
     async function scan() {
-      if (transactions.length < 5 || !currentWorkspaceId) return;
+      if (isGuest || transactions.length < 5 || !currentWorkspaceId) return;
       setIsScanning(true);
       try {
         const res = await fetch('/api/v1/forensics/anomaly-scan', {
@@ -73,18 +74,19 @@ const ForensicAudit = React.memo(() => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ workspaceId: currentWorkspaceId })
         });
+        if (!res.ok) return;
         const data = await res.json();
         if (data.anomalies) {
           setAnomalies(data.anomalies);
         }
-      } catch (e) {
-        console.error('Anomaly scan failed', e);
+      } catch {
+        // Ignore background scan errors when offline or unauthenticated
       } finally {
         setIsScanning(false);
       }
     }
     scan();
-  }, [transactions, currentWorkspaceId]);
+  }, [isGuest, transactions, currentWorkspaceId]);
 
   // 3. COMPLIANCE STATS
   const complianceStats = useMemo(() => {
