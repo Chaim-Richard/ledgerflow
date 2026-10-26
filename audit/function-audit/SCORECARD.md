@@ -104,8 +104,8 @@ npx tsx audit/function-audit/probes/af012-rule-chain-order.mjs
 npx tsx audit/function-audit/probes/af012-shipped-pack-chains.mjs
 ```
 
-The whole unit suite was run in four shards with the database attached; the counts are recorded in
-[`../FINAL_ACCURATE_LIST_2026-10-25.md`](../FINAL_ACCURATE_LIST_2026-10-25.md) §5.
+The whole unit suite ran in four shards with the database attached: **4,616 tests · 904 suites · 0 failed ·
+0 skipped** (exit 0 on every shard). Recorded in [`../FINAL_ACCURATE_LIST_2026-10-25.md`](../FINAL_ACCURATE_LIST_2026-10-25.md) §5.
 
 ## Not run here, and why
 
