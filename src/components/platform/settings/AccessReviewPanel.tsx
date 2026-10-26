@@ -5,6 +5,7 @@ import { useCurrentRole } from '../../../hooks/useCurrentRole';
 import { useAccessReview } from '../../../hooks/useAccessReview';
 import { ACCESS_REVIEW_HEADERS, ACCESS_ROLE_LABELS, TWO_STEP_LABELS, accessReviewCsvRows, twoStepLimitNote } from '../../../lib/accessReview';
 import { downloadCsv } from '../../../lib/csvExport';
+import { getLocalDateISO } from '../../../lib/utils';
 import { EmptyState } from '../../ui/EmptyState';
 import { LoadingState } from '../../ui/LoadingState';
 
@@ -39,7 +40,7 @@ export default function AccessReviewPanel() {
 function ScopedAccessReview({ workspaceId }: { workspaceId: string }) {
   const review = useAccessReview(workspaceId);
 
-  const exportCsv = () => downloadCsv(`access-review-${new Date().toISOString().slice(0, 10)}.csv`, [...ACCESS_REVIEW_HEADERS], accessReviewCsvRows(review.rows));
+  const exportCsv = () => downloadCsv(`access-review-${getLocalDateISO()}.csv`, [...ACCESS_REVIEW_HEADERS], accessReviewCsvRows(review.rows));
 
   return (
     <section aria-labelledby="access-review-title" className="p-6 md:p-8 bg-[var(--surface)] border border-[var(--line)] rounded-2xl space-y-5">

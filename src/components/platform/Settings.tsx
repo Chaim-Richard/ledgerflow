@@ -59,7 +59,7 @@ export default function Settings() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSubTab}
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               className="space-y-10"
@@ -78,7 +78,7 @@ export default function Settings() {
         {/* Global Sidebar Documentation Context (Could also be modularized later) */}
         <div className="space-y-10">
           <div className="p-4 md:p-10 bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm group hover:border-indigo-600 transition-all duration-500">
-            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">About settings</h2>
+            <h2 className="text-[11px] font-black text-[var(--text)] dark:text-[#699274] uppercase tracking-[0.3em] mb-6 opacity-40 dark:opacity-100">About settings</h2>
             <div className="space-y-4">
               <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold mb-8">
                 Choose a tab to review or update the settings for your workspace.

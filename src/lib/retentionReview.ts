@@ -139,6 +139,45 @@ function recordLabel(record: RetentionSourceRecord): string {
   return COLLECTION_LABELS[record.collection];
 }
 
+interface ResolvedEntityContext {
+  entity: string;
+  profileSource: string;
+  countryCode: string;
+  countryName: string;
+  period?: RetentionPeriodInput;
+}
+
+function resolveEntityContext(
+  rawValue: string | undefined,
+  profiles: TaxProfiles | null | undefined,
+  dimensionId: string,
+  nodes: readonly DimensionNode[],
+  cache: Map<string, ResolvedEntityContext>,
+): ResolvedEntityContext {
+  const cacheKey = rawValue ?? '';
+  const hit = cache.get(cacheKey);
+  if (hit) return hit;
+  const dimensions = rawValue ? { [dimensionId]: rawValue } : undefined;
+  const profile = resolveSellerProfile(profiles, dimensions, [dimensionId]);
+  const countryCode = typeof profile.place?.country === 'string' && /^[A-Za-z]{2}$/.test(profile.place.country.trim())
+    ? profile.place.country.trim().toUpperCase()
+    : '';
+  const period = periodForCountry(countryCode);
+  const entity = profile.name || (rawValue
+    ? resolveDimensionLabel(nodes as DimensionNode[], dimensionId, rawValue)
+    : 'Books');
+  const countryName = period?.countryName || (countryCode || 'Unknown');
+  const resolved: ResolvedEntityContext = {
+    entity,
+    profileSource: profile.from[0] || 'No matching Tax profile',
+    countryCode,
+    countryName,
+    period,
+  };
+  cache.set(cacheKey, resolved);
+  return resolved;
+}
+
 function classify(input: {
   key: string;
   recordId: string;
@@ -146,20 +185,22 @@ function classify(input: {
   recordType: string;
   recordDate?: string;
   recordStatus?: string;
-  dimensions?: Record<string, string>;
+  rawValue?: string;
   relatedRecord?: string;
   profiles?: TaxProfiles | null;
   dimensionId: string;
   nodes: readonly DimensionNode[];
   asOfDate: string;
   missingSource?: boolean;
+  contextCache: Map<string, ResolvedEntityContext>;
 }): RetentionReviewRow {
-  const rawValue = input.dimensions?.[input.dimensionId];
-  const profile = resolveSellerProfile(input.profiles, input.dimensions, [input.dimensionId]);
-  const countryCode = typeof profile.place?.country === 'string' && /^[A-Za-z]{2}$/.test(profile.place.country.trim())
-    ? profile.place.country.trim().toUpperCase()
-    : '';
-  const period = periodForCountry(countryCode);
+  const { entity, profileSource, countryCode, countryName, period } = resolveEntityContext(
+    input.rawValue,
+    input.profiles,
+    input.dimensionId,
+    input.nodes,
+    input.contextCache,
+  );
   const date = validDate(input.recordDate) ? input.recordDate.slice(0, 10) : '';
   const reviewDueOn = period && date ? addMonthsYMD(date, period.years * 12) : undefined;
   const reviewState: RetentionReviewState = reviewDueOn
@@ -170,10 +211,6 @@ function classify(input: {
     : !countryCode ? 'Country is not recorded in the resolved Tax profile'
     : !period ? `No A-144 review period is specified for ${countryCode}`
     : undefined;
-  const entity = profile.name || (rawValue
-    ? resolveDimensionLabel(input.nodes as DimensionNode[], input.dimensionId, rawValue)
-    : 'Books');
-  const countryName = period?.countryName || (countryCode || 'Unknown');
 
   return {
     key: input.key,
@@ -183,7 +220,7 @@ function classify(input: {
     recordDate: date,
     recordStatus: input.recordStatus || '',
     entity,
-    profileSource: profile.from[0] || 'No matching Tax profile',
+    profileSource,
     countryCode,
     countryName,
     ...(period ? { periodYears: period.years } : {}),
@@ -194,7 +231,13 @@ function classify(input: {
   };
 }
 
-function rowsForRecord(record: RetentionSourceRecord, input: RetentionReviewInput, dimensionId: string, nodes: readonly DimensionNode[]): RetentionReviewRow[] {
+function rowsForRecord(
+  record: RetentionSourceRecord,
+  input: RetentionReviewInput,
+  dimensionId: string,
+  nodes: readonly DimensionNode[],
+  contextCache: Map<string, ResolvedEntityContext>,
+): RetentionReviewRow[] {
   if (!record.id) return [];
   const type = recordLabel(record);
   const number = record.number || record.id;
@@ -205,12 +248,17 @@ function rowsForRecord(record: RetentionSourceRecord, input: RetentionReviewInpu
     recordType: type,
     recordDate: record.date,
     recordStatus: record.status,
-    dimensions: raw ? { [dimensionId]: raw } : undefined,
+    rawValue: raw,
     profiles: input.profiles,
     dimensionId,
     nodes,
     asOfDate: input.asOfDate,
+    contextCache,
   }));
+}
+
+function cmpStr(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /** Review supported documents and their linked files using saved Tax profiles and calendar-year arithmetic. */
@@ -218,17 +266,20 @@ export function retentionReview(input: RetentionReviewInput): RetentionReviewRep
   if (!validDate(input.asOfDate)) throw new Error('Choose a valid as-of date.');
   const dimensionId = input.worldDimensionId || 'world';
   const nodes = input.dimensionNodes || [];
-  const recordsByKey = new Map<string, RetentionSourceRecord>();
-  const rows = input.records.flatMap(record => {
-    recordsByKey.set(`${record.collection}:${record.id}`, record);
-    return rowsForRecord(record, input, dimensionId, nodes);
-  });
+  const contextCache = new Map<string, ResolvedEntityContext>();
+  const rowsByRecordKey = new Map<string, RetentionReviewRow[]>();
+  const rows: RetentionReviewRow[] = [];
+  for (const record of input.records) {
+    const recordRows = rowsForRecord(record, input, dimensionId, nodes, contextCache);
+    rowsByRecordKey.set(`${record.collection}:${record.id}`, recordRows);
+    for (const r of recordRows) rows.push(r);
+  }
 
   for (const attachment of input.attachments || []) {
     if (!attachment.id || !attachment.linkedId || !REVIEWABLE_ATTACHMENT_COLLECTIONS.has(attachment.linkedCollection as RetentionReviewCollection)) continue;
     const collection = attachment.linkedCollection as RetentionReviewCollection;
-    const parent = recordsByKey.get(`${collection}:${attachment.linkedId}`);
-    if (!parent) {
+    const parentRows = rowsByRecordKey.get(`${collection}:${attachment.linkedId}`);
+    if (!parentRows) {
       rows.push(classify({
         key: `attachment:${attachment.id}:missing-source`,
         recordId: attachment.id,
@@ -241,10 +292,10 @@ export function retentionReview(input: RetentionReviewInput): RetentionReviewRep
         nodes,
         asOfDate: input.asOfDate,
         missingSource: true,
+        contextCache,
       }));
       continue;
     }
-    const parentRows = rowsForRecord(parent, input, dimensionId, nodes);
     for (const parentRow of parentRows) {
       rows.push({
         ...parentRow,
@@ -257,9 +308,9 @@ export function retentionReview(input: RetentionReviewInput): RetentionReviewRep
     }
   }
 
-  rows.sort((a, b) => a.reviewState.localeCompare(b.reviewState) ||
-    a.reviewDueOn?.localeCompare(b.reviewDueOn || '') || a.recordDate.localeCompare(b.recordDate) ||
-    a.recordType.localeCompare(b.recordType) || a.recordNumber.localeCompare(b.recordNumber));
+  rows.sort((a, b) => cmpStr(a.reviewState, b.reviewState) ||
+    cmpStr(a.reviewDueOn || '', b.reviewDueOn || '') || cmpStr(a.recordDate, b.recordDate) ||
+    cmpStr(a.recordType, b.recordType) || cmpStr(a.recordNumber, b.recordNumber));
   return {
     rows,
     asOfDate: input.asOfDate,

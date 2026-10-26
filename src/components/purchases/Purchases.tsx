@@ -85,6 +85,17 @@ export default function Purchases() {
     });
   }, [bills, searchTerm]);
 
+  const [billLimit, setBillLimit] = useState(100);
+  const visibleBills = useMemo(() => {
+    if (filteredBills.length <= billLimit) return filteredBills;
+    const sliced = filteredBills.slice(0, billLimit);
+    if (focusedBillId && !sliced.some(b => b.id === focusedBillId)) {
+      const focused = filteredBills.find(b => b.id === focusedBillId);
+      if (focused) sliced.push(focused);
+    }
+    return sliced;
+  }, [filteredBills, billLimit, focusedBillId]);
+
   // Filter vendors based on search term
   const [vendorTag, setVendorTag] = useState<string | null>(null);
   const vendorTags = useMemo(() => allTags(vendors), [vendors]);
@@ -250,7 +261,7 @@ export default function Purchases() {
                 setIsVendorModalOpen(true);
               }
             }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors"
+            className="px-4 py-2 bg-[#018669] hover:bg-emerald-700 text-white font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
             {activeSubTab === 'bills' ? 'Record Bill' : 'Add Vendor'}
@@ -264,7 +275,7 @@ export default function Purchases() {
           onClick={() => { setActiveSubTab('bills'); setSearchTerm(''); }}
           className={`pb-3 text-sm font-bold border-b-2 transition-all ${
             activeSubTab === 'bills'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              ? 'border-emerald-500 text-[#02806d] dark:text-emerald-400'
               : 'border-transparent text-[var(--muted)] dark:text-slate-400 hover:text-slate-700'
           }`}
         >
@@ -274,7 +285,7 @@ export default function Purchases() {
           onClick={() => { setActiveSubTab('vendors'); setSearchTerm(''); }}
           className={`pb-3 text-sm font-bold border-b-2 transition-all ${
             activeSubTab === 'vendors'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              ? 'border-emerald-500 text-[#02806d] dark:text-emerald-400'
               : 'border-transparent text-[var(--muted)] dark:text-slate-400 hover:text-slate-700'
           }`}
         >
@@ -320,8 +331,8 @@ export default function Purchases() {
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                   <th scope="col" className="pl-4 w-8">
                     <input type="checkbox" aria-label="Select all bills shown"
-                      checked={filteredBills.length > 0 && filteredBills.every(b => pickedBills.has(b.id))}
-                      onChange={e => setPickedBills(e.target.checked ? new Set(filteredBills.map(b => b.id)) : new Set())} />
+                      checked={visibleBills.length > 0 && visibleBills.every(b => pickedBills.has(b.id))}
+                      onChange={e => setPickedBills(e.target.checked ? new Set(visibleBills.map(b => b.id)) : new Set())} />
                   </th>
                   <th scope="col" className="p-4">Vendor</th>
                   <th scope="col" className="p-4">Bill #</th>
@@ -333,7 +344,7 @@ export default function Purchases() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {filteredBills.map(b => {
+                {visibleBills.map(b => {
                   const isOverdue = b.dueDate && new Date(b.dueDate) < new Date() && b.status !== 'paid' && b.status !== 'void';
                   return (
                     <tr key={b.id} id={recordElementId('bill', b.id)} aria-current={focusedBillId === b.id ? 'true' : undefined}
@@ -445,6 +456,20 @@ export default function Purchases() {
                     </tr>
                   );
                 })}
+
+                {filteredBills.length > visibleBills.length && (
+                  <tr>
+                    <td colSpan={8} className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setBillLimit(n => n + 200)}
+                        className="min-h-11 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                      >
+                        Show more bills ({visibleBills.length} of {filteredBills.length})
+                      </button>
+                    </td>
+                  </tr>
+                )}
 
                 {loading && filteredBills.length === 0 && (
                   <tr>

@@ -10,7 +10,7 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { downloadCsv } from '../../lib/csvExport';
-import { formatCurrency, parseAmountToCents } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import {
   BILL_RETENTION_CSV_HEADERS,
   billRetentionCsvRows,
@@ -28,7 +28,7 @@ export default function BillRetentionReportView() {
   const canWrite = useCurrentRole() !== 'viewer';
   const { updateEntity } = useEntityOperations();
 
-  const [asOfDate, setAsOfDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [asOfDate, setAsOfDate] = useState(() => getLocalDateISO());
   const [billId, setBillId] = useState('');
   const [heldInput, setHeldInput] = useState('');
   const [releaseDate, setReleaseDate] = useState('');

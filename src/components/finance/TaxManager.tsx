@@ -198,17 +198,18 @@ export default function TaxManager({
   const taxMetrics = useMemo(() => {
     const fromServer = serverMonths ? yearFigures(activity, selectedYear, accounts) : null;
     const yearTransactions = (transactions || []).filter(tx => isPostable(tx) && parseLocalDate(tx.date).getFullYear() === selectedYear);
+    const accountById = new Map(accounts.map(a => [a.id, a]));
     
     const grossIncome = fromServer ? fromServer.grossIncome : yearTransactions
       .reduce((acc, tx) => {
-        const incomeLines = tx.lines?.filter(l => isIncomeAccount(accounts.find(a => a.id === l.accountId))) || [];
+        const incomeLines = tx.lines?.filter(l => isIncomeAccount(accountById.get(l.accountId))) || [];
         // Typically income lines are negative in a ledger (Credit)
         return acc + incomeLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
 
     const expenses = fromServer ? fromServer.expenses : yearTransactions
       .reduce((acc, tx) => {
-        const expenseLines = tx.lines?.filter(l => accounts.find(a => a.id === l.accountId)?.type === 'expense') || [];
+        const expenseLines = tx.lines?.filter(l => accountById.get(l.accountId)?.type === 'expense') || [];
         return acc + expenseLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
 
@@ -237,7 +238,7 @@ export default function TaxManager({
 
     const salesTaxCollected = fromServer ? fromServer.salesTaxCollected : yearTransactions
       .flatMap(tx => (tx.lines || []).map(l => ({ line: l, tx })))
-      .filter(({ line }) => accounts.find(a => a.id === line.accountId)?.name.toLowerCase().includes('sales tax'))
+      .filter(({ line }) => accountById.get(line.accountId)?.name.toLowerCase().includes('sales tax'))
       .reduce((acc, { line, tx }) => acc + lineAmount(line, tx), 0);
 
     return {
@@ -435,7 +436,7 @@ export default function TaxManager({
                   <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Protocol Domain</th>
                   <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-right">Basis</th>
                   <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-center">Metric</th>
-                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-slate-700 uppercase tracking-widest text-right bg-slate-100/50">Apportionment</th>
+                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--text)] uppercase tracking-widest text-right bg-[var(--ink)]">Apportionment</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -448,9 +449,9 @@ export default function TaxManager({
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-[var(--ink)] rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-[var(--ink)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate ?? 0.21) : 0)}
                   </td>
                 </tr>
@@ -464,9 +465,9 @@ export default function TaxManager({
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-[var(--ink)] rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-[var(--ink)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * 0.153 : 0)}
                   </td>
                 </tr>
@@ -480,9 +481,9 @@ export default function TaxManager({
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-[var(--ink)] rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-600 bg-emerald-50/50 group-hover/row:bg-emerald-50 tabular-nums">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30 group-hover/row:bg-emerald-50 dark:group-hover/row:bg-emerald-950/50 tabular-nums">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                 </tr>

@@ -5,7 +5,8 @@ import { formatCurrency, parseLocalDate, cn, formatDate } from '../../lib/utils'
 
 import { DollarSign, Search, Eye, Download, Printer } from 'lucide-react';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
+import { downloadDocumentPdf } from '../../services/documentDownloads';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
 

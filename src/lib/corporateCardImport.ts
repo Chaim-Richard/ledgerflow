@@ -137,7 +137,7 @@ function existingClaimSignatures(existingBills: Bill[] | undefined): Map<string,
 
 /**
  * Parse a corporate card CSV statement for an open expense claim.
- * All-or-nothing validation: any malformed row refuses the whole import listing every problem.
+ * All-or-nothing validation — a malformed row refuses the whole import listing every problem.
  */
 export function parseCorporateCardCsv(
   csvText: string,

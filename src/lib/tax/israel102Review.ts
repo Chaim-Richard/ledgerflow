@@ -27,6 +27,14 @@ export interface Israel102ReviewRun {
   healthEmployeeCents?: number;
 }
 
+/** Converts typed ILS decimal strings to minor units; never uses floating-point rounding. */
+export function exactIlsCents(text: string | undefined): number | undefined {
+  if (text === undefined || !/^(0|[1-9]\d{0,11})(\.\d{1,2})?$/.test(text.trim())) return undefined;
+  const [whole, fraction = ''] = text.trim().split('.');
+  const cents = Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
+  return Number.isSafeInteger(cents) ? cents : undefined;
+}
+
 export interface Israel102ReviewSummary {
   readyForFiling: false;
   canReview: boolean;

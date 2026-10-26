@@ -7,25 +7,39 @@ import { normalizeSearchText } from '../textNormalization';
  * in a Bipartite Graph using the True Hungarian Algorithm (Kuhn-Munkres O(N^3)).
  * It maximizes aggregate system utility via prioritized objective optimization.
  */
-export function findGlobalOptimalMatch(
+function solveHungarianComponent(
   sourceItems: { id: string; scoreMap: Map<string, number> }[],
-  targetIds: string[]
-): Map<string, string> {
-  const matches = new Map<string, string>(); // Source ID -> Target ID
-
-  if (sourceItems.length === 0 || targetIds.length === 0) return matches;
-
-  // Construct cost matrix (Algorithm minimizes cost, so we insert negated weights or inverted similarities)
-  // Our objective is maximizing weight, so cost = max_weight - weight
+  targetIds: string[],
+  matches: Map<string, string>
+): void {
   const n = sourceItems.length;
   const m = targetIds.length;
+  if (n === 0 || m === 0) return;
+
+  if (n === 1) {
+    let bestTarget = '';
+    let bestWeight = 0;
+    for (let j = 0; j < m; j++) {
+      const w = sourceItems[0].scoreMap.get(targetIds[j]) || 0;
+      if (w > bestWeight) {
+        bestWeight = w;
+        bestTarget = targetIds[j];
+      }
+    }
+    if (bestWeight > 0) matches.set(sourceItems[0].id, bestTarget);
+    return;
+  }
+
   const dim = Math.max(n, m);
 
   // Find global max to subtract from for the cost transposition
   let maxWeight = 0;
   sourceItems.forEach(s => {
-      s.scoreMap.forEach(w => maxWeight = Math.max(maxWeight, w));
+    s.scoreMap.forEach(w => {
+      if (w > maxWeight) maxWeight = w;
+    });
   });
+  if (maxWeight <= 0) return;
 
   const cost = Array.from({ length: dim }, () => new Float64Array(dim).fill(maxWeight * 2)); // Dummy edges get high cost
 
@@ -94,6 +108,76 @@ export function findGlobalOptimalMatch(
         matches.set(sourceItems[sIdx].id, targetIds[tIdx]);
       }
     }
+  }
+}
+
+export function findGlobalOptimalMatch(
+  sourceItems: { id: string; scoreMap: Map<string, number> }[],
+  targetIds: string[]
+): Map<string, string> {
+  const matches = new Map<string, string>(); // Source ID -> Target ID
+
+  if (sourceItems.length === 0 || targetIds.length === 0) return matches;
+
+  const targetOrder = new Map<string, number>();
+  targetIds.forEach((id, idx) => targetOrder.set(id, idx));
+
+  const activeSources = sourceItems.filter(s => {
+    for (const [tId, w] of s.scoreMap.entries()) {
+      if (w > 0 && targetOrder.has(tId)) return true;
+    }
+    return false;
+  });
+  if (activeSources.length === 0) return matches;
+
+  // Build target -> source indices adjacency to decompose into independent connected components
+  const targetToSources = new Map<string, number[]>();
+  activeSources.forEach((s, sIdx) => {
+    for (const [tId, w] of s.scoreMap.entries()) {
+      if (w > 0 && targetOrder.has(tId)) {
+        const list = targetToSources.get(tId);
+        if (list) list.push(sIdx);
+        else targetToSources.set(tId, [sIdx]);
+      }
+    }
+  });
+
+  const visitedSource = new Uint8Array(activeSources.length);
+  const visitedTarget = new Set<string>();
+
+  for (let i = 0; i < activeSources.length; i++) {
+    if (visitedSource[i]) continue;
+    const compSourceIndices: number[] = [];
+    const compTargets: string[] = [];
+    const queue: number[] = [i];
+    visitedSource[i] = 1;
+
+    while (queue.length > 0) {
+      const sIdx = queue.pop()!;
+      compSourceIndices.push(sIdx);
+      for (const [tId, w] of activeSources[sIdx].scoreMap.entries()) {
+        if (w <= 0 || !targetOrder.has(tId)) continue;
+        if (!visitedTarget.has(tId)) {
+          visitedTarget.add(tId);
+          compTargets.push(tId);
+          const neighbors = targetToSources.get(tId) || [];
+          for (const nextS of neighbors) {
+            if (!visitedSource[nextS]) {
+              visitedSource[nextS] = 1;
+              queue.push(nextS);
+            }
+          }
+        }
+      }
+    }
+
+    compSourceIndices.sort((a, b) => a - b);
+    compTargets.sort((a, b) => (targetOrder.get(a) ?? 0) - (targetOrder.get(b) ?? 0));
+    solveHungarianComponent(
+      compSourceIndices.map(idx => activeSources[idx]),
+      compTargets,
+      matches
+    );
   }
 
   return matches;

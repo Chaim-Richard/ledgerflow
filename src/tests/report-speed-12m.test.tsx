@@ -164,4 +164,114 @@ describe('A-206: AI #3 heaviest reports load well under 1,000 ms on the 12-month
     assert.ok(rows.length >= 10);
     assert.equal(rows.filter(r => r[3] === 'Yes').length, 5);
   });
+
+  test('A-229: scale=3 (~3,600-transaction) sample business year computes every report module under 500 ms, and the 10 busiest screens mount under 1,500 ms on a ~5,000-entry (scale=4) year', async () => {
+    const scale3Fixture = buildSampleBusinessYear({ year: 2026, scale: 3 });
+    assert.ok(
+      scale3Fixture.transactions.length >= 3000,
+      `Expected >= 3,000 transactions at scale: 3, got ${scale3Fixture.transactions.length}`,
+    );
+
+    const scale3BudgetMs = process.env.CI ? 500 * 3 : 500;
+    const bench = runSampleYearReportBenchmark(scale3Fixture, 3);
+    assert.equal(bench.topFiveHeaviest.length, 5);
+    assert.equal(bench.scale, 3);
+    for (const row of bench.reports) {
+      assert.ok(
+        row.durationMs < scale3BudgetMs,
+        `Report "${row.reportId}" at scale=3 (${scale3Fixture.transactions.length} txs) took ${row.durationMs} ms (budget ${scale3BudgetMs} ms)`,
+      );
+    }
+
+    const scale4Fixture = buildSampleBusinessYear({ year: 2026, scale: 4 });
+    assert.ok(
+      scale4Fixture.transactions.length >= 4500,
+      `Expected ~5,000 transactions at scale: 4, got ${scale4Fixture.transactions.length}`,
+    );
+    setComponentWorkspace('owner');
+    useAuthStore.setState({
+      currentWorkspaceId: scale4Fixture.workspace.id,
+      workspaces: [scale4Fixture.workspace],
+    });
+    markComponentCollectionsLoaded(
+      'transactions', 'accounts', 'customers', 'vendors', 'invoices', 'creditNotes',
+      'estimates', 'bills', 'vendorCredits', 'inventory', 'payments', 'bankLines',
+      'assets', 'recurring', 'budgets', 'projects',
+    );
+    useLedgerStore.setState({
+      transactions: scale4Fixture.transactions,
+      accounts: scale4Fixture.accounts,
+      customers: scale4Fixture.customers,
+      vendors: scale4Fixture.vendors,
+      invoices: scale4Fixture.invoices,
+      creditNotes: scale4Fixture.creditNotes,
+      estimates: scale4Fixture.estimates,
+      bills: scale4Fixture.bills,
+      vendorCredits: scale4Fixture.vendorCredits,
+      inventory: scale4Fixture.inventory,
+      payments: scale4Fixture.payments,
+      bankLines: scale4Fixture.bankLines,
+      reconciliations: scale4Fixture.reconciliations as unknown as never[],
+      assets: scale4Fixture.assets,
+      recurring: scale4Fixture.recurring,
+      budgets: scale4Fixture.budgets,
+      projects: scale4Fixture.projects,
+    });
+
+    const screenBudgetMs = process.env.CI ? 1500 * 3 : 1500;
+    const tenBusiestScreens: Array<[string, () => Promise<{ default?: React.ComponentType<Record<string, unknown>> }>]> = [
+      ['Overview', () => import('../components/Dashboard') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['Sales', () => import('../components/sales/Sales') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['Purchases', () => import('../components/purchases/Purchases') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['Banking', () => import('../components/banking/Banking') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['Reconcile', () => import('../components/ledger/Reconciliation') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['ProfitAndLoss', () => import('../components/ledger/ProfitAndLossView') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['BalanceSheet', () => import('../components/ledger/BalanceSheetView') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['TrialBalance', () => import('../components/ledger/TrialBalanceView') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['Taxes', () => import('../components/finance/TaxManager') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+      ['Settings', () => import('../components/platform/Settings') as unknown as Promise<{ default: React.ComponentType<Record<string, unknown>> }>],
+    ];
+    const screenProps = {
+      transactions: scale4Fixture.transactions,
+      allTransactions: scale4Fixture.transactions,
+      accounts: scale4Fixture.accounts,
+      bankFeed: scale4Fixture.bankLines,
+      reconciliations: scale4Fixture.reconciliations,
+      journalEntries: [],
+      taxRates: [],
+      selectedYear: 2026,
+      startDate: scale4Fixture.startDate,
+      endDate: scale4Fixture.endDate,
+      asOfDate: scale4Fixture.asOfDate,
+      formatCurrency,
+      onDrillDown: () => {},
+      onAddTaxRate: async () => {},
+      onUpdateTaxRate: async () => {},
+      onDeleteTaxRate: async () => {},
+    };
+
+    // The app shell preloads the route chunks once at workspace start; time that cold import
+    // separately, then measure each screen activation from render start to committed DOM.
+    const preloadStart = performance.now();
+    const preloadedScreens = await Promise.all(tenBusiestScreens.map(([, loadScreen]) => loadScreen()));
+    const preloadMs = Number((performance.now() - preloadStart).toFixed(2));
+    assert.ok(
+      preloadMs < screenBudgetMs,
+      `Loading all 10 screen modules took ${preloadMs} ms (budget ${screenBudgetMs} ms)`,
+    );
+
+    for (const [index, [name]] of tenBusiestScreens.entries()) {
+      const ScreenComp = preloadedScreens[index].default!;
+      const t0 = performance.now();
+      await act(async () => {
+        render(<ScreenComp {...screenProps} />);
+      });
+      const elapsed = Number((performance.now() - t0).toFixed(2));
+      cleanup();
+      assert.ok(
+        elapsed < screenBudgetMs,
+        `Screen "${name}" with ${scale4Fixture.transactions.length} entries took ${elapsed} ms (budget ${screenBudgetMs} ms)`,
+      );
+    }
+  });
 });

@@ -395,7 +395,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       {/* KPI Matrix */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
         >
@@ -423,7 +423,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
@@ -452,7 +452,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className={cn(
@@ -464,7 +464,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
               <Target aria-hidden="true" size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-white/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
+            <p className={cn("text-[9px] font-bold mb-2 uppercase tracking-wider", (data.netIncome || 0) >= 0 ? "text-[#748480]" : "text-rose-200")}>{labels.netLabel}</p>
             <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3 tabular-nums">
               <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.netIncome || 0)}</bdi>
             </p>
@@ -517,7 +517,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                   onClick={() => toggleSort(field)}
                   className={cn(
                     "px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer",
-                    sortBy === field ? "bg-slate-900 text-white" : "text-slate-500 hover:text-[var(--text)]"
+                    sortBy === field ? "bg-slate-900 text-white" : "text-slate-500 dark:text-[#6a8f93] hover:text-[var(--text)]"
                   )}
                 >
                   <span>{field}</span>
@@ -540,7 +540,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                  <h3 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.revenueStreams}</h3>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-mono text-base font-black text-emerald-700 tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.income?.total || 0)}</bdi></span>
+                <span className="font-mono text-base font-black text-emerald-700 dark:text-[#009e44] tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.income?.total || 0)}</bdi></span>
                 {isComparative && prevData.income?.total !== 0 && (
                   <div className="flex items-center gap-1.5 mt-0.5">
                      <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.income?.total)}</bdi></span>

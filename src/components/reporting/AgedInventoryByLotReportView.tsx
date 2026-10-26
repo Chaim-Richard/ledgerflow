@@ -9,7 +9,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useCollection } from '../../hooks/useCollection';
 import { downloadCsv } from '../../lib/csvExport';
-import { formatCurrency } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import type { PurchaseOrder } from '../../types';
 import {
   AGED_INVENTORY_BY_LOT_CSV_HEADERS,
@@ -35,7 +35,7 @@ export default function AgedInventoryByLotReportView({
   const purchaseOrders = purchaseOrdersProp ?? loadedOrders;
   const workspaceCurrency = useAuthStore(s => s.getCurrentWorkspace()?.currency) || 'USD';
 
-  const [asOfDate, setAsOfDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [asOfDate, setAsOfDate] = useState(() => getLocalDateISO());
   const [bucketFilter, setBucketFilter] = useState<'ALL' | LotAgeBucketKey>('ALL');
 
   const rows = useMemo(

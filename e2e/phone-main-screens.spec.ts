@@ -7,6 +7,10 @@ const screens = [
   { tab: 'purchases', heading: 'Purchases & AP', action: 'Record Bill' },
   { tab: 'reports', heading: 'Reports', action: 'Generate' },
   { tab: 'settings', heading: 'Settings', action: 'Backup & Export' },
+  { tab: 'general-ledger', heading: 'General Ledger', action: 'Print Ledger' },
+  { tab: 'statement', heading: 'Account Statement', action: 'Print Statement' },
+  { tab: 'consolidation', heading: 'Multi-Entity Consolidation', action: 'Top-Level Adjustments' },
+  { tab: 'banking', heading: 'Bank & Institution Connections', action: 'Make deposit' },
 ];
 
 for (const screen of screens) {
@@ -16,6 +20,7 @@ for (const screen of screens) {
     await page.addInitScript(() => {
       localStorage.setItem('isGuest', 'true');
       localStorage.setItem('has_seen_onboarding', 'true');
+      window.print = () => {};
     });
     await page.goto(`/#${screen.tab}`);
     await expect(page.getByRole('heading', { name: screen.heading, exact: true })).toBeVisible();
@@ -31,7 +36,7 @@ for (const screen of screens) {
     await action.focus();
     await expect(action).toBeFocused();
     await action.press('Enter');
-    if (['dashboard', 'transactions', 'sales', 'purchases'].includes(screen.tab)) {
+    if (['dashboard', 'transactions', 'sales', 'purchases', 'banking'].includes(screen.tab)) {
       await expect(page.getByRole('dialog')).toHaveCount(1);
     } else if (screen.tab === 'settings') {
       await expect(page.getByRole('button', { name: 'Choose export', exact: true })).toBeVisible();

@@ -27,6 +27,14 @@ export const US_W2_REVIEW_YEARS = [
   { year: 2026, socialSecurityWageBaseCents: 18450000, source: 'https://www.irs.gov/instructions/iw2w3' },
 ] as const;
 
+/** Strict decimal to cents, without floating-point multiplication of user input. */
+export function exactW2Cents(input: string | undefined): number | undefined {
+  if (input === undefined || !/^(0|[1-9]\d{0,11})(\.\d{1,2})?$/.test(input.trim())) return undefined;
+  const [whole, fractional = ''] = input.trim().split('.');
+  const cents = Number(whole) * 100 + Number(fractional.padEnd(2, '0'));
+  return Number.isSafeInteger(cents) ? cents : undefined;
+}
+
 export const US_W2_REVIEW_HEADERS = [
   'Tax year', 'Employee reference', 'Employee name',
   'Box 1 wages (USD)', 'Box 2 federal tax withheld (USD)',

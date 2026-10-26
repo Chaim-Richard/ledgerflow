@@ -172,6 +172,7 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
     { label: 'Work Orders (Kit Assembly)', componentName: 'WorkOrdersView' },
     { label: 'Israel: Annual Customer & Vendor Summary', componentName: 'IsraeliAnnualPartySummaryView' },
     { label: 'Accountant Queue', componentName: 'AccountantQueueView', id: 'accountant-queue' },
+    { label: 'Banking Data Validation', componentName: 'BankingValidationReportView' },
   ];
 
   async function chooseReport(page: import('@playwright/test').Page, label: string) {
@@ -211,6 +212,17 @@ test.describe('View Registry & Navigation Coverage Suite', () => {
   }
 
   const settingsTabs = [
+    { label: 'Rules & Automation', componentName: 'RulesSettingsView' },
+    { label: 'Dimensions & Labels', componentName: 'DimensionsView' },
+    { label: 'Appearance & Display', componentName: 'AppearanceSettingsView' },
+    { label: 'Team & Invites', componentName: 'TeamView' },
+    { label: 'Billing & Plan', componentName: 'BillingView' },
+    { label: 'Custom Templates', componentName: 'TemplatesView' },
+    { label: 'Security', componentName: 'SecurityView' },
+    { label: 'AI & Copilot', componentName: 'AISettingsView' },
+    { label: 'Developer', componentName: 'DeveloperView' },
+    { label: 'Backup & Export', componentName: 'ExportView' },
+    { label: 'Shortcuts', componentName: 'ShortcutsView' },
     { label: 'Import Data', componentName: 'ImportDataView' },
     { label: 'Emails & Reminders', componentName: 'EmailSettingsView' },
     { label: 'Branding & PDFs', componentName: 'BrandingSettingsView' },

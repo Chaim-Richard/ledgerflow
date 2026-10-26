@@ -12,6 +12,13 @@ import { maskCardNumbers } from './cardNumberMask';
 
 export type NoteableType = 'customer' | 'vendor' | 'item' | 'invoice' | 'bill' | 'estimate' | 'transaction' | 'project';
 
+export const NOTE_COLLECTIONS: Record<NoteableType, 'customers' | 'vendors' | 'inventory' | 'invoices' | 'bills' | 'estimates' | 'transactions' | 'projects'> = {
+  customer: 'customers', vendor: 'vendors', item: 'inventory', invoice: 'invoices',
+  bill: 'bills', estimate: 'estimates', transaction: 'transactions', project: 'projects',
+};
+
+export type NoteCollection = (typeof NOTE_COLLECTIONS)[NoteableType];
+
 export interface RecordNote {
   id: string;
   workspaceId: string;

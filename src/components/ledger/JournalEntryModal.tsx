@@ -1,17 +1,15 @@
 import { useDialog } from '../../hooks/useDialog';
-import { TruthEngine } from '../../modules/integrity/TruthEngine';
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { User } from '../../lib/db/auth';
 import { ChartAccount, JournalLine } from '../../types';
 import { 
-  Plus, 
-  Trash2, 
   AlertCircle, 
   CheckCircle2,
   X,
   ArrowRightLeft,
   Type as TypeIcon
 } from 'lucide-react';
+import DocumentLineEditor, { type JournalEditorLine } from '../common/DocumentLineEditor';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn, getLocalDateISO, formatCurrency, safeConfirm } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
@@ -71,14 +69,27 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   
   const isLocked = !!date && isLockedDate(date, lockDate, lockException);
 
-  const [lines, setLines] = useState<JournalLine[]>(() => initialEntry?.lines.length
-    ? initialEntry.lines.map(l => ({ accountId: l.accountId, accountName: l.accountName, debit: l.debit || 0, credit: l.credit || 0, dimensions: { ...(l.dimensions || {}) } }))
-    : [
-      { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-      { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-    ]);
-  const [lineKeys, setLineKeys] = useState(() => (initialEntry?.lines.length ? initialEntry.lines.map((_, i) => `initial-${i}`) : ['initial-first', 'initial-second']));
   const nextLineKey = useRef(0);
+  const toEditorLine = (l: Partial<JournalLine>, id: string): JournalEditorLine => ({
+    id,
+    description: '',
+    accountId: l.accountId || '',
+    accountName: l.accountName || '',
+    debit: l.debit || 0,
+    credit: l.credit || 0,
+    amountCents: (l.debit || 0) > 0 ? (l.debit || 0) : -(l.credit || 0),
+    class: l.class,
+    location: l.location,
+    project: l.project,
+    dimensions: { ...(l.dimensions || {}) },
+  });
+
+  const [lines, setLines] = useState<JournalEditorLine[]>(() => initialEntry?.lines.length
+    ? initialEntry.lines.map((l, i) => toEditorLine(l, `initial-${i}`))
+    : [
+      toEditorLine({}, 'initial-first'),
+      toEditorLine({}, 'initial-second'),
+    ]);
 
   // BD-09 / CA-27: start from a saved template, or keep these lines as one
   const role = useCurrentRole();
@@ -102,8 +113,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     if (!template) return;
     const { lines: filled, missing } = formLines(template, accounts);
     while (filled.length < 2) filled.push({ accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} });
-    setLines(filled);
-    setLineKeys(filled.map(() => `template-${nextLineKey.current++}`));
+    setLines(filled.map(l => toEditorLine(l, `template-${nextLineKey.current++}`)));
     if (template.description) setDescription(template.description);
     setAdjusting(Boolean(template.adjusting));
     if (missing) toast.warning(`${missing} ${missing === 1 ? 'line was' : 'lines were'} left out: the account no longer exists`);
@@ -134,19 +144,6 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     }
-  };
-
-  const handleDimensionChange = (index: number, dimensionId: string, value: string) => {
-    setLines(prev => prev.map((l, i) => {
-      if (i !== index) return l;
-      return {
-        ...l,
-        dimensions: {
-          ...(l.dimensions || {}),
-          [dimensionId.toLowerCase()]: value
-        }
-      };
-    }));
   };
 
   const { dialogProps, titleId } = useDialog(onClose, isOpen);
@@ -198,7 +195,7 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       if (match) {
         const found = accounts.find(a => a.name === match.accountName);
         if (found && lines[0].accountId === '') {
-          handleLineChange(0, 'accountId', found.id);
+          setLines(prev => prev.map((lineItem, i) => i === 0 ? { ...lineItem, accountId: found.id, accountName: found.name } : lineItem));
           toast.info(`Smart Category: Suggesting ${found.name} based on rule patterns.`, { duration: 2000 });
         }
       }
@@ -215,39 +212,8 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
   const labelRuleAccounts = useMemo(() => new Set(requiredLabelRules(workspace?.dimensions).flatMap(r => [...r.accountIds])), [workspace?.dimensions]);
   const dimensionsShown = showDimensions || lines.some(l => labelRuleAccounts.has(l.accountId));
 
-  const handleAddLine = () => {
-    setLines([...lines, { accountId: '', accountName: '', debit: 0, credit: 0, class: '', location: '', project: '', dimensions: {} }]);
-    const key = `added-${nextLineKey.current++}`;
-    setLineKeys(keys => [...keys, key]);
-  };
-
-  const handleRemoveLine = (index: number) => {
-    if (lines.length <= 2) return;
-    setLines(lines.filter((_, i) => i !== index));
-    setLineKeys(keys => keys.filter((_, i) => i !== index));
-  };
-
-  const handleLineChange = (index: number, field: keyof JournalLine, value: string) => {
-    setLines(prev => prev.map((lineItem, i) => {
-      if (i !== index) return lineItem;
-      const updated = { ...lineItem };
-      if (field === 'accountId') {
-        const account = accounts.find(a => a.id === value);
-        updated.accountId = value;
-        updated.accountName = account?.name || '';
-      } else if (field === 'debit' || field === 'credit') {
-        // Convert to cents
-        const cents = TruthEngine.parseAmountToCents(value || '0');
-        updated[field] = cents;
-        // If debit is set, clear credit and vice versa (standard journal entry behavior)
-        if (field === 'debit' && cents > 0) updated.credit = 0;
-        if (field === 'credit' && cents > 0) updated.debit = 0;
-      } else {
-        (updated as unknown as Record<string, string>)[field] = value;
-      }
-      return updated;
-    }));
-  };
+  const createJournalLine = (): JournalEditorLine =>
+    toEditorLine({ class: '', location: '', project: '', dimensions: {} }, `added-${nextLineKey.current++}`);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -278,19 +244,23 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         const debitCents = l.debit || 0;
         const creditCents = l.credit || 0;
         const baseCents = Math.round((debitCents > 0 ? debitCents : -creditCents) * appliedRate);
-        const dims: Record<string, string> = { ...(l.dimensions || {}) };
-        if (l.class && !dims.class) dims.class = l.class;
-        if (l.location && !dims.location) dims.location = l.location;
-        if (l.project && !dims.project) dims.project = l.project;
-        if ((l as typeof l & { world?: string }).world && !dims.world) dims.world = (l as typeof l & { world: string }).world;
+        const rawDims = l.dimensions || {};
+        const dims: Record<string, string> = {};
+        for (const [k, v] of Object.entries(rawDims)) {
+          if (v) dims[k] = v;
+        }
+        if (l.class && !('class' in rawDims)) dims.class = l.class;
+        if (l.location && !('location' in rawDims)) dims.location = l.location;
+        if (l.project && !('project' in rawDims)) dims.project = l.project;
+        if ((l as typeof l & { world?: string }).world && !('world' in rawDims)) dims.world = (l as typeof l & { world: string }).world;
         
         return {
           accountId: l.accountId,
           accountName: l.accountName,
           amountCents: baseCents,
-          class: l.class || undefined,
-          location: l.location || undefined,
-          project: l.project || undefined,
+          class: dims.class || undefined,
+          location: dims.location || undefined,
+          project: dims.project || undefined,
           dimensions: Object.keys(dims).length > 0 ? dims : undefined
         };
       });
@@ -375,10 +345,9 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
       setDescription('');
       setReference('');
       setLines([
-        { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
-        { accountId: '', accountName: '', debit: 0, credit: 0, dimensions: {} },
+        toEditorLine({}, 'initial-first'),
+        toEditorLine({}, 'initial-second'),
       ]);
-      setLineKeys(['initial-first', 'initial-second']);
     } catch (error) {
       console.error("Journal Entry Error:", error);
       // PREV-5: why, in words (it said only "Failed to record journal entry"); the entry stays in the form
@@ -579,133 +548,19 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
               )}
 
               {/* Lines Table */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold text-[var(--text)] uppercase tracking-widest">Entry Lines</h3>
-                  <div className="flex items-center gap-4">
-                    <label htmlFor="je-show-dim" className="flex items-center gap-2 cursor-pointer">
-                      <input 
-                        id="je-show-dim"
-                        type="checkbox" 
-                        checked={showDimensions} 
-                        onChange={e => setShowDimensions(e.target.checked)} 
-                        className="rounded border-[var(--line)] text-[var(--brass)] focus:ring-[var(--brass)]"
-                      />
-                      <span className="text-[11px] font-bold text-[var(--muted)] uppercase tracking-widest">Show Dimensions</span>
-                    </label>
-                    <button 
-                      type="button"
-                      onClick={handleAddLine}
-                      className="flex items-center gap-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
-                     aria-label="Add Line">
-                      <Plus size={14} /> Add Line
-                    </button>
-                  </div>
-                </div>
-
-                <div className="border border-[var(--line)] rounded-xl overflow-hidden overflow-x-auto custom-scrollbar">
-                  <table className="w-full border-collapse text-sm min-w-[600px]">
-                    <caption className="sr-only">Journal Entry Lines</caption>
-                    <thead>
-                      <tr className="text-left border-b border-[var(--line)] bg-[var(--ink)]/50">
-                        <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]">Account</th>
-                        {dimensionsShown && activeDimensions.map(dim => (
-                          <th scope="col" key={dim.id} className={cn("p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px]", dim.isWorld && "text-[var(--brass)]")}>
-                            {dim.name}
-                          </th>
-                        ))}
-                        <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Debit</th>
-                        <th scope="col" className="p-3.5 font-bold text-[var(--muted)] uppercase tracking-widest text-[10px] text-right w-32">Credit</th>
-                        <th scope="col" className="p-3.5 w-12"><span className="sr-only">Actions</span></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-[var(--line)]">
-                      {lines.map((line, idx) => (
-                        <tr key={lineKeys[idx]} className="group hover:bg-[var(--ink)]/50 transition-colors">
-                          <td className="p-2.5">
-                            <div className="relative">
-                              <input 
-                                required
-                                id={`je-line-acc-${idx}`}
-                                aria-label={`Account for line ${idx + 1}`}
-                                list={`je-account-${idx}`}
-                                value={accounts.find(a => a.id === line.accountId) ? `${accounts.find(a => a.id === line.accountId)?.code} - ${accounts.find(a => a.id === line.accountId)?.name}` : line.accountId || ''}
-                                onChange={(e) => {
-                                  const acc = accounts.find(a => `${a.code} - ${a.name}` === e.target.value || a.id === e.target.value);
-                                  handleLineChange(idx, 'accountId', acc ? acc.id : e.target.value);
-                                }}
-                                placeholder="Select Account..."
-                                className="w-full px-3 py-2 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
-                              />
-                              <datalist id={`je-account-${idx}`}>
-                                {accounts.sort((a, b) => a.code.localeCompare(b.code)).map(acc => (
-                                  <option key={acc.id} value={`${acc.code} - ${acc.name}`}>{acc.name}</option>
-                                ))}
-                              </datalist>
-                            </div>
-                          </td>
-                          {dimensionsShown && activeDimensions.map(dim => (
-                            <td key={dim.id} className="p-2.5">
-                              <div className="relative">
-                                <input 
-                                  id={`je-dim-${dim.id}-${idx}`}
-                                  aria-label={`${dim.name} for line ${idx + 1}`}
-                                  value={line.dimensions?.[dim.id.toLowerCase()] || (line as unknown as Record<string, string>)[dim.id.toLowerCase()] || ''}
-                                  onChange={(e) => handleDimensionChange(idx, dim.id, e.target.value)}
-                                  placeholder={`Select ${dim.name}...`}
-                                  className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px] text-[var(--text)]"
-                                />
-                              </div>
-                            </td>
-                          ))}
-                          <td className="p-2.5">
-                            <input 
-                              id={`je-line-debit-${idx}`}
-                              aria-label={`Debit amount for line ${idx + 1}`}
-                              type="number" 
-                              step="0.01"
-                              value={line.debit > 0 ? line.debit / 100 : ''}
-                              onChange={(e) => handleLineChange(idx, 'debit', e.target.value)}
-                              placeholder="0.00"
-                              className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
-                            />
-                          </td>
-                          <td className="p-2.5">
-                            <input 
-                              id={`je-line-credit-${idx}`}
-                              aria-label={`Credit amount for line ${idx + 1}`}
-                              type="number" 
-                              step="0.01"
-                              value={line.credit > 0 ? line.credit / 100 : ''}
-                              onChange={(e) => handleLineChange(idx, 'credit', e.target.value)}
-                              placeholder="0.00"
-                              className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
-                            />
-                          </td>
-                          <td className="p-2.5 text-center">
-                            <button 
-                              type="button"
-                              aria-label={`Remove line ${idx + 1}`}
-                              onClick={() => handleRemoveLine(idx)}
-                              className="p-2 text-[var(--muted)] hover:text-rose-600 transition-colors cursor-pointer"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="bg-[var(--ink)]/50 font-bold">
-                        <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={dimensionsShown ? 4 : 1}>Totals</td>
-                        <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.debit, activeCurrency)}</td>
-                        <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{formatCurrency(totals.credit, activeCurrency)}</td>
-                        <td></td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </div>
+              <DocumentLineEditor
+                side="journal"
+                lines={lines}
+                onChange={setLines}
+                createLine={createJournalLine}
+                accounts={accounts}
+                currency={activeCurrency}
+                date={date}
+                showDimensions={showDimensions}
+                onShowDimensionsChange={setShowDimensions}
+                dimensionsShown={dimensionsShown}
+                activeDimensions={activeDimensions}
+              />
 
               {/* Validation Status */}
               <div className={cn(

@@ -418,8 +418,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             className={cn(
               "px-3 py-1.5 rounded-lg flex items-center gap-2 font-bold text-[9px] uppercase tracking-wider border shadow-3xs transition-all w-full sm:w-auto",
               trialBalance.isBalanced 
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" 
-                : "bg-rose-500 text-white border-rose-400"
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" 
+                : "bg-rose-700 text-white border-rose-400"
             )}
           >
             {trialBalance.isBalanced ? <CheckCircle2 aria-hidden="true" size={12} className="shrink-0 text-emerald-500" /> : <AlertCircle aria-hidden="true" size={12} className="shrink-0" />}
@@ -442,7 +442,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
           </button>
           <button 
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600/10 text-emerald-600 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600/20 transition-all cursor-pointer"
            aria-label="Excel">
             <FileSpreadsheet aria-hidden="true" size={11} /> Excel
           </button>
