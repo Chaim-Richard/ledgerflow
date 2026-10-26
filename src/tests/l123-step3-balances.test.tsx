@@ -44,6 +44,10 @@ import { entriesAfter, openingCutoff, withServerOpening } from '../lib/serverBal
 import type { ChartAccount, Transaction } from '../types';
 import type { Firestore } from '../server/db/pgFirestore';
 
+function escapeRegExpLiteral(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 const N = 25_000;
 const CAP = LEDGER_COLLECTIONS.transactions.cap;
 const dayOf = (i: number) => new Date(Date.UTC(2019, 0, 1) + Math.floor((i - 1) / 7) * 86_400_000).toISOString().slice(0, 10);
@@ -93,7 +97,7 @@ describe('L-123 step 3: browser balances from the server (screen, fetch stubbed)
     const urls: string[] = [];
     answer({ status: 'success', asOf: '2020-12-15', accounts: { [`${ws}_cash`]: 500_700, [`${ws}_sales`]: -750_900, [`${ws}_rent`]: 250_200 } }, u => urls.push(u));
     render(<Ledger />);
-    await waitFor(() => assert.match(shownIn('1000'), new RegExp(formatCurrency(2_505_000).replace(/[$.]/g, '\\$&'))), { timeout: 5000 });
+    await waitFor(() => assert.match(shownIn('1000'), new RegExp(escapeRegExpLiteral(formatCurrency(2_505_000)))), { timeout: 5000 });
     assert.ok(shownIn('4000').includes(formatCurrency(3_750_000)), shownIn('4000'));
     assert.ok(shownIn('6000').includes(formatCurrency(1_250_000)), shownIn('6000'));
     assert.ok(urls.some(u => u === `/api/v1/balances?workspaceId=${ws}&asOf=2020-12-15`), urls.join('\n'));
