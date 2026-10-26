@@ -87,7 +87,13 @@ test('A-100: the osek patur ceiling history is on the screen, year by year, with
   assert.equal(row2026[1], '₪122,833.00');
   assert.equal(row2026[3], 'open — the Authority sets each year', 'the newest year is not closed off');
   const links = Array.from(block.querySelectorAll('a')).map(link => link.getAttribute('href'));
-  assert.ok(links.every(href => href && href.startsWith('https://')), 'every year cites an https page');
-  assert.ok(links.includes('https://www.gov.il/he/service/request-open-exempt-dealer-via-internet'), 'the Tax Authority’s own page is one of them');
+  const parsedLinks = links.filter((href): href is string => Boolean(href)).map(href => new URL(href));
+  assert.ok(parsedLinks.every(url => url.protocol === 'https:'), 'every year cites an https page');
+  assert.ok(
+    parsedLinks.some(
+      url => url.host === 'www.gov.il' && url.pathname === '/he/service/request-open-exempt-dealer-via-internet'
+    ),
+    'the Tax Authority’s own page is one of them'
+  );
   assert.match(block.textContent || '', /unknown,\\s*,?|never zero/, 'and the screen states that a year without a row is unknown');
 });
