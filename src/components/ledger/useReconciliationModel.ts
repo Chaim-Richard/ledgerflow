@@ -140,9 +140,11 @@ export function useReconciliationModel() {
 
       for (const { ltx, absAmount, cashSign, cashSignByAccount, dateMs: lDateMs } of candidates) {
         // Disallow matching positive bank deposits with negative cash outflows and vice versa
-        const effectiveSign = btx.accountId && cashSignByAccount.has(btx.accountId)
-          ? cashSignByAccount.get(btx.accountId)!
-          : cashSign;
+        const accountSign = btx.accountId ? cashSignByAccount.get(btx.accountId) : undefined;
+        if (accountSign === 0 && bSign !== 0) {
+          continue;
+        }
+        const effectiveSign = accountSign !== undefined ? accountSign : cashSign;
         if (effectiveSign !== 0 && effectiveSign !== bSign) {
           continue;
         }

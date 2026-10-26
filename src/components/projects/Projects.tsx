@@ -126,6 +126,7 @@ function useProjectsModel() {
         setProjects([
           ...projects,
           {
+            ...newProject,
             id: `proj_${Date.now()}`,
             workspaceId: currentWorkspaceId || 'default',
             uid: user?.uid || 'guest',
@@ -134,6 +135,7 @@ function useProjectsModel() {
             type: newProject.type || 'general',
             status: newProject.status || 'active',
             budgetCents: newProject.budgetCents || 0,
+            dimensions: newProject.dimensions || [],
             createdAt,
           } as Project,
         ]);

@@ -271,6 +271,8 @@ test.describe('Keyboard', () => {
         const body = req.postDataJSON() as Record<string, unknown>;
         paymentRequests.push(body);
         const amountCents = Number(body.amountCents) || 0;
+        const allocations = Array.isArray(body.allocations) ? body.allocations as Payment['allocations'] : [];
+        const allocatedCents = allocations.reduce((sum, a) => sum + (Number(a.amountCents) || 0), 0);
         const payRecord: Payment = {
           id: 'pay-h3-1',
           uid,
@@ -280,8 +282,12 @@ test.describe('Keyboard', () => {
           contactId: String(body.customerId || customers[0]?.id || ''),
           date: String(body.paymentDate || '2026-10-26'),
           amountCents,
-          paymentMethod: 'bank_transfer',
           currency: 'USD',
+          method: 'bank_transfer',
+          depositAccountId: String(body.cashAccountId || 'cash'),
+          allocations,
+          unappliedCents: Math.max(0, amountCents - allocatedCents),
+          createdAt: new Date().toISOString(),
         };
         payments.push(payRecord);
         if (invoices[0]) {
