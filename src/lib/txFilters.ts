@@ -65,8 +65,8 @@ export function transactionDate(t: Pick<Transaction, 'date'>): string {
 export function isTransactionInDateRange(t: Pick<Transaction, 'date'>, start?: string, end?: string): boolean {
   const date = transactionDate(t);
   if (!date) return false;
-  const startDate = start?.slice(0, 10);
-  const endDate = end?.slice(0, 10);
+  const startDate = typeof start === 'string' ? start.slice(0, 10) : undefined;
+  const endDate = typeof end === 'string' ? end.slice(0, 10) : undefined;
   return (!startDate || date >= startDate) && (!endDate || date <= endDate);
 }
 
