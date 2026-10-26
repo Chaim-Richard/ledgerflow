@@ -163,7 +163,20 @@ function useSystemCommandCenterModel() {
   // Trigger System Diagnostic event directly in system telemetry logs
   const handleTriggerStressEvent = (type: 'db_timeout' | 'quota_low' | 'normal_gemini') => {
     const secureRandomInt = (maxExclusive: number) => {
-      const randomValue = globalThis.crypto.getRandomValues(new Uint32Array(1))[0];
+      if (!Number.isInteger(maxExclusive) || maxExclusive <= 0) {
+        throw new Error('maxExclusive must be a positive integer');
+      }
+
+      const UINT32_RANGE = 0x100000000; // 2^32
+      const acceptableUpperBound = UINT32_RANGE - (UINT32_RANGE % maxExclusive);
+      const buffer = new Uint32Array(1);
+
+      let randomValue: number;
+      do {
+        globalThis.crypto.getRandomValues(buffer);
+        randomValue = buffer[0];
+      } while (randomValue >= acceptableUpperBound);
+
       return randomValue % maxExclusive;
     };
 
