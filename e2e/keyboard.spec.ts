@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { TransactionTemplates } from '../src/kernel/templates/TransactionTemplates';
-import { computeProfitAndLoss } from '../src/server/reports/profitAndLoss';
+import { computeProfitAndLoss } from '../src/server/reports/computeReports';
 import { makeChartAccount, makeTransaction } from '../src/tests/fixtures';
 import type { ChartAccount, Customer, Invoice, Payment, Transaction } from '../src/types';
 
