@@ -394,8 +394,8 @@ export default function Sales() {
                 <tr className="text-left border-b border-[var(--line)]/50">
                   <th scope="col" className="pl-4 md:pl-8 w-8">
                     <input type="checkbox" aria-label="Select all invoices shown"
-                      checked={filteredInvoices.length > 0 && filteredInvoices.every(i => pickedInvoices.has(i.id))}
-                      onChange={e => setPickedInvoices(e.target.checked ? new Set(filteredInvoices.map(i => i.id)) : new Set())} />
+                      checked={visibleInvoices.length > 0 && visibleInvoices.every(i => pickedInvoices.has(i.id))}
+                      onChange={e => setPickedInvoices(e.target.checked ? new Set(visibleInvoices.map(i => i.id)) : new Set())} />
                   </th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
@@ -626,7 +626,7 @@ export default function Sales() {
                       <button
                         type="button"
                         onClick={() => setInvoiceLimit(n => n + 200)}
-                        className="px-4 py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
+                        className="min-h-11 px-4 py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
                       >
                         Show more invoices ({visibleInvoices.length} of {filteredInvoices.length})
                       </button>

@@ -225,7 +225,16 @@ export default function BudgetManager() {
                   </button>
                   <button 
                     aria-label={`Delete budget for ${b.targetId}`}
-                    onClick={async () => { if (await safeConfirm('Delete budget?')) { await deleteDoc(doc(db, 'budgets', b.id)); toast.success('Budget deleted'); } }}
+                    onClick={async () => {
+                      if (await safeConfirm('Delete budget?')) {
+                        if (isGuest || !user) {
+                          setBudgets(budgets.filter(item => item.id !== b.id));
+                        } else {
+                          await deleteDoc(doc(db, 'budgets', b.id));
+                        }
+                        toast.success('Budget deleted');
+                      }
+                    }}
                     className="p-2 text-[var(--muted)] hover:text-rose-500 transition-colors opacity-100 md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Trash2 aria-hidden="true" size={16} />

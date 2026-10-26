@@ -234,7 +234,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   <button
                     type="button"
                     onClick={() => setBankLimit(n => n + 200)}
-                    className="w-full py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
+                    className="w-full min-h-11 py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
                   >
                     Show more bank lines ({visibleBankFeed.length} of {filteredBankFeed.length})
                   </button>
@@ -300,7 +300,7 @@ export function ReconciliationView(model: ReturnType<typeof useReconciliationMod
                   <button
                     type="button"
                     onClick={() => setLedgerLimit(n => n + 200)}
-                    className="w-full py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
+                    className="w-full min-h-11 py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
                   >
                     Show more ledger entries ({visibleLedgerEntries.length} of {filteredLedgerEntries.length})
                   </button>

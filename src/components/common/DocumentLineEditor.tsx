@@ -157,7 +157,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
             <button
               type="button"
               onClick={() => onChange([...lines, createLine()])}
-              className="flex items-center gap-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
+              className="min-h-11 px-2 flex items-center gap-2 text-xs font-bold text-[var(--muted)] hover:text-[var(--text)] transition-colors cursor-pointer"
               aria-label="Add Line"
             >
               <Plus size={14} /> Add Line
@@ -204,7 +204,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
                             }) as T);
                           }}
                           placeholder="Select Account..."
-                          className="w-full px-3 py-2 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
+                          className="w-full min-h-11 px-3 py-2 bg-transparent border-none focus:ring-0 font-bold text-[var(--text)] min-w-[150px]"
                         />
                         <datalist id={`je-account-${idx}`}>
                           {sortedAccounts.map(acc => (
@@ -213,26 +213,33 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
                         </datalist>
                       </div>
                     </td>
-                    {dimensionsShown && activeDimensions.map(dim => (
-                      <td key={dim.id} className="p-2.5">
-                        <div className="relative">
-                          <input
-                            id={`je-dim-${dim.id}-${idx}`}
-                            aria-label={`${dim.name} for line ${idx + 1}`}
-                            value={line.dimensions?.[dim.id.toLowerCase()] || (line as unknown as Record<string, string>)[dim.id.toLowerCase()] || ''}
-                            onChange={e => updateAt(idx, current => ({
-                              ...current,
-                              dimensions: {
-                                ...(current.dimensions || {}),
-                                [dim.id.toLowerCase()]: e.target.value,
-                              },
-                            }) as T)}
-                            placeholder={`Select ${dim.name}...`}
-                            className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px] text-[var(--text)]"
-                          />
-                        </div>
-                      </td>
-                    ))}
+                    {dimensionsShown && activeDimensions.map(dim => {
+                      const dimKey = dim.id.toLowerCase();
+                      const dimValue = line.dimensions && dimKey in line.dimensions
+                        ? line.dimensions[dimKey]
+                        : ((line as unknown as Record<string, string>)[dimKey] || '');
+                      return (
+                        <td key={dim.id} className="p-2.5">
+                          <div className="relative">
+                            <input
+                              id={`je-dim-${dim.id}-${idx}`}
+                              aria-label={`${dim.name} for line ${idx + 1}`}
+                              value={dimValue}
+                              onChange={e => updateAt(idx, current => ({
+                                ...current,
+                                ...(dimKey === 'class' ? { class: e.target.value } : dimKey === 'location' ? { location: e.target.value } : dimKey === 'project' ? { project: e.target.value } : {}),
+                                dimensions: {
+                                  ...(current.dimensions || {}),
+                                  [dimKey]: e.target.value,
+                                },
+                              }) as T)}
+                              placeholder={`Select ${dim.name}...`}
+                              className="w-full min-h-11 px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] font-bold min-w-[120px] text-[var(--text)]"
+                            />
+                          </div>
+                        </td>
+                      );
+                    })}
                     <td className="p-2.5">
                       <input
                         id={`je-line-debit-${idx}`}
@@ -253,7 +260,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
                           });
                         }}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
+                        className="w-full min-h-11 px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
                       />
                     </td>
                     <td className="p-2.5">
@@ -276,7 +283,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
                           });
                         }}
                         placeholder="0.00"
-                        className="w-full px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
+                        className="w-full min-h-11 px-3 py-2 bg-[var(--ink)]/50 border border-transparent rounded-lg focus:bg-[var(--surface)] focus:border-[var(--line)] text-right font-mono font-bold text-[var(--text)]"
                       />
                     </td>
                     <td className="p-2.5 text-center">
@@ -287,7 +294,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
                           if (lines.length <= 2) return;
                           onChange(lines.filter((_, i) => i !== idx));
                         }}
-                        className="p-2 text-[var(--muted)] hover:text-rose-600 transition-colors cursor-pointer"
+                        className="min-h-11 min-w-11 inline-flex items-center justify-center p-2 text-[var(--muted)] hover:text-rose-600 transition-colors cursor-pointer"
                       >
                         <Trash2 size={16} />
                       </button>
@@ -298,7 +305,7 @@ export default function DocumentLineEditor<T extends DocumentEditorLine>({
             </tbody>
             <tfoot>
               <tr className="bg-[var(--ink)]/50 font-bold">
-                <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={dimensionsShown ? 4 : 1}>Totals</td>
+                <td className="p-4 text-right uppercase tracking-widest text-[10px] text-[var(--muted)]" colSpan={dimensionsShown ? 1 + activeDimensions.length : 1}>Totals</td>
                 <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{money(totalDebit)}</td>
                 <td className="p-4 text-right font-mono text-[var(--text)] tabular-nums">{money(totalCredit)}</td>
                 <td></td>

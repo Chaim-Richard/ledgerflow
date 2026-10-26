@@ -331,8 +331,8 @@ export default function Purchases() {
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                   <th scope="col" className="pl-4 w-8">
                     <input type="checkbox" aria-label="Select all bills shown"
-                      checked={filteredBills.length > 0 && filteredBills.every(b => pickedBills.has(b.id))}
-                      onChange={e => setPickedBills(e.target.checked ? new Set(filteredBills.map(b => b.id)) : new Set())} />
+                      checked={visibleBills.length > 0 && visibleBills.every(b => pickedBills.has(b.id))}
+                      onChange={e => setPickedBills(e.target.checked ? new Set(visibleBills.map(b => b.id)) : new Set())} />
                   </th>
                   <th scope="col" className="p-4">Vendor</th>
                   <th scope="col" className="p-4">Bill #</th>
@@ -463,7 +463,7 @@ export default function Purchases() {
                       <button
                         type="button"
                         onClick={() => setBillLimit(n => n + 200)}
-                        className="px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                        className="min-h-11 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
                       >
                         Show more bills ({visibleBills.length} of {filteredBills.length})
                       </button>

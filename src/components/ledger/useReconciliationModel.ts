@@ -92,6 +92,7 @@ export function useReconciliationModel() {
       ltx: (typeof unclearedLedgerTransactions)[number];
       absAmount: number;
       cashSign: number;
+      cashSignByAccount: Map<string, number>;
       dateMs: number;
     }
     const preparedByAbsAmount = new Map<number, PreparedLedgerEntry[]>();
@@ -99,18 +100,24 @@ export function useReconciliationModel() {
 
     for (const ltx of unclearedLedgerTransactions) {
       let cashDelta = 0;
+      const cashDeltaByAccount = new Map<string, number>();
       if (ltx.lines) {
         for (const l of ltx.lines) {
           if (cashAccountIds.has(l.accountId)) {
-            cashDelta += lineAmount(l, ltx);
+            const delta = lineAmount(l, ltx);
+            cashDelta += delta;
+            cashDeltaByAccount.set(l.accountId, (cashDeltaByAccount.get(l.accountId) || 0) + delta);
           }
         }
       }
+      const cashSignByAccount = new Map<string, number>();
+      cashDeltaByAccount.forEach((delta, accId) => cashSignByAccount.set(accId, Math.sign(delta)));
       const absAmount = Math.abs(ltx.totalAmountCents);
       const entry: PreparedLedgerEntry = {
         ltx,
         absAmount,
         cashSign: Math.sign(cashDelta),
+        cashSignByAccount,
         dateMs: parseLocalDate(ltx.date).getTime(),
       };
       preparedList.push(entry);
@@ -131,9 +138,12 @@ export function useReconciliationModel() {
         ? (preparedByAbsAmount.get(bAbsAmount) || [])
         : preparedList.filter(p => Math.abs(p.absAmount - bAbsAmount) <= matchToleranceCents);
 
-      for (const { ltx, absAmount, cashSign, dateMs: lDateMs } of candidates) {
+      for (const { ltx, absAmount, cashSign, cashSignByAccount, dateMs: lDateMs } of candidates) {
         // Disallow matching positive bank deposits with negative cash outflows and vice versa
-        if (cashSign !== 0 && cashSign !== bSign) {
+        const effectiveSign = btx.accountId && cashSignByAccount.has(btx.accountId)
+          ? cashSignByAccount.get(btx.accountId)!
+          : cashSign;
+        if (effectiveSign !== 0 && effectiveSign !== bSign) {
           continue;
         }
 

@@ -244,19 +244,23 @@ export default function JournalEntryModal({ isOpen, onClose, user, accounts, wor
         const debitCents = l.debit || 0;
         const creditCents = l.credit || 0;
         const baseCents = Math.round((debitCents > 0 ? debitCents : -creditCents) * appliedRate);
-        const dims: Record<string, string> = { ...(l.dimensions || {}) };
-        if (l.class && !dims.class) dims.class = l.class;
-        if (l.location && !dims.location) dims.location = l.location;
-        if (l.project && !dims.project) dims.project = l.project;
-        if ((l as typeof l & { world?: string }).world && !dims.world) dims.world = (l as typeof l & { world: string }).world;
+        const rawDims = l.dimensions || {};
+        const dims: Record<string, string> = {};
+        for (const [k, v] of Object.entries(rawDims)) {
+          if (v) dims[k] = v;
+        }
+        if (l.class && !('class' in rawDims)) dims.class = l.class;
+        if (l.location && !('location' in rawDims)) dims.location = l.location;
+        if (l.project && !('project' in rawDims)) dims.project = l.project;
+        if ((l as typeof l & { world?: string }).world && !('world' in rawDims)) dims.world = (l as typeof l & { world: string }).world;
         
         return {
           accountId: l.accountId,
           accountName: l.accountName,
           amountCents: baseCents,
-          class: l.class || undefined,
-          location: l.location || undefined,
-          project: l.project || undefined,
+          class: dims.class || undefined,
+          location: dims.location || undefined,
+          project: dims.project || undefined,
           dimensions: Object.keys(dims).length > 0 ? dims : undefined
         };
       });

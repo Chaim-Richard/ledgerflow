@@ -145,8 +145,8 @@ function useQBOMigrationWizardModel({ isOpen, onClose }: { isOpen: boolean; onCl
         let dateStr = getLocalDateISO();
         if (rawDate) {
           if (typeof rawDate === 'number') {
-            // Excel serial date (days since Dec 30, 1899; 25569 = 1970-01-01)
-            const serialDays = Math.round(rawDate - 25569);
+            // Excel serial date (days since Dec 30, 1899; 25569 = 1970-01-01); truncate fractional time
+            const serialDays = Math.floor(rawDate) - 25569;
             if (Number.isFinite(serialDays)) {
               dateStr = fromDayNumber(serialDays);
             }

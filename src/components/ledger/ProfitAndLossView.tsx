@@ -464,7 +464,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
               <Target aria-hidden="true" size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-[#748480] mb-2 uppercase tracking-wider">{labels.netLabel}</p>
+            <p className={cn("text-[9px] font-bold mb-2 uppercase tracking-wider", (data.netIncome || 0) >= 0 ? "text-[#748480]" : "text-rose-200")}>{labels.netLabel}</p>
             <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3 tabular-nums">
               <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.netIncome || 0)}</bdi>
             </p>

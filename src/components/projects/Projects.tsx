@@ -61,8 +61,20 @@ function useProjectsModel() {
   useCommandDispatcher();
   const { addEntity, updateEntity } = useEntityOperations();
   const onAdd = (data: Partial<Project>) => addEntity('projects', data);
-  const onUpdate = (id: string, data: Partial<Project>) => updateEntity('projects', id, data);
-  const onDelete = (id: string) => deleteProjectWithUndo(id);
+  const onUpdate = async (id: string, data: Partial<Project>) => {
+    if (isGuest || !user) {
+      setProjects(projects.map(p => (p.id === id ? { ...p, ...data } : p)));
+      return;
+    }
+    return updateEntity('projects', id, data);
+  };
+  const onDelete = async (id: string) => {
+    if (isGuest || !user) {
+      setProjects(projects.filter(p => p.id !== id));
+      return;
+    }
+    return deleteProjectWithUndo(id);
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'pipeline' | 'list'>('pipeline');
   const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);

@@ -211,7 +211,24 @@ export const useUIStore = create<UIState>((set) => ({
   isQuietMode: false,
   activeIntelChannel: (() => {
     try {
-      return (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lens') : null) || 'radar';
+      const lens = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('lens') : null;
+      const validLenses = new Set([
+        'radar', 'roi', 'pivot', 'budgets', 'nexus', 'entities', 'forensics',
+        'breakeven', 'compound', 'rule72', 'ltv', 'cac', 'npv', 'wacc', 'roas', 'caprate', 'ratios', 'ebitda',
+        'd3-visualizer', 'project-matrix', 'telemetry', 'stress-test',
+        'production-depreciation', 'depreciation-conventions', 'pricing-preview', 'allocation-preview',
+        'standard-cost-variance', 'seasonal-budget', 'customer-cohorts',
+        '1', '2', '3', 'forensics_1', 'forensics_2', 'recon_1', 'planning_2', 'ops_2', 'forensics_3',
+        'ops_3', 'system_1', 'forensics_4', 'forensics_5', 'forensics_isolation_forest', 'forensics_6',
+        'planning_3', 'planning_4', 'valuation_1', 'valuation_2', 'treasury_1', 'intelligence_4',
+        'planning_5', 'valuation_3', 'ops_1', 'planning_6', 'intelligence_5', 'treasury_2',
+        'intelligence_6', 'ops_6', 'ops_4', 'ops_5', 'intelligence_3',
+        'ease_1', 'ease_2', 'ease_3', 'ease_4', 'ease_5',
+        'moat_1', 'moat_2', 'moat_3', 'moat_4',
+        'niche_1', 'niche_2', 'niche_3', 'niche_4', 'niche_5', 'niche_6',
+        'gl-detail', 'budget-vs-actual', '1099_totals', 'payroll-summary', 'sales-tax-liability',
+      ]);
+      return lens && validLenses.has(lens) ? lens : 'radar';
     } catch {
       return 'radar';
     }
