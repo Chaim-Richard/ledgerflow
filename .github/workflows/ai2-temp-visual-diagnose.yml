@@ -1,11 +1,10 @@
 # TEMPORARY — AI #2 (27 Oct). Removed again before the PR is handed to the lead.
-# Two jobs only, on pushes to the AI #2 arena branch whose message carries the marker `[ai2-temp]`:
-#  - capture: recapture the pnl/balance-sheet reference images with the same Linux Chromium CI uses
-#    (the manual "Refresh visual baselines" dispatch is 403 for this token) and commit only
-#    e2e/__screenshots__ back to this branch;
-#  - diagnose: run the two unit shards that failed on CI with the database the unit jobs get, and
-#    turn every failing test name into a check-run annotation (the unit job's log is not reachable
-#    from this sandbox).
+# Runs only on pushes to the AI #2 arena branch whose message carries `[ai2-temp]`.
+#  - capture: recapture the pnl/balance-sheet reference images with the Linux Chromium CI uses
+#    (the manual "Refresh visual baselines" dispatch is 403 for this token).
+#  - diagnose-unit: the two unit shards that failed on CI, with the database the unit jobs get,
+#    and every failing test name (top-level or nested) turned into a check-run annotation.
+#  - diagnose-e2e: the two browser checks that failed on CI.
 name: AI2 temp visual + diagnosis
 permissions:
   contents: write
@@ -39,7 +38,7 @@ jobs:
           git config user.email "ai2@ledgerflow.local"
           git commit -m "test: reviewed visual references for the statement totals (pnl, balance sheet)"
           git push origin HEAD:arena/89c30823-ledgerflow
-  diagnose:
+  diagnose-unit:
     if: contains(github.event.head_commit.message, '[ai2-temp]')
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -66,24 +65,59 @@ jobs:
           HUSKY: 0
       - name: Prepare the test database
         run: npm run db:test-setup
-      - name: Shard 4/4 (the CI failure) with test names as annotations
+      - name: Shard 4/4 (the CI failure), every failing test named
         run: |
           set +e
           TEST_SHARD=4/4 npm run test:shard > shard4.log 2>&1
-          grep -E "^not ok" shard4.log | sed -E 's/^not ok [0-9]+ - /::error title=shard4::/' | head -40
-          tail -40 shard4.log
-      - name: Shard 2/3 in Los Angeles (the CI failure) with test names as annotations
+          echo "exit=$?"
+          echo "::notice title=shard4::$(grep -aE '^# (tests|pass|fail|skipped)' shard4.log | tr '\n' ' ')"
+          grep -aE 'not ok' shard4.log | sed -E 's/^[[:space:]]*not ok [0-9]+ - /::error title=shard4::/; s/^/ /' | head -40
+          tail -15 shard4.log
+      - name: Shard 2/3 in Los Angeles (the CI failure), every failing test named
         run: |
           set +e
           TZ=America/Los_Angeles TEST_SHARD=2/3 npm run test:shard > shard2.log 2>&1
-          grep -E "^not ok" shard2.log | sed -E 's/^not ok [0-9]+ - /::error title=shard2LA::/' | head -40
-          tail -40 shard2.log
+          echo "exit=$?"
+          echo "::notice title=shard2LA::$(grep -aE '^# (tests|pass|fail|skipped)' shard2.log | tr '\n' ' ')"
+          grep -aE 'not ok' shard2.log | sed -E 's/^[[:space:]]*not ok [0-9]+ - /::error title=shard2LA::/; s/^/ /' | head -40
+          tail -15 shard2.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: diagnosis-logs
+          name: diagnosis-unit-logs
           path: |
             shard4.log
             shard2.log
+          retention-days: 3
+          if-no-files-found: ignore
+  diagnose-e2e:
+    if: contains(github.event.head_commit.message, '[ai2-temp]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+        env:
+          HUSKY: 0
+      - run: npx playwright install --with-deps chromium
+      - name: The W10 trial-balance accessibility gate and the report pack spec
+        run: |
+          set +e
+          npx playwright test e2e/w10-backup-restore-reports.spec.ts e2e/report-pack.spec.ts --retries=0 > e2e.log 2>&1
+          echo "exit=$?"
+          grep -aE '(✘|✗|✓|[0-9]+ (passed|failed|flaky))|Error:|label-content-name-mismatch' e2e.log | head -60
+          echo "::notice title=e2e::$(grep -aE '[0-9]+ (passed|failed|flaky)' e2e.log | tr '\n' ' ')"
+          tail -30 e2e.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: diagnosis-e2e
+          path: |
+            e2e.log
+            test-results/
           retention-days: 3
           if-no-files-found: ignore
