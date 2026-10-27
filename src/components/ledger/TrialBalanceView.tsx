@@ -580,19 +580,17 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 <button
                   type="button"
                   onClick={() => onDrillDown('Total trial balance', { asOfDate, accountIds: trialBalance.lines.map(line => line.id), label: `Total trial balance at ${asOfDate} · every account it adds up` })}
-                  aria-label="See the entries behind the total debit column"
                   title="Open every account's entries behind the total debit column"
                   className="min-h-11 underline decoration-dotted underline-offset-2 hover:text-indigo-600 focus-visible:text-indigo-600"
-                >{formatCurrency(trialBalance.totalDebits)}</button>
+                >{formatCurrency(trialBalance.totalDebits)}<span className="sr-only"> — see the entries behind the total debit column</span></button>
               </td>
               <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
                 <button
                   type="button"
                   onClick={() => onDrillDown('Total trial balance', { asOfDate, accountIds: trialBalance.lines.map(line => line.id), label: `Total trial balance at ${asOfDate} · every account it adds up` })}
-                  aria-label="See the entries behind the total credit column"
                   title="Open every account's entries behind the total credit column"
                   className="min-h-11 underline decoration-dotted underline-offset-2 hover:text-indigo-600 focus-visible:text-indigo-600"
-                >{formatCurrency(trialBalance.totalCredits)}</button>
+                >{formatCurrency(trialBalance.totalCredits)}<span className="sr-only"> — see the entries behind the total credit column</span></button>
               </td>
             </tr>
           </tfoot>
