@@ -22,10 +22,18 @@ const flowGroup = z.object({ total: amount, inflow: amount, outflow: amount, ite
 const cfSchema = z.object({ operating: flowGroup, investing: flowGroup, financing: flowGroup, netChange: amount });
 /** C-84: the budget screen's own answer (GET /reports/budget-vs-actual), in cents, one month */
 const budgetSchema = z.array(z.object({ accountName: z.string(), budget: amount, actual: amount, variance: amount, percent: z.number() }));
-/** C-84: the stock screen's own answer (GET /reports/stock-aging); quantity is units, the value is money */
+/** C-84: the stock screen's own answer (GET /reports/stock-aging); quantity is units, the value is money.
+ *  The age buckets are carried through: "stock on hand by age" must keep which units are old. */
+const ageBuckets = z.record(z.string(), z.number()).optional();
 const stockSchema = z.object({ asOf: z.string(), items: z.array(z.object({
   itemName: z.string(), quantity: z.number(), valueCents: amount, unknownAge: z.number().optional(),
+  buckets: ageBuckets, oldestDays: z.number().nullable().optional(), lastSold: z.string().nullable().optional(),
+  daysSinceSold: z.number().nullable().optional(),
 })) });
+/** the bucket order the stock screen uses (src/lib/stockMoves.ts AGE_BUCKETS), for printing */
+const STOCK_BUCKETS: ReadonlyArray<readonly [string, string]> = [
+  ['d30', '0–30 days'], ['d90', '31–90 days'], ['d180', '91–180 days'], ['d365', '181–365 days'], ['older', 'Over a year'],
+];
 
 /** Presentation only: preserve the single-report server totals, never reconstruct financial history. */
 export function packSection(kind: PackReport, input: unknown, names: Record<string, string>): PackSection {
@@ -62,18 +70,29 @@ export function packSection(kind: PackReport, input: unknown, names: Record<stri
   } else if (kind === 'budget') {
     const data = budgetSchema.parse(input);
     if (!data.length) warnings.push('No budgets are set for the month of this pack, so there is nothing to compare.');
-    let budgetTotal = 0, actualTotal = 0, varianceTotal = 0, over = 0;
+    // The service answers one row per saved budget and gives each row its account's whole monthly
+    // actual, so two budgets on one account would count the same spending twice. The account is the
+    // unit: its budgets add up, its actual counts once, and the variance follows from those two.
+    const byAccount = new Map<string, { budgetCents: number; actualCents: number }>();
     for (const line of data) {
-      row(`${line.accountName} · Budget`, line.budget);
-      row(`${line.accountName} · Actual`, line.actual);
-      row(`${line.accountName} · Variance`, line.variance);
-      budgetTotal += line.budget; actualTotal += line.actual; varianceTotal += line.variance;
-      if (line.variance < 0) over += 1;
+      const account = byAccount.get(line.accountName) || { budgetCents: 0, actualCents: line.actual };
+      account.budgetCents += line.budget;
+      byAccount.set(line.accountName, account);
     }
-    if (data.length) {
-      row('Total budget', budgetTotal, true); row('Total actual', actualTotal, true); row('Total variance', varianceTotal, true);
+    let budgetTotal = 0, actualTotal = 0, over = 0;
+    for (const [accountName, account] of byAccount) {
+      const variance = account.budgetCents - account.actualCents;
+      row(`${accountName} · Budget`, account.budgetCents);
+      row(`${accountName} · Actual`, account.actualCents);
+      row(`${accountName} · Variance`, variance);
+      budgetTotal += account.budgetCents; actualTotal += account.actualCents;
+      if (variance < 0) over += 1;
     }
-    if (over) warnings.push(`${over} budget ${over === 1 ? 'line is' : 'lines are'} over budget for the month.`);
+    if (byAccount.size) {
+      row('Total budget', budgetTotal, true); row('Total actual', actualTotal, true); row('Total variance', budgetTotal - actualTotal, true);
+    }
+    if (data.length > byAccount.size) warnings.push(`${data.length} budgets are saved across ${byAccount.size} accounts; each account’s spending is counted once.`);
+    if (over) warnings.push(`${over} ${over === 1 ? 'account is' : 'accounts are'} over budget for the month.`);
   } else if (kind === 'stock') {
     const data = stockSchema.parse(input);
     if (!data.items.length) warnings.push(`No item had stock on hand at ${data.asOf}.`);
@@ -82,6 +101,13 @@ export function packSection(kind: PackReport, input: unknown, names: Record<stri
       row(`${item.itemName} · ${item.quantity} units`, item.valueCents);
       total += item.valueCents;
       if ((item.unknownAge || 0) > 0) undated += 1;
+      // the age of the units on hand is the point of this section: keep it in the pack
+      for (const [key, label] of STOCK_BUCKETS) {
+        const units = item.buckets?.[key] || 0;
+        if (units) row(`${item.itemName} · ${label} · ${units} units`, 0);
+      }
+      if ((item.unknownAge || 0) > 0) row(`${item.itemName} · age unknown (before the stock history) · ${item.unknownAge} units`, 0);
+      if (item.oldestDays !== null && item.oldestDays !== undefined) row(`${item.itemName} · oldest units ${item.oldestDays} days old`, 0);
     }
     if (data.items.length) row('Total stock on hand', total, true);
     if (undated) warnings.push(`${undated} ${undated === 1 ? 'item includes units' : 'items include units'} from before the stock history began, so their age is unknown.`);

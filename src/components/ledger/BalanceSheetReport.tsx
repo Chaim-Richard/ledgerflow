@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, FileSpreadsheet, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -18,12 +19,21 @@ import ReportEmptyState from '../reporting/ReportEmptyState';
 export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
 
   // C-95: the totals open the posted entries they are made of (the server explains the same figure).
+  // On cash basis the server's totals carry cash adjustments the posted lines do not hold (unapplied
+  // payments are added to liabilities), so the entries are not opened there and the button says why.
+  const cashBasis = basis === 'cash';
   const drillTotal = (total: StatementTotal) => {
+    if (cashBasis) { toast.info('On cash basis the totals include the server’s cash adjustments, so the entries behind them are not listed yet: switch to accrual to see them'); return; }
     const target = statementTotalDrill(total, transactions);
     if (target) setDrillDownTarget(target);
   };
   const totalIds = (section?: Record<string, number>) => Object.keys(section || {});
-  const entriesLink = "min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted)] underline decoration-dotted underline-offset-2 hover:text-indigo-500 focus-visible:text-indigo-500 self-end";
+  /** the income, cost of goods and expense accounts whose balances make the earnings on this date */
+  const earningsAccountIds = accounts
+    .filter(account => account.type === 'income' || account.type === 'expense' || account.type === 'cost_of_goods')
+    .map(account => account.id);
+  const cashReason = 'Cash basis totals include the server’s cash adjustments; switch to accrual to open the entries.';
+  const entriesLink = "min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted)] underline decoration-dotted underline-offset-2 hover:text-indigo-500 focus-visible:text-indigo-500 disabled:no-underline disabled:opacity-60 self-end";
   // Account groups (K-14): the same accounts, a group's children indented under their parent with a
   // subtotal under them. A group starts open, and the section totals below are the report's own.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -286,6 +296,8 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
                 type="button"
                 onClick={() => drillTotal({ name: `Total ${labels.assetsLabel}`, accountIds: totalIds(currentData.assets), expectedCents: currentData.totalAssets, sign: 1, endDate: asOfDate || undefined })}
                 aria-label={`See the entries behind total ${labels.assetsLabel}`}
+                disabled={cashBasis}
+                title={cashBasis ? cashReason : undefined}
                 className={entriesLink}
               >Entries</button>
             </div>
@@ -376,6 +388,8 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
                     type="button"
                     onClick={() => drillTotal({ name: `Sub-total ${labels.liabilitiesLabel}`, accountIds: totalIds(currentData.liabilities), expectedCents: currentData.totalLiabilities, sign: -1, endDate: asOfDate || undefined })}
                     aria-label={`See the entries behind sub-total ${labels.liabilitiesLabel}`}
+                    disabled={cashBasis}
+                    title={cashBasis ? cashReason : undefined}
                     className={entriesLink}
                   >Entries</button>
                 </div>
@@ -482,8 +496,17 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
                   <span className="font-mono font-semibold tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalEquity + currentData.netIncome)}</bdi></span>
                   <button
                     type="button"
-                    onClick={() => drillTotal({ name: `Sub-total ${labels.equityLabel}`, accountIds: totalIds(currentData.equity), expectedCents: currentData.totalEquity, sign: -1, endDate: asOfDate || undefined })}
+                    onClick={() => drillTotal({
+                      name: `Sub-total ${labels.equityLabel}`,
+                      // the subtotal printed beside this button is the equity accounts plus the earnings
+                      accountIds: [...totalIds(currentData.equity), ...earningsAccountIds],
+                      expectedCents: currentData.totalEquity + currentData.netIncome,
+                      sign: -1,
+                      endDate: asOfDate || undefined,
+                    })}
                     aria-label={`See the entries behind sub-total ${labels.equityLabel}`}
+                    disabled={cashBasis}
+                    title={cashBasis ? cashReason : undefined}
                     className={entriesLink}
                   >Entries</button>
                 </div>

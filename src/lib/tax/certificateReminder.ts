@@ -9,6 +9,8 @@ import type { CertificateState } from '../customerTaxCertificates';
  * it does not send, file or change any invoice: the reader copies it or opens it in their own mail app.
  */
 export interface CertificateReminderRow {
+  /** the customer's record id: two customers may share a name, and a letter belongs to a record */
+  id?: string;
   customer: string;
   /** the certificate number as recorded (may be empty) */
   number: string;
@@ -22,6 +24,8 @@ export interface CertificateReminderRow {
 export type ReminderLanguage = 'en' | 'he';
 
 export interface CertificateReminderDraft {
+  /** the customer's record id, carried through from the row (empty when the row had none) */
+  id: string;
   customer: string;
   language: ReminderLanguage;
   subject: string;
@@ -75,6 +79,7 @@ export function certificateReminderDraft(
     ].join('\n');
   const email = (row.email || '').trim();
   return {
+    id: row.id || row.customer,
     customer: row.customer,
     language,
     subject,
@@ -85,7 +90,7 @@ export function certificateReminderDraft(
 
 /** The rows that need a letter, in the report's own order. */
 export function certificateReminderRows(
-  rows: readonly (CertificateReminderRow & { id: string })[],
+  rows: readonly CertificateReminderRow[],
   language: ReminderLanguage,
   options: { entityName?: string; today: string },
 ): CertificateReminderDraft[] {

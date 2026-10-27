@@ -469,7 +469,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             type="button"
             onClick={() => drillTotal({ name: labels.outflowLabel, accountIds: sectionIds(data.expense), expectedCents: data.expense?.total || 0, sign: 1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
             aria-label={`See the entries behind ${labels.outflowLabel}`}
-            className={cn(totalCell, 'text-white/70 hover:text-white focus-visible:text-white self-start mt-0 pt-1')}
+            className={cn(totalCell, 'self-start mt-0 pt-1')}
           >Entries</button>
         </motion.div>
 

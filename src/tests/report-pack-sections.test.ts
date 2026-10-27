@@ -10,7 +10,7 @@ import { PACK_REPORTS, packReportUrl, packSection } from '../lib/reportPack';
 
 const start = '2026-03-01', end = '2026-03-31';
 
-test('budget vs actual keeps each line’s budget, actual and variance, and totals them', () => {
+test('budget vs actual keeps each account’s budget, actual and variance, and totals them once', () => {
   const answer = [
     { accountName: 'Rent', budget: 500000, actual: 450000, variance: 50000, percent: 90 },
     { accountName: 'Marketing', budget: 200000, actual: 260000, variance: -60000, percent: 130 },
@@ -24,7 +24,24 @@ test('budget vs actual keeps each line’s budget, actual and variance, and tota
   assert.equal(cents('Total actual'), 710000);
   assert.equal(cents('Total variance'), -10000);
   assert.equal(section.rows.at(-1)?.total, true);
-  assert.deepEqual(section.warnings, ['1 budget line is over budget for the month.']);
+  assert.deepEqual(section.warnings, ['1 account is over budget for the month.']);
+});
+
+test('two budgets saved on one account keep its spending counted once', () => {
+  // the service answers one row per budget and repeats the account's whole monthly actual in each
+  const answer = [
+    { accountName: 'Rent', budget: 300000, actual: 1100, variance: 298900, percent: 0.4 },
+    { accountName: 'Rent', budget: 400000, actual: 1100, variance: 398900, percent: 0.3 },
+  ];
+  const section = packSection('budget', answer, {});
+  const cents = (label: string) => section.rows.find(row => row.label === label)?.cents;
+  assert.equal(cents('Rent · Budget'), 700000, 'the account’s budgets add up');
+  assert.equal(cents('Rent · Actual'), 1100, 'its spending is not counted twice');
+  assert.equal(cents('Rent · Variance'), 700000 - 1100);
+  assert.equal(cents('Total actual'), 1100);
+  assert.equal(cents('Total variance'), 700000 - 1100);
+  assert.equal(section.rows.filter(row => row.label === 'Rent · Actual').length, 1);
+  assert.deepEqual(section.warnings, ['2 budgets are saved across 1 accounts; each account’s spending is counted once.']);
 });
 
 test('a month with no budgets says so instead of printing an empty comparison', () => {
@@ -37,16 +54,23 @@ test('stock on hand sums the items’ own values and keeps undated units honest'
   const answer = {
     asOf: end,
     items: [
-      { itemName: 'Widget', quantity: 12, valueCents: 4800, unknownAge: 0 },
-      { itemName: 'Gadget', quantity: 5.5, valueCents: 5500, unknownAge: 2 },
+      { itemName: 'Widget', quantity: 12, valueCents: 4800, unknownAge: 0, buckets: { d30: 9, d90: 3, d180: 0, d365: 0, older: 0 }, oldestDays: 40 },
+      { itemName: 'Gadget', quantity: 5.5, valueCents: 5500, unknownAge: 2, buckets: { d30: 3.5, d90: 0, d180: 0, d365: 0, older: 0 }, oldestDays: 12 },
     ],
   };
   const section = packSection('stock', answer, {});
   assert.equal(section.rows[0].label, 'Widget · 12 units');
   assert.equal(section.rows[0].cents, 4800);
-  assert.equal(section.rows[1].label, 'Gadget · 5.5 units', 'fractional units are printed as they are');
-  assert.equal(section.rows.at(-1)?.label, 'Total stock on hand');
-  assert.equal(section.rows.at(-1)?.cents, 10300);
+  assert.ok(section.rows.some(row => row.label === 'Gadget · 5.5 units'), 'fractional units are printed as they are');
+  const labels = section.rows.map(row => row.label);
+  assert.ok(labels.includes('Widget · 0–30 days · 9 units'), 'the age of the units on hand is kept in the pack');
+  assert.ok(labels.includes('Widget · 31–90 days · 3 units'));
+  assert.ok(labels.includes('Widget · oldest units 40 days old'));
+  assert.equal(labels.some(label => label.startsWith('Gadget · 0–30 days')), true);
+  assert.ok(labels.includes('Gadget · age unknown (before the stock history) · 2 units'));
+  const totalRow = section.rows.findIndex(row => row.label === 'Total stock on hand');
+  assert.equal(section.rows[totalRow].cents, 10300, 'the age rows add nothing to the value total');
+  assert.equal(totalRow, section.rows.length - 1);
   assert.deepEqual(section.warnings, ['1 item includes units from before the stock history began, so their age is unknown.']);
   assert.deepEqual(packSection('stock', { asOf: end, items: [] }, {}).warnings, [`No item had stock on hand at ${end}.`]);
 });

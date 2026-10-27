@@ -159,6 +159,11 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
               {explained ? <Explained request={explained} formatCurrency={formatCurrency} onOpen={onClose} onFail={failExplain} /> : <>
               <table className="w-full text-left border-separate border-spacing-y-2">
                 <caption className="sr-only">Entries behind this amount</caption>
+                {explain?.accountIds?.length ? (
+                  <p className="text-xs text-[var(--muted)] pb-2">
+                    {explain.label ? `${explain.label} · ` : ''}the lines of the {explain.accountIds.length === 1 ? 'account' : `${explain.accountIds.length} accounts`} this figure is made of, from the entries this screen loaded.
+                  </p>
+                ) : null}
                 <thead>
                   <tr className="micro-label text-[var(--muted)]">
                     <th scope="col" className="pb-4 pl-4 font-black">Date</th>
@@ -168,8 +173,15 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                 </thead>
                 <tbody>
                   {transactions.slice(0, displayLimit).map((tx) => {
-                    const matchedLine = tx.lines?.find(l => l.accountName === accountName || l.accountId === accountName);
-                    const amount = matchedLine ? matchedLine.amountCents : tx.totalAmountCents;
+                    // A statement total is made of several accounts, so the fallback list adds up the
+                    // lines of those accounts (the caller passes them); a single account's drill-down
+                    // keeps matching by its name or id.
+                    const amount = explain?.accountIds?.length
+                      ? (tx.lines || []).filter(l => explain.accountIds.includes(l.accountId)).reduce((sum, l) => sum + l.amountCents, 0)
+                      : (() => {
+                        const matchedLine = tx.lines?.find(l => l.accountName === accountName || l.accountId === accountName);
+                        return matchedLine ? matchedLine.amountCents : tx.totalAmountCents;
+                      })();
 
                     return (
                       <tr key={tx.id} className="group hover:bg-[var(--ink)] transition-all rounded-[32px] overflow-hidden">

@@ -64,6 +64,7 @@ function ScopedCertificates(){
       rows={report.rows.map(row => ({ id: row.id, customer: row.customer, number: row.number, expires: row.expires, state: row.state, email: (customerById.get(row.id) as { email?: string } | undefined)?.email }))}
       today={today}
       entityName={workspaceName}
+      emailsTrusted={Boolean(confirmed)}
     />
     <details className="text-xs text-[var(--muted)] space-y-2 pt-2 border-t border-[var(--line)]">
       <summary className="cursor-pointer font-medium text-[var(--text)]">US sales-tax exemption certificate types &amp; multistate forms (reference)</summary>

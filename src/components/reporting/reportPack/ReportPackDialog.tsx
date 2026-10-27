@@ -46,8 +46,14 @@ export default function ReportPackDialog({ startDate, endDate, onClose }: { star
         const response = await fetch(packReportUrl(kind, workspaceId, startDate, endDate), { headers: { Authorization: `Bearer ${token}` }, signal: abort.signal });
         if (!response.ok) throw new Error(`${PACK_REPORTS[kind]} could not load (${response.status}). Retry to prepare the whole pack.`);
         const result = await response.json();
-        try { return packSection(kind, result.data ?? result, names); }
-        catch { throw new Error(`${PACK_REPORTS[kind]} returned incomplete report data. Retry before printing.`); }
+        try {
+          const section = packSection(kind, result.data ?? result, names);
+          // C-84: a section the service answered with nothing is not printed as a blank page — the
+          // reader is told before the pack is prepared, and nothing is enabled for printing.
+          if (!section.rows.length) throw new Error(`${PACK_REPORTS[kind]} has no rows for this period${section.warnings.length ? `: ${section.warnings[0]}` : ''} Deselect it or choose another period before printing.`);
+          return section;
+        }
+        catch (cause) { throw cause instanceof Error && /has no rows/.test(cause.message) ? cause : new Error(`${PACK_REPORTS[kind]} returned incomplete report data. Retry before printing.`); }
       }));
       if (current()) setSnapshot({ sections, made: new Date().toISOString(), agingDate: getLocalDateISO() });
     } catch (cause) {

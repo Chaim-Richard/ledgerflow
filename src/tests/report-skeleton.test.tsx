@@ -18,7 +18,7 @@ describe('The report loading skeleton', () => {
     const { container } = render(<ReportSkeleton rows={5} columns={3} label="Loading report records…" />);
     const status = screen.getByRole('status');
     assert.match(status.textContent || '', /Loading report records…/);
-    assert.equal(status.getAttribute('aria-busy'), 'true');
+    assert.equal(status.getAttribute('aria-busy'), null, 'a busy live region can hold its own announcement back');
     // one header row plus the five placeholder rows, three cells each
     assert.equal(container.querySelectorAll('[aria-hidden="true"] [style]').length, 6);
     assert.equal(screen.queryAllByRole('status').length, 1, 'one live region, not one per row');
