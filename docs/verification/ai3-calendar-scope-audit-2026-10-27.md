@@ -23,7 +23,7 @@ Read the complete bodies of the eight exported calendar helpers and the two expo
 | `daysInMonth` | Pure month 1–12, February leap branch | 9,600 valid year/month pairs against independent UTC Date month-end oracle: no finding in domain |
 | `dayNumber` | Integer epoch-day count for valid civil dates, before/after epoch | 292,194 dates, 1600–2399: no finding in domain |
 | `fromDayNumber` | Inverse epoch-day conversion | Same 292,194 dates, including negative day numbers: no finding in domain |
-| `civilDateParts` | Trimmed civil date, accepts unpadded month/day, rejects timestamps and impossible days | Full date enumeration plus 16 malformed/impossible inputs and explicit unpadded leap day: no finding in domain |
+| `civilDateParts` | Trimmed civil date, accepts unpadded month/day, rejects timestamps and impossible days | Full date enumeration plus 15 malformed/impossible inputs and a separate explicit valid unpadded leap-day assertion: no finding in domain |
 | `weekdayYMD` | Sunday=0, including negative modulo before epoch | Same 292,194 dates against `getUTCDay`: no finding in domain |
 | `addDaysYMD` | Signed whole-day arithmetic without timezone conversion | Epoch, leap/nonleap century, year rollover, US DST start/end, inverse checks: no finding in domain |
 | `addMonthsYMD` | Signed whole months; clamp to month end; optional recurring anchor | Six independent boundaries plus anchor restoration (Feb 28 → Mar 31 versus Mar 28): no finding in domain |
