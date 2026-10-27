@@ -24,6 +24,7 @@ import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrow
 import { provenanceFromResponse } from '../../lib/reportProvenance';
 import ReportEmptyState from '../reporting/ReportEmptyState';
 import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
+import { statementTotalDrill, type StatementTotal } from '../../lib/statementDrill';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -300,6 +301,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
     setDrillDownTarget(target);
   };
 
+  // C-95: every total opens the entries it is made of — the same posted entries the figure covers,
+  // explained by the server, with the figure on screen passed through so a partial list is said so.
+  const drillTotal = (total: StatementTotal) => {
+    const target = statementTotalDrill(total, transactions);
+    if (target) drill(target);
+  };
+  const sectionIds = (section?: { accounts?: Record<string, unknown> }) => Object.keys(section?.accounts || {});
+  const totalCell = "mt-3 self-start min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2 hover:text-indigo-500 focus-visible:text-indigo-500";
+
   // Account groups (K-14): the same P&L lines, a group's children indented under their parent with
   // a subtotal under them. A group starts open and no figure here is the report's own total.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -420,6 +430,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                </span>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => drillTotal({ name: labels.inflowLabel, accountIds: sectionIds(data.income), expectedCents: data.income?.total || 0, sign: -1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
+            aria-label={`See the entries behind ${labels.inflowLabel}`}
+            className={totalCell}
+          >Entries</button>
         </motion.div>
 
         <motion.div 
@@ -449,6 +465,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                </span>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => drillTotal({ name: labels.outflowLabel, accountIds: sectionIds(data.expense), expectedCents: data.expense?.total || 0, sign: 1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
+            aria-label={`See the entries behind ${labels.outflowLabel}`}
+            className={cn(totalCell, 'self-start mt-0 pt-1')}
+          >Entries</button>
         </motion.div>
 
         <motion.div 
@@ -473,6 +495,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">
               {(data.netIncome || 0) >= 0 ? "Profit" : "Loss"}
             </p>
+            <button
+              type="button"
+              onClick={() => drillTotal({ name: labels.netLabel, accountIds: [...sectionIds(data.income), ...sectionIds(data.cogs), ...sectionIds(data.expense)], expectedCents: data.netIncome || 0, sign: -1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
+              aria-label={`See the entries behind ${labels.netLabel}`}
+              className="min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2 text-white/70 hover:text-white focus-visible:text-white"
+            >Entries</button>
             {isComparative && prevData.netIncome !== 0 && (
                <span className={cn(
                  "text-[9px] font-bold ml-auto", 
