@@ -18,6 +18,10 @@ test('C-97: every term has unique identity and real English and Hebrew explanati
   }
   assert.deepEqual(searchGlossary('accrual').map(term => term.id).includes('accrual'), true);
   assert.deepEqual(searchGlossary('מלאי').map(term => term.id).includes('inventory'), true);
+  assert.equal(GLOSSARY_TERMS.find(term => term.id === 'chart-of-accounts')?.titleHe, 'תוכנית חשבונות');
+  assert.ok(searchGlossary('תוכנית חשבונות').some(term => term.id === 'chart-of-accounts'));
+  assert.deepEqual(searchGlossary('מע״מ').map(term => term.id), ['vat'], 'Hebrew gershayim matches the stored ASCII quote');
+  assert.ok(searchGlossary('מע"מ').some(term => term.id === 'vat'));
   assert.ok(searchGlossary('Tax').every(term => term.categoryEn === 'Tax' || term.plainEn.toLowerCase().includes('tax')));
   assert.equal(searchGlossary('').length, GLOSSARY_TERMS.length);
   assert.equal(searchGlossary('zzzz-no-term').length, 0);

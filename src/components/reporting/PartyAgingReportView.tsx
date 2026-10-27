@@ -217,7 +217,9 @@ export default function PartyAgingReportView({ side }: PartyAgingReportViewProps
               {sortedAndFilteredRows.length === 0 && (
                 <tr>
                   <td data-report-empty-state colSpan={AGING_BUCKETS.length + 3} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
-                    No outstanding {isCustomer ? 'receivables' : 'payables'} found matching criteria. Clear the search to see every party, or record an open {isCustomer ? 'customer invoice' : 'vendor bill'} in {isCustomer ? 'Sales' : 'Purchases'}; this report reads saved documents.
+                    {docsPartial
+                      ? `Loaded ${isCustomer ? 'invoice' : 'bill'} history is incomplete. Clear the search, then load full ${isCustomer ? 'invoice' : 'bill'} history before treating this report as empty; an open document may be outside the loaded records.`
+                      : `No outstanding ${isCustomer ? 'receivables' : 'payables'} found matching criteria. Clear the search to see every party, or record an open ${isCustomer ? 'customer invoice' : 'vendor bill'} in ${isCustomer ? 'Sales' : 'Purchases'}; this report reads saved documents.`}
                   </td>
                 </tr>
               )}

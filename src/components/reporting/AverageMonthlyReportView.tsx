@@ -4,6 +4,8 @@ import { formatCurrency, workspaceYearMonth } from '../../lib/utils';
 import { computeMonthlyAverages } from '../../lib/reportGenerators';
 import { Calendar, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import ReportEmptyState from './ReportEmptyState';
+import { ReportProvenanceNote } from './ReportProvenanceNote';
+import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 
 interface Props {
   selectedYear?: number;
@@ -15,10 +17,12 @@ export const AverageMonthlyReportView: React.FC<Props> = ({
   const transactions = useLedgerStore(s => s.transactions);
   const accounts = useLedgerStore(s => s.accounts);
 
+  const provenance = useBrowserProvenance(STATEMENT_COLLECTIONS, false);
   const summary = useMemo(() => {
     return computeMonthlyAverages(accounts, transactions, selectedYear);
   }, [accounts, transactions, selectedYear]);
   const noActivity = summary.monthlyData.every(month => month.incomeCents === 0 && month.expenseCents === 0);
+  const historyComplete = provenance.completeness === 'complete';
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto p-4 sm:p-6" id="monthly-averages-report">
@@ -33,8 +37,11 @@ export const AverageMonthlyReportView: React.FC<Props> = ({
           </p>
         </div>
       </div>
-      {noActivity && <ReportEmptyState title="No income or expenses in this year"
-        description="Choose another year, or record posted sales and expense entries first. The twelve months remain visible at zero so the selected period is clear." />}
+      {noActivity && !historyComplete && <ReportProvenanceNote provenance={provenance} />}
+      {noActivity && <ReportEmptyState title="No income or expenses in the loaded records for this year"
+        description={historyComplete
+          ? 'Choose another year, or record posted sales and expense entries first. The twelve months remain visible at zero so the selected period is clear.'
+          : 'Loaded ledger history is incomplete or failed. Load full history before treating the whole year as inactive; older posted entries may not be in this browser cache.'} />}
 
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

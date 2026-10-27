@@ -13,7 +13,7 @@ bookkeeping workflow or worked-figures proof.
 | Task | User-visible result | Main files and tests |
 |---|---|---|
 | C-85 | Reports → **Saved report views** keeps the report, period, comparison and custom date range under a name, scoped to user/workspace on this device. Use restores every filter; duplicate names, stale reports and blocked storage are explicit. No row or amount is stored. | `src/lib/reportViews.ts`, `src/components/reporting/ReportViewsControls.tsx`, `Reports.tsx`; `report-saved-views.test.tsx` (4) |
-| C-96 | Reports → **Copy link** copies the exact URL with report, year, timeframe, month/quarter, comparison, custom dates, unrelated query keys and hash preserved. A refused clipboard says to copy the address bar instead of failing silently. | same lib and `Reports.tsx`; `report-saved-views.test.tsx` |
+| C-96 | Reports → **Copy link** copies the exact URL with report, year, timeframe, month/quarter, comparison, custom dates, known navigation keys and hash preserved; unrelated or sensitive query values are dropped. A refused clipboard says to copy the address bar instead of failing silently. | same lib and `Reports.tsx`; `report-saved-views.test.tsx` |
 | C-67 | **Columns** chooser on invoices, bills, payments, customers and vendors. Selection and actions stay visible, at least two columns remain, choices are workspace/device-scoped, print restores every column, and colspan status rows are never hidden. | `src/lib/listColumns.ts`, `src/components/ui/ListColumnChooser.tsx`, `Sales.tsx`, `Purchases.tsx`, `PaymentsView.tsx`; `list-column-chooser.test.tsx` (2) |
 | C-54 / C-91 | `ReportTableScroll` supplies one compact next-action empty state when a report table has no rows. Loading, failure, provisional and explicit empty messages are never duplicated. Reports without that wrapper received explicit states where missing; A/R and A/P aging say how to clear the search or record an open document. | `ReportEmptyState.tsx`, `ReportTableScroll.tsx`, `PartyAgingReportView.tsx`, `CashFlowView.tsx`, `AverageMonthlyReportView.tsx`, `AskBooksView.tsx`, `ImportAcceptanceView.tsx`; `report-empty-state.test.tsx` (3), `report-empty-state-coverage.test.ts` (130 registered reports) |
 | C-87 | One formula-safe Excel header block — title, entity, period, basis, currency, generated-at — now sits **above** the column headings in all five `exportToExcel` report paths. Object rows still resolve by column key. | `src/lib/excelExport.ts`, `plExport.ts`, `BalanceSheetView.tsx`, `CashFlowView.tsx`, `TrialBalanceView.tsx`, `ToolSandbox.tsx`; `report-export-header.test.ts` (3) |
@@ -72,21 +72,60 @@ the same totals in one process. GitHub CI’s first browser shard also caught a 
 the new glossary spec (`getByRole('status')` matched app-wide banners); the spec now targets the
 glossary’s own result-count text. No application assertion was weakened.
 
-## 5. Checks
+## 5. Automated review round and visual baselines (26 Oct)
+
+GitHub CI run `40416346684` was green for lint/typecheck/database rules, both timezone unit passes,
+all four unit shards, coverage, CodeQL, SBOM and browser shards 1–4. **Browser shard 5/5** failed only
+on the ten desktop visual references for the five screens this batch intentionally changes: Settings
+(glossary tab), Sales/Purchases (column chooser) and P&L/Balance Sheet (saved views, copy link and
+report table empty-state fallback), light and dark. The Playwright smoke aggregator mirrors that
+single shard failure. The exact spec names came from the failed check run’s annotations; phone and
+unchanged desktop references were not stale.
+
+The same review round also found real presentation issues. All were corrected on this branch, with
+focused tests:
+
+- Saved views now persist `cmp=none` explicitly, restore it over an active comparison, and mark the
+  applied view as the Reports page’s explicit link state so loaded-cache auto-defaults cannot replace
+  its year/month. A blocked `localStorage` write keeps the name draft and never says “Saved”.
+- Copied report links allowlist `mode`, `stale`, `lens` and `view`; unrelated or sensitive query
+  values are not copied. The share-link test now proves a `token` is dropped.
+- `ReportTableScroll` counts data rows structurally instead of interpreting their words, so “No item”
+  and “No Fee Loan” remain data. Its observer also watches the status-owning parent containers, so
+  the fallback returns when an external loading status disappears.
+- Cash Flow, Monthly Averages and A/R/A/P Aging now qualify an empty result when the server answer
+  or browser history is incomplete; the monthly view shows the shared incomplete-cache provenance note.
+- Excel headers preserve the exact workspace name and write formula-like cells as rich text, never as
+  formulas or altered labels. `ToolSandbox` exports the same effective algorithm date range its
+  preview used, via a tested pure helper.
+- The glossary’s “Chart of accounts” Hebrew title is corrected, gershayim (`״`) folds to the stored
+  ASCII quote in searches, and the duplicate CF-06 tracker row is removed.
+- New/updated tests: `report-saved-views.test.tsx`, `accounting-glossary.test.tsx`,
+  `report-export-header.test.ts`, `report-empty-state.test.tsx`, `algorithm-report-period.test.ts`.
+
+The repository’s manual “Refresh visual baselines” workflow cannot be dispatched with this session’s
+GitHub token (HTTP 403), and this sandbox has no Chromium. Following the same temporary pattern used
+by AI #3, a short-lived push-triggered workflow on this branch recaptures **only the ten changed
+desktop images** on CI’s Linux Chromium, runs the **entire 40-image reference set** without
+`--update-snapshots`, and commits the candidates to this branch as reviewable PNG diffs. It never
+pushes to `main`; the temporary workflow is removed before the final PR state. The images are opened
+and reviewed before the branch is called final. No screenshot tolerance or test input is changed.
+
+## 6. Checks
 
 | Check | Result |
 |---|---|
 | `npx tsc --noEmit -p tsconfig.json` | clean |
 | ESLint on every changed `.ts/.tsx` file | 0 errors, 0 warnings |
 | `npm run lint:eslint` (whole repo) | 0 errors, 42 warnings — the unchanged cap |
-| Focused new and affected suites | 81/81 in the regression rerun; earlier focused batches 35/35, 28/28, 30/30 and 12/12 |
-| Full unit suite, four CI shards in parallel | 3,968 tests, 3,966 pass, 0 fail, 2 skipped |
+| Focused new and affected suites after the review round | 20/20 (`report-saved-views`, `accounting-glossary`, `report-export-header`, `report-empty-state`, coverage and `algorithm-report-period`) |
+| Full unit suite, four CI shards in parallel after the review round | 3,975 tests, 3,973 pass, 0 fail, 2 skipped; one timing-sensitive A-229 speed case passed when shard 1 was rerun alone (1,070/1,069/0/1) after four-way parallel module loading exceeded its 1,500 ms import budget by 106 ms |
 | `npm run build` | passes (Vite + PWA + `build/server.cjs`) |
 | `git diff --check` | clean |
 | `npm audit --audit-level=high` | passes: 0 high/critical; 2 pre-existing moderate advisories in the transitive `typed-rest-client` → `qs` tree, not a dependency change in this branch |
-| `npm test` (literal single command) | **passes: 3,968 tests / 3,966 pass / 0 fail / 2 skipped**, 896 suites, ~32 min on Node 22; the same two database-gated skips |
-| `npm run test:rules` | not run: no `LF_TEST_DATABASE_URL`/test Postgres; no SQL, route or RLS change |
-| Playwright | `e2e/glossary.spec.ts` added; not run locally because this sandbox has no Chromium. GitHub CI runs the browser spec |
+| `npm test` (literal single command, before the review round) | passed: 3,968 tests / 3,966 pass / 0 fail / 2 skipped, 896 suites, ~32 min on Node 22 |
+| `npm run test:rules` | not run locally: no `LF_TEST_DATABASE_URL`/test Postgres; no SQL, route or RLS change. GitHub CI’s database-rules job passes |
+| Playwright | `e2e/glossary.spec.ts` added; not run locally because this sandbox has no Chromium. GitHub CI runs the browser specs and the refreshed visual references |
 
 No existing test input or expected number was changed, no warning cap was raised, and no quality
 baseline was relaxed. The owner’s paused Vercel preview remains red independently of this code.

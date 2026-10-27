@@ -19,15 +19,18 @@ const context = {
   generatedAt: '2026-10-26T12:00:00.000Z',
 };
 
-test('C-87: one header block, formula-safe, above the column headings', async () => {
+test('C-87: one header block, formula-safe and exact, above the column headings', async () => {
   const rows = reportTitleRows(context);
   assert.equal(rows.length, 7);
   assert.equal(rows[0][0], 'Profit & Loss');
-  assert.equal(rows[1][0], "Entity: '=cmd|demo", 'a formula-like entity name is escaped');
+  assert.equal(rows[1][0], 'Entity: =cmd|demo', 'the workspace name is never altered');
   assert.equal(rows[2][0], 'Period: 2026-01-01 to 2026-01-31');
   assert.equal(rows[3][0], 'Basis: Accrual');
   assert.equal(rows[4][0], 'Currency: USD');
   assert.equal(rows[5][0], 'Generated at: 2026-10-26T12:00:00.000Z');
+  const formulaLike = reportTitleRows({ ...context, title: '=1+1' })[0][0];
+  assert.equal(typeof formulaLike, 'object');
+  assert.equal((formulaLike as { richText: { text: string }[] }).richText[0].text, '=1+1');
 
   const workbook = await buildReportWorkbook(
     [{ header: 'Account', key: 'account', width: 30 }, { header: 'Amount', key: 'amount', width: 20 }],
@@ -35,12 +38,25 @@ test('C-87: one header block, formula-safe, above the column headings', async ()
     { sheetName: 'Statement', reportContext: context },
   );
   const sheet = workbook.worksheets[0];
-  const text = (row: number) => (sheet.getRow(row).values as unknown[]).slice(1).map(String);
-  assert.deepEqual(text(1), ['Profit & Loss']);
-  assert.deepEqual(text(2), ["Entity: '=cmd|demo"]);
-  assert.deepEqual(text(6), ['Generated at: 2026-10-26T12:00:00.000Z']);
-  assert.deepEqual(text(8), ['Account', 'Amount'], 'column headings follow the standard block');
-  assert.deepEqual(text(9), ['Sales', '12.5'], 'object rows still resolve by column key');
+  const cellText = (address: string) => sheet.getCell(address).text;
+  assert.equal(cellText('A1'), 'Profit & Loss');
+  assert.equal(cellText('A2'), 'Entity: =cmd|demo');
+  assert.equal(sheet.getCell('A2').formula, undefined, 'the entity caption is a string, not a formula');
+  assert.equal(sheet.getCell('A2').value, 'Entity: =cmd|demo', 'the exact workspace name is preserved');
+  assert.equal(cellText('A6'), 'Generated at: 2026-10-26T12:00:00.000Z');
+  assert.equal(cellText('A8'), 'Account', 'column headings follow the standard block');
+  assert.equal(cellText('B8'), 'Amount');
+  assert.equal(cellText('A9'), 'Sales', 'object rows still resolve by column key');
+  assert.equal(cellText('B9'), '12.5');
+
+  const formulaLikeWorkbook = await buildReportWorkbook(
+    [{ header: 'Account', key: 'account', width: 30 }],
+    [],
+    { sheetName: 'Statement', reportContext: { ...context, title: '=1+1' } },
+  );
+  const formulaLikeCell = formulaLikeWorkbook.worksheets[0].getCell('A1');
+  assert.equal(formulaLikeCell.text, '=1+1');
+  assert.equal(formulaLikeCell.formula, undefined, 'a formula-like title is written as rich text');
 });
 
 test('the export context reads the signed-in workspace, with no report rows', () => {

@@ -41,11 +41,13 @@ export default function ReportTableScroll({children}:{children:ReactNode}) {
 
  const scroll=(left:number)=>ref.current?.scrollBy({left,behavior:'auto'});
  // the table's column headings and its name, read when it is on screen and whenever it changes
- const reportRef=useRef('');
- useEffect(()=>{
-  const el=ref.current;
-  if(!el)return;
-  const read=()=>{
+  const reportRef=useRef('');
+  useEffect(()=>{
+   const el=ref.current;
+   if(!el)return;
+   // The status that suppresses the fallback can live beside the table, so watch those containers too.
+   const containers=[el.parentElement,el.parentElement?.parentElement].filter((node):node is HTMLElement=>Boolean(node));
+   const read=()=>{
    const table=el.querySelector('table');
    const row=table?.querySelector('thead tr:last-child');
    const cells=row?Array.from(row.children):[];
@@ -61,22 +63,28 @@ export default function ReportTableScroll({children}:{children:ReactNode}) {
    const busy=Boolean(table?.closest('[aria-busy="true"]'))||/\b(loading|refreshing|calculating|failed|could not|error)\b/i.test(text);
    // A provisional, failed or explicit empty message outside the table already owns role=status/alert.
    // Do not add a second live region (and do not count our own fallback as such a message).
-   const containers=[el.parentElement,el.parentElement?.parentElement].filter((node):node is HTMLElement=>Boolean(node));
    const outsideMessage=containers.some(container=>Array.from(container.children).some(child=>
     child!==el&&!child.contains(el)&&!child.querySelector('[data-report-empty-state]')&&
     (child.matches('[role="status"],[role="alert"]')||Boolean(child.querySelector('[role="status"],[role="alert"]')))&&
     Boolean((child.textContent||'').trim())
    ));
+   // C-54/C-91: structural markers, not the words in a data row, identify placeholders. A row named
+   // "No item" or "No Fee Loan" is still a real row; colspan/rowspan and explicit markers are not.
+   const headerCount=cells.length;
    const hasRows=Array.from(table?.querySelectorAll('tbody tr')||[]).some(bodyRow=>{
+    if(bodyRow.matches('[data-report-empty-row]')||bodyRow.querySelector('[data-report-empty-row],[data-report-empty-state]'))return false;
     const bodyCells=Array.from(bodyRow.children);
+    if(!bodyCells.length)return false;
     if(bodyCells.some(cell=>Number(cell.getAttribute('colspan')||'1')>1||Number(cell.getAttribute('rowspan')||'1')>1))return false;
-    const bodyText=(bodyRow.textContent||'').trim();
-    return Boolean(bodyText)&&!/^(no |nothing |choose |select )/i.test(bodyText);
+    if(headerCount>1&&bodyCells.length<headerCount)return false;
+    return true;
    });
    setEmpty(Boolean(table)&&!busy&&!outsideMessage&&!hasRows&&!table?.querySelector('[data-report-empty-state]'));
   };
   const watch=new MutationObserver(read);
-  watch.observe(el,{childList:true,subtree:true,characterData:true});
+  const watchOptions: MutationObserverInit={childList:true,subtree:true,characterData:true,attributes:true};
+  watch.observe(el,watchOptions);
+  containers.forEach(container=>watch.observe(container,watchOptions));
   const first=setTimeout(read,0);
   return()=>{watch.disconnect();clearTimeout(first);};
  },[identity]);

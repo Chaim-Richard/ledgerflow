@@ -43,8 +43,8 @@ test('saved views validate their version, names and query strings without storin
   assert.notEqual(reportViewsKey('א', 'ב'), reportViewsKey('ב', 'א'));
 });
 
-test('the share URL carries every report filter and keeps unrelated query keys', () => {
-  const href = 'https://books.example/reports?mode=compact&stale=1#details';
+test('the share URL carries every report filter and only known navigation keys', () => {
+  const href = 'https://books.example/reports?mode=compact&stale=1&lens=cash&view=reports&token=secret#details';
   const url = new URL(reportShareUrl(state, href));
   assert.equal(url.searchParams.get('report'), 'pnl');
   assert.equal(url.searchParams.get('y'), '2026');
@@ -55,7 +55,51 @@ test('the share URL carries every report filter and keeps unrelated query keys',
   assert.equal(url.searchParams.get('end'), '2026-06-30');
   assert.equal(url.searchParams.get('mode'), 'compact');
   assert.equal(url.searchParams.get('stale'), '1');
+  assert.equal(url.searchParams.get('lens'), 'cash');
+  assert.equal(url.searchParams.get('view'), 'reports');
+  assert.equal(url.searchParams.get('token'), null, 'private query values are not copied');
   assert.equal(url.hash, '#details');
+});
+
+test('a saved no-comparison view explicitly turns an active comparison off', () => {
+  const none: ReportUrlState = { ...state, compare: 'none' };
+  const params = reportViewParams(none);
+  assert.equal(new URLSearchParams(params).get('cmp'), 'none');
+  assert.equal(reportViewState(params, { ...state, compare: 'previous' }).compare, 'none');
+});
+
+test('applying a saved no-comparison view turns an active comparison off', () => {
+  setComponentWorkspace();
+  localStorage.clear();
+  const save = render(<ReportViewsControls state={{ ...state, compare: 'none' }} onUse={() => {}} />);
+  fireEvent.click(save.getByText('Saved report views', { exact: true }));
+  fireEvent.change(save.getByLabelText('View name'), { target: { value: 'No compare' } });
+  fireEvent.click(save.getByRole('button', { name: 'Save this report view' }));
+  cleanup();
+
+  const restored: { state?: ReportUrlState } = {};
+  const apply = render(<ReportViewsControls state={{ ...state, compare: 'previous' }} onUse={next => { restored.state = next; }} />);
+  fireEvent.click(apply.getByText('Saved report views', { exact: true }));
+  fireEvent.click(apply.getByRole('button', { name: 'Use report view No compare' }));
+  assert.equal(restored.state?.compare, 'none');
+});
+
+test('a refused browser save keeps the draft and does not announce success', () => {
+  setComponentWorkspace();
+  localStorage.clear();
+  const original = Storage.prototype.setItem;
+  Storage.prototype.setItem = (() => { throw new Error('blocked'); }) as typeof Storage.prototype.setItem;
+  try {
+    const view = render(<ReportViewsControls state={state} onUse={() => {}} />);
+    fireEvent.click(view.getByText('Saved report views', { exact: true }));
+    fireEvent.change(view.getByLabelText('View name'), { target: { value: 'Keep my draft' } });
+    fireEvent.click(view.getByRole('button', { name: 'Save this report view' }));
+    assert.match(view.getByRole('alert').textContent || '', /Browser storage is unavailable/);
+    assert.equal((view.getByLabelText('View name') as HTMLInputElement).value, 'Keep my draft');
+    assert.equal(view.queryByText(/Saved Keep my draft/), null);
+  } finally {
+    Storage.prototype.setItem = original;
+  }
 });
 
 test('a refused clipboard is reported instead of throwing', async () => {

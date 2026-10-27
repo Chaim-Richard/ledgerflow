@@ -19,6 +19,39 @@ test('an empty report table gets one shared next-action state', async () => {
   assert.equal(view.container.querySelectorAll('[data-report-empty-state]').length, 1);
 });
 
+test('a data row is counted structurally, even when its text begins with “No”', async () => {
+  const view = render(<ReportTableScroll><table>
+    <caption>Groups report</caption><thead><tr><th>Group</th><th>Amount</th></tr></thead>
+    <tbody><tr><td>No item</td><td>$100.00</td></tr></tbody>
+  </table></ReportTableScroll>);
+  await tick();
+  assert.equal(view.queryByText('Nothing to show in this table yet'), null);
+
+  const marker = render(<ReportTableScroll><table>
+    <caption>Marked empty report</caption><thead><tr><th>Group</th><th>Amount</th></tr></thead>
+    <tbody><tr data-report-empty-row><td>No results</td><td /></tr></tbody>
+  </table></ReportTableScroll>);
+  await waitFor(() => assert.ok(marker.getByText('Nothing to show in this table yet')));
+});
+
+test('the fallback returns when an external status disappears', async () => {
+  function Wrapper() {
+    const [busy, setBusy] = React.useState(true);
+    return <div>
+      {busy && <p role="status">Loading complete history…</p>}
+      <button type="button" onClick={() => setBusy(false)}>Finish loading</button>
+      <ReportTableScroll><table>
+        <caption>Changing report</caption><thead><tr><th>Item</th><th>Amount</th></tr></thead><tbody />
+      </table></ReportTableScroll>
+    </div>;
+  }
+  const view = render(<Wrapper />);
+  await tick();
+  assert.equal(view.queryByText('Nothing to show in this table yet'), null);
+  fireEvent.click(view.getByRole('button', { name: 'Finish loading' }));
+  await waitFor(() => assert.ok(view.getByText('Nothing to show in this table yet')));
+});
+
 test('data rows, loading, and an explicit empty row never receive a second empty state', async () => {
   const data = render(<ReportTableScroll><table>
     <caption>Data report</caption><thead><tr><th>Item</th><th>Amount</th></tr></thead>

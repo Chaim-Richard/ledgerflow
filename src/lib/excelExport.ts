@@ -20,25 +20,28 @@ export interface ReportExportContext {
 export interface ExportToExcelOptions {
   sheetName?: string;
   fileName?: string;
-  titleRows?: (string | number | null | undefined)[][];
+  titleRows?: CellValue[][];
   /** C-87: when set, builds the same header block for every report export. */
   reportContext?: ReportExportContext;
 }
 
-/** A display-only header never becomes an Excel formula, even if a workspace name starts with '='. */
-function reportHeaderValue(value: string): string {
-  return /^[=+\-@]/.test(value) ? `'${value}` : value;
+/**
+ * A formula-like cell is written as rich text, not as a formula or an altered label. ExcelJS treats
+ * plain strings beginning with `=`, `+`, `-` or `@` as formulas; rich text keeps the exact value.
+ */
+function reportHeaderCell(value: string): CellValue {
+  return /^[=+\-@]/.test(value) ? { richText: [{ text: value }] } : value;
 }
 
 /** The one header block (C-87): report, entity, period, basis, currency and when it was made. */
-export function reportTitleRows(context: ReportExportContext): (string | number | null | undefined)[][] {
+export function reportTitleRows(context: ReportExportContext): CellValue[][] {
   return [
-    [reportHeaderValue(context.title)],
-    [`Entity: ${reportHeaderValue(context.entity)}`],
-    [`Period: ${reportHeaderValue(context.period)}`],
-    [`Basis: ${reportHeaderValue(context.basis)}`],
-    [`Currency: ${reportHeaderValue(context.currency)}`],
-    [`Generated at: ${reportHeaderValue(context.generatedAt)}`],
+    [reportHeaderCell(context.title)],
+    [reportHeaderCell(`Entity: ${context.entity}`)],
+    [reportHeaderCell(`Period: ${context.period}`)],
+    [reportHeaderCell(`Basis: ${context.basis}`)],
+    [reportHeaderCell(`Currency: ${context.currency}`)],
+    [reportHeaderCell(`Generated at: ${context.generatedAt}`)],
     [],
   ];
 }

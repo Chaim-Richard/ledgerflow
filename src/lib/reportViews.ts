@@ -29,9 +29,14 @@ const FALLBACK_STATE: ReportUrlState = {
   compare: 'none',
 };
 
-/** A saved view's query string is normalized through the same reader as an incoming shared link. */
+/**
+ * A saved view's query string is normalized through the same reader as an incoming shared link.
+ * `cmp=none` is explicit: applying a saved view must turn an active comparison off, not inherit it.
+ */
 export function reportViewParams(state: ReportUrlState): string {
-  return reportStateToParams(state).toString();
+  const params = reportStateToParams(state);
+  if (state.compare === 'none') params.set('cmp', 'none');
+  return params.toString();
 }
 
 export function reportViewState(params: string, fallback: ReportUrlState = FALLBACK_STATE): ReportUrlState {
@@ -71,11 +76,17 @@ export function parseReportViews(raw: string | null): SavedReportView[] {
   }
 }
 
-/** The exact URL behind the Copy link button: all report filters, with unrelated query keys kept. */
+/**
+ * The exact URL behind the Copy link button: all report filters and known navigation keys only.
+ * Credentials or other private values that happen to be in the address bar are never copied.
+ */
 export function reportShareUrl(state: ReportUrlState, href: string): string {
   const url = new URL(href);
-  const params = reportStateToParams(state, url.searchParams);
-  url.search = params.toString();
+  const preserved = new URLSearchParams();
+  for (const key of ['mode', 'stale', 'lens', 'view']) {
+    for (const value of url.searchParams.getAll(key)) preserved.append(key, value);
+  }
+  url.search = reportStateToParams(state, preserved).toString();
   return url.toString();
 }
 

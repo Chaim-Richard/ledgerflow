@@ -168,6 +168,9 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
   // AUD-10: the server's answer, or the figures worked out here
   const provenance = isServerAuthoritative && serverData ? provenanceFromResponse(serverData)
     : serverFailed || browserFigures.completeness !== 'complete' ? browserFigures : null;
+  // Only the complete server answer can establish that the whole period has no cash movement.
+  const historyComplete = isServerAuthoritative && Boolean(serverData) && !serverFailed
+    && provenance?.completeness === 'complete';
   const noCashMovement = !loadingStates.cf && [currentData.operating, currentData.investing, currentData.financing]
     .every(section => section.inflow === 0 && section.outflow === 0 && section.total === 0);
 
@@ -233,8 +236,11 @@ export default function CashFlowView({ startDate, endDate, compareStartDate, com
     <div className="space-y-6">
       {/* AUD-10: where these figures come from */}
       <ReportProvenanceNote id="cf-statement-provenance" provenance={provenance} onRefresh={() => loadServerReport()} busy={loadingStates.cf} />
-      {noCashMovement && <ReportEmptyState title="No cash movement in this period"
-        description="Choose another period, or record a posted receipt or payment on a cash or bank account. This statement reads posted cash movements only." />}
+      {noCashMovement && (historyComplete
+        ? <ReportEmptyState title="No cash movement in this period"
+          description="Choose another period, or record a posted receipt or payment on a cash or bank account. This statement reads posted cash movements only." />
+        : <ReportEmptyState title="No cash movement in the loaded records"
+          description="The complete server report is not available and the browser ledger may be capped or partial. Load the full server report above before treating this period as empty; an older posted cash movement may not be loaded." />)}
 
 
       {/* Date Range & Controls */}

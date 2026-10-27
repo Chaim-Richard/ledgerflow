@@ -56,7 +56,8 @@ const Reports = React.memo(() => {
   const activeTab = useUIStore(state => state.activeReportTab || 'pnl');
   const setActiveTab = useUIStore(state => state.setActiveReportTab);
   const fiscalYearStartMonth = useAuthStore(s => s.getCurrentWorkspace()?.fiscalYearStartMonth) || 1;
-  const [linked] = useState(() => {
+  /** An applied saved view becomes the new explicit link state, so auto-defaults cannot replace it. */
+  const [linked, setLinked] = useState<ReportUrlState>(() => {
     return reportStateFromParams(linkedReportParams(), {
       report: activeTab, year: 0, timeframe: 'month', quarter: -1, month: -1, compare: 'none',
     });
@@ -376,6 +377,7 @@ const Reports = React.memo(() => {
             
             <button className="min-h-11 px-3 border border-[var(--line)] rounded-md text-xs" onClick={() => setPackPeriod({ startDate: period.startDate, endDate: period.endDate })}>Report pack</button>
             <ReportViewsControls state={reportState} onUse={next => {
+              setLinked(next);
               setActiveTab(next.report);
               setSelectedYear(next.year);
               setTimeframe(next.timeframe);

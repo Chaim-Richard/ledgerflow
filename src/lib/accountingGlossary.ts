@@ -1,3 +1,5 @@
+import { normalizeSearchText } from './textNormalization';
+
 /** C-97: plain-language accounting glossary. Words only; no report figure or tax advice. */
 export interface GlossaryTerm {
   id: string;
@@ -19,7 +21,7 @@ export const GLOSSARY_TERMS: readonly GlossaryTerm[] = [
   { id: 'credit', titleEn: 'Credit', titleHe: 'זכות', categoryEn: 'Basics', categoryHe: 'יסודות', plainEn: 'The right side of a journal entry. Debits and credits in one entry must balance.', plainHe: 'הצד הימני של פקודת יומן. חובה וזכות באותה פקודה חייבות להתאזן.' },
   { id: 'journal-entry', titleEn: 'Journal entry', titleHe: 'פקודת יומן', categoryEn: 'Basics', categoryHe: 'יסודות', plainEn: 'One dated record of a business event, with balanced debit and credit lines.', plainHe: 'רישום מתוארך אחד של אירוע עסקי, עם שורות חובה וזכות מאוזנות.' },
   { id: 'posting', titleEn: 'Posting', titleHe: 'רישום בספרים', categoryEn: 'Basics', categoryHe: 'יסודות', plainEn: 'Confirming an entry so it counts in posted reports. A draft does not count.', plainHe: 'אישור פקודה כך שתיספר בדוחות של רשומות שנרשמו. טיוטה אינה נספרת.' },
-  { id: 'chart-of-accounts', titleEn: 'Chart of accounts', titleHe: 'מחשבות החשבונות', categoryEn: 'Basics', categoryHe: 'יסודות', plainEn: 'The workspace’s list of named accounts and their types, used to classify every line.', plainHe: 'רשימת החשבונות בעלי השמות והסוגים בספרי העסק, המשמשת לסיווג כל שורה.' },
+  { id: 'chart-of-accounts', titleEn: 'Chart of accounts', titleHe: 'תוכנית חשבונות', categoryEn: 'Basics', categoryHe: 'יסודות', plainEn: 'The workspace’s list of named accounts and their types, used to classify every line.', plainHe: 'רשימת החשבונות בעלי השמות והסוגים בספרי העסק, המשמשת לסיווג כל שורה.' },
   { id: 'trial-balance', titleEn: 'Trial balance', titleHe: 'מאזן בוחן', categoryEn: 'Reports', categoryHe: 'דוחות', plainEn: 'A list of every account’s debit and credit balance on a date, checking that the totals match.', plainHe: 'רשימת יתרות החובה והזכות של כל חשבון בתאריך, שבודקת שהסכומים מתאימים.' },
   { id: 'profit-and-loss', titleEn: 'Profit & Loss', titleHe: 'רווח והפסד', categoryEn: 'Reports', categoryHe: 'דוחות', plainEn: 'Income, costs and expenses for a period, ending with the period’s profit or loss.', plainHe: 'הכנסות, עלויות והוצאות בתקופה, עם הרווח או ההפסד בסופה.' },
   { id: 'balance-sheet', titleEn: 'Balance Sheet', titleHe: 'מאזן', categoryEn: 'Reports', categoryHe: 'דוחות', plainEn: 'Assets, liabilities and equity on one date, rather than activity across a period.', plainHe: 'נכסים, התחייבויות והון עצמי בתאריך אחד, ולא פעילות לאורך תקופה.' },
@@ -48,10 +50,15 @@ export const GLOSSARY_TERMS: readonly GlossaryTerm[] = [
   { id: 'base-currency', titleEn: 'Base currency', titleHe: 'מטבע בסיס', categoryEn: 'Currency', categoryHe: 'מטבע', plainEn: 'The currency the workspace uses for its main reports and totals.', plainHe: 'המטבע שהעסק משתמש בו לדוחות ולסכומים הראשיים.' },
 ] as const;
 
+/** Comparison-only folding; stored titles and IDs keep their exact Unicode. */
+function foldGlossaryText(text: string): string {
+  return normalizeSearchText(text).replace(/\u05F4/g, '"');
+}
+
 /** Searches exact Unicode text in both languages; no ASCII-only transliteration or identity guess. */
 export function searchGlossary(query: string, terms: readonly GlossaryTerm[] = GLOSSARY_TERMS): GlossaryTerm[] {
-  const needle = query.trim().toLocaleLowerCase();
+  const needle = foldGlossaryText(query.trim());
   if (!needle) return [...terms];
   return terms.filter(term => [term.titleEn, term.titleHe, term.plainEn, term.plainHe, term.categoryEn, term.categoryHe]
-    .some(value => value.toLocaleLowerCase().includes(needle)));
+    .some(value => foldGlossaryText(value).includes(needle)));
 }

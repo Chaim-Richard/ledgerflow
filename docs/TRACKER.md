@@ -1652,7 +1652,6 @@ Measured at `origin/main` @ `936add6` · tsc 0 real errors · 293 tests (291 pas
 - [ ] CF-02 Activity under project
 - [ ] CF-03 Rate hierarchy
 - [ ] CF-04 Working time / capacity
-- [x] CF-06 Export templates (AI #2, 26 Oct: re-verified on `main`; see the batch below)
 - [ ] CF-05 Per-user bookmarks
 - [x] CF-06 Export templates — **26 Oct (AI #2, C-38):** named C-29 column/order choices for indexed report tables and statement period groups, scoped per user/workspace/report on this browser. Apply then use the existing CSV action; changed schemas are refused, and blocked storage is explicit. The feature is on `main`; `export-templates.test.tsx` 4/4 and `column-chooser.test.tsx` re-verified at `116ee530`. Earlier fifteen targeted tests and phone CSV download remain historical evidence.
 - [ ] CF-07 Comments on customer / project

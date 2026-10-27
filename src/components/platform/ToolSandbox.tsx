@@ -12,6 +12,7 @@ import { FINANCIAL_ALGORITHMS } from '../../lib/financial-algorithms';
 import type { AlgoInput } from '../../lib/algorithms/types';
 import { buildAlgorithmContext } from '../../lib/algorithms/types';
 import { currentReportExportContext, exportToExcel, reportTitleRows } from '../../lib/excelExport';
+import { algorithmReportPeriod } from '../../lib/algorithmReportPeriod';
 import { getLocalDateISO } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { downloadCsv } from '../../lib/csvExport';
@@ -82,27 +83,25 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
     setParams(init);
   }
 
+  /** One effective period for the preview and the workbook header; never today's date by accident. */
+  const reportPeriod = useMemo(
+    () => algorithmReportPeriod(algorithm, params, getLocalDateISO()),
+    [algorithm, params],
+  );
+
   // Re-run anytime params change, using REAL user dataset
   const results = useMemo(() => {
-    const today = getLocalDateISO();
-    const asOfDate = (params.asOfDate as string | undefined) || today;
-    const rangeInput = algorithm.inputs.find((i) => i.kind === 'dateRange');
-    const range = rangeInput ? params[rangeInput.key] as DateRangeValue | undefined : undefined;
-    const period = range?.start && range?.end 
-      ? { start: range.start, end: range.end } 
-      : { start: '1970-01-01', end: asOfDate };
-
     const ctx = buildAlgorithmContext(
       transactions,
       accounts,
-      asOfDate,
-      period,
+      reportPeriod.asOfDate,
+      reportPeriod.period,
       reportingCurrency,
       { invoices, bills, vendors, employees, budgets, customers }
     );
 
     return algorithm.compute(ctx, params);
-  }, [algorithm, transactions, accounts, params, invoices, bills, vendors, employees, budgets, customers, reportingCurrency]);
+  }, [algorithm, transactions, accounts, params, reportPeriod, invoices, bills, vendors, employees, budgets, customers, reportingCurrency]);
 
   // Derive dynamic table columns from rows
   const tableColumns = useMemo(() => {
@@ -135,7 +134,7 @@ export default function ToolSandbox({ toolId, onClose }: ToolSandboxProps) {
       fileName: `${sanitizedName}_${getLocalDateISO()}.xlsx`,
       titleRows: reportTitleRows(currentReportExportContext(
         algorithm.name,
-        `Algorithm inputs as of ${getLocalDateISO()}`,
+        reportPeriod.label,
         'Loaded workspace records and algorithm preview',
       ))
     });

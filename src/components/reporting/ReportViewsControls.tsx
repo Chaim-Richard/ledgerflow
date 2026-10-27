@@ -48,14 +48,17 @@ function ScopedViews({ state, onUse, storageKey, user, workspace }: Props & {
     (useAuthStore.getState().user?.uid || 'guest') === user &&
     (useAuthStore.getState().currentWorkspaceId || 'none') === workspace;
 
-  function persist(next: SavedReportView[]) {
-    if (!stillCurrent()) return;
+  /** Returns whether the choice is durable; a refused write keeps the caller's draft intact. */
+  function persist(next: SavedReportView[]): boolean {
+    if (!stillCurrent()) return false;
     setViews(next);
     setError('');
     try {
       localStorage.setItem(storageKey, JSON.stringify({ version: 1, views: next }));
+      return true;
     } catch {
       setError('Browser storage is unavailable. New views last until this screen reloads.');
+      return false;
     }
   }
 
@@ -65,7 +68,7 @@ function ScopedViews({ state, onUse, storageKey, user, workspace }: Props & {
     if (!label || label.length > 80) { setError('Enter a view name of 1–80 characters.'); return; }
     if (views.some(view => view.name === label)) { setError('That name already exists. Remove the old view or choose another name.'); return; }
     if (views.length >= MAX_REPORT_VIEWS) { setError(`Up to ${MAX_REPORT_VIEWS} report views. Remove one first.`); return; }
-    persist([...views, { name: label, params: reportViewParams(state), createdAt: new Date().toISOString() }]);
+    if (!persist([...views, { name: label, params: reportViewParams(state), createdAt: new Date().toISOString() }])) return;
     setNotice(`Saved ${label}`);
     setName('');
   }
