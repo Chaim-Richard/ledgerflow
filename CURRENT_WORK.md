@@ -24,7 +24,7 @@ Everything below is open. Finished items leave this list. Full wording is in COO
 | PR | State |
 |---|---|
 | new (from `arena/8d145257-ledgerflow`) | E-53 IIF export + E-44/E-45/E-46/E-47 provider list imports |
-| **#414** (from `arena/63bdffa0-ledgerflow`) | AI #2 C-38/C-54/C-65/C-67/C-68/C-85/C-87/C-89/C-90/C-91/C-96/C-97/C-98/C-101 launch-readiness batch |
+| **#414** (from `arena/63bdffa0-ledgerflow`) | AI #2 C-38/C-54/C-65/C-67/C-68/C-85/C-87/C-89/C-90/C-91/C-96/C-97/C-98/C-101 launch-readiness batch; review fixes and reviewed CI visual baselines included |
 
 **Waiting on you (owner)** — details in `docs/FOR_YOU.md`
 - Replace the four generated secrets (item 2), try sign-up on the live site (3), deployment protection (4).

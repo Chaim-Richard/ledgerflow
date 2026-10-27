@@ -105,11 +105,17 @@ focused tests:
 
 The repository’s manual “Refresh visual baselines” workflow cannot be dispatched with this session’s
 GitHub token (HTTP 403), and this sandbox has no Chromium. Following the same temporary pattern used
-by AI #3, a short-lived push-triggered workflow on this branch recaptures **only the ten changed
-desktop images** on CI’s Linux Chromium, runs the **entire 40-image reference set** without
-`--update-snapshots`, and commits the candidates to this branch as reviewable PNG diffs. It never
-pushes to `main`; the temporary workflow is removed before the final PR state. The images are opened
-and reviewed before the branch is called final. No screenshot tolerance or test input is changed.
+by AI #3, a short-lived push-triggered workflow on this branch recaptured **every changed reference
+image** on CI’s Linux Chromium, ran the **entire 40-image reference set** without
+`--update-snapshots`, and committed the candidates to this branch as reviewable PNG diffs. It never
+pushed to `main`; the temporary workflow is removed before the final PR state. The first attempt only
+recaptured the ten desktop images and correctly failed the full check, because the row-detection fix
+also changed eight phone report references. The successful workflow run `40424080429` updated 18
+images: five desktop light/dark screens plus four phone light/dark report screens; Settings phone
+images were unchanged. Full-size desktop/phone light/dark images were opened and reviewed: the new
+Columns disclosure, Saved report views, Copy link and Accounting glossary tab are visible, report
+figures and tables remain intact, and no clipping or duplicate empty state appears. No screenshot
+tolerance or test input was changed.
 
 ## 6. Checks
 
@@ -126,7 +132,10 @@ and reviewed before the branch is called final. No screenshot tolerance or test 
 | `npm test` (literal single command, before the review round) | passed: 3,968 tests / 3,966 pass / 0 fail / 2 skipped, 896 suites, ~32 min on Node 22 |
 | `npm run test:rules` | not run locally: no `LF_TEST_DATABASE_URL`/test Postgres; no SQL, route or RLS change. GitHub CI’s database-rules job passes |
 | Playwright | `e2e/glossary.spec.ts` added; not run locally because this sandbox has no Chromium. GitHub CI runs the browser specs and the refreshed visual references |
+| Temporary CI baseline workflow `40424080429` | full 40-image Playwright check passed after recapturing 18 changed references; all 18 PNGs opened and reviewed; temporary workflow removed from the final branch |
+| Final GitHub CI on the pushed branch | required checks green on the final commit — see the check set on [PR #414](https://github.com/shmuelbiller1/ledgerflow/pull/414) |
 
-No existing test input or expected number was changed, no warning cap was raised, and no quality
-baseline was relaxed. The owner’s paused Vercel preview remains red independently of this code.
+No existing test input or expected number was changed, no screenshot tolerance or warning cap was
+raised, and no quality baseline was relaxed; only reviewed reference PNGs were refreshed. The owner’s
+paused Vercel preview remains red independently of this code.
 
