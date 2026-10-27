@@ -35,6 +35,7 @@ import type { ReportUrlState } from '../../lib/reportPermalink';
 import { copyReportLink } from '../../lib/reportViews';
 import ReportViewsControls from './ReportViewsControls';
 import { isTransactionInDateRange } from '../../lib/txFilters';
+import { entriesForAccounts } from '../../lib/statementDrill';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 
 /** The report settings in the address bar when the page opened (a shared link), if any. */
@@ -227,10 +228,18 @@ const Reports = React.memo(() => {
     return fiscalYearStartMonth === 1 ? `FY ${selectedYear}` : fy;
   }, [customPeriod, timeframe, selectedMonth, selectedYear, selectedQuarter, fiscalYearStartMonth, period.startDate]);
 
+  /**
+   * The fallback list when the server cannot explain a figure. A statement total is made of several
+   * accounts and is named after none of them ("Total debits"), so the list is built from the figure's
+   * own accounts and period — never from the label on the button, which matches no account.
+   */
   const drillDownTransactions = useMemo(() => {
     if (!drillDownAccount || !transactions) return [];
+    if (drillDownExplain?.accountIds?.length) {
+      return entriesForAccounts(transactions, drillDownExplain.accountIds, drillDownExplain.startDate, drillDownExplain.endDate);
+    }
     return transactions.filter(t => t.lines?.some(l => l.accountName === drillDownAccount));
-  }, [transactions, drillDownAccount]);
+  }, [transactions, drillDownAccount, drillDownExplain]);
 
   const accountTypeMap = useMemo(() => {
     const map = new Map<string, string>();

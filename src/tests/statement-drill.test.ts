@@ -66,3 +66,12 @@ test('a simulation entry stays out of the entries behind a report figure', () =>
   const simulated = makeTransaction({ id: 'ghost-1', date: '2026-03-09', lines: [{ accountId: 'income-a', amountCents: -400 }] });
   assert.deepEqual(entriesForAccounts([...entries, simulated], ['income-a'], march.startDate, march.endDate).map(t => t.id), ['sale-1']);
 });
+
+test('a trial-balance total opens its entries by account, not by the label on the button', () => {
+  // reports.tsx used to look the dialogs entries up by `line.accountName === 'Total debits'`, a name no
+  // account has, so the offline fallback always claimed there was nothing behind the total
+  const debits = entriesForAccounts(entries, ['income-a', 'income-b', 'expense-a'], undefined, '2026-03-31');
+  assert.deepEqual(debits.map(t => t.id), ['sale-1', 'sale-2', 'rent'], 'every posted entry that touches one of the accounts, up to the end date');
+  assert.equal(debits.filter(t => (t.lines || []).some(l => l.accountName === 'Total debits')).length, 0);
+  assert.deepEqual(entriesForAccounts(entries, [], undefined, '2026-03-31'), [], 'a total of no accounts opens nothing');
+});
