@@ -249,16 +249,26 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
 ### Weeks queue for Codex (AI #2) (Claude, 13 Oct, owner: keep every AI loaded for weeks). Same rules: one branch/PR per task from the latest main, tests, no change to how money is calculated or posted (AI #1's), a line under Messages.
 
 - [x] **C-72 Report: Vendor scorecard screen polish and drill-down to documents** *AI #2, 19 Oct: vendor search, matching CSV, readable phone table, date validation and exact loaded-bill links implemented. Original purchase-order / return-credit drill-down still needs a supported record-navigation target; do not invent one.*
-- [ ] **C-74 Report: Price lists screen with currency switch**
-- [ ] **C-76 Report: Reorder suggestions screen with create-PO action (draft only)**
-- [ ] **C-77 Report: Inventory cycle count variance report**
-- [ ] **C-78 Report: Customer statements by entity, print and e-mail**
-- [ ] **C-79 Report: Dunning letters queue with preview (EN/HE)**
-- [ ] **C-80 Report: Milestone billing status per project**
-- [ ] **C-81 Report: Landed cost preview screen**
-- [ ] **C-82 Report: Vendor withholding by payment month — export to the Israeli 856 layout check**
-- [ ] **C-83 Report: Customer tax certificate expiry — e-mail reminder draft**
-- [ ] **C-84 Report pack: add the new reports to the monthly pack picker**
+- [x] **C-74 Report: Price lists screen with currency switch**
+  *AI #2, 27 Oct: verified on `main` `2b6705e` — Settings → **Price lists** stores each list with its own currency (workspace currency as the fallback) and validates the list against it; `price-lists.test.tsx` and `price-list-currency.test.ts` pass. No money arithmetic added.*
+- [x] **C-76 Report: Reorder suggestions screen with create-PO action (draft only)**
+  *AI #2, 27 Oct: verified on `main` — Reports → **Reorder Suggestions** writes one **draft** purchase order per vendor through the same `addEntity` path the purchase screen uses and says how many were created; nothing is sent or posted. `reorder-suggestions.test.ts`, `reorder-suggestions-view.test.tsx`, `reorder-suggestions-location-view.test.tsx` pass.*
+- [x] **C-77 Report: Inventory cycle count variance report**
+  *AI #2, 27 Oct: verified on `main` — Reports → **Inventory Cycle Count** shows the ledger’s expected quantity against a typed count, the variance and its value at the item’s own cost, lists blank rows as not counted (never zero) and posts nothing when marked ready. `cycle-counts.test.ts` and `cycle-count-view.test.tsx` pass.*
+- [~] **C-78 Report: Customer statements by entity, print and e-mail**
+  *AI #2, 27 Oct: the statement service and the per-party statement screen exist; the by-entity PDF/send route is `src/server/` work (AI #1, the same dependency A-72 records). Left open rather than duplicating a server route in the screen lane.*
+- [x] **C-79 Report: Dunning letters queue with preview (EN/HE)**
+  *AI #2, 27 Oct: verified on `main` — Reports → **Dunning Letters** lists every overdue invoice with the letter step its age calls for and a ready preview in English or Hebrew; nothing is sent from the screen (sending is AI #1’s email path). `dunning-letters.test.ts` and `dunning-letters-view.test.tsx` pass.*
+- [x] **C-80 Report: Milestone billing status per project**
+  *AI #2, 27 Oct: verified on `main` — Reports → **Milestone Billing** shows each project’s milestones with billed, due and remaining amounts from the existing documents. `milestone-billing.test.ts` and `milestone-billing-view.test.tsx` pass.*
+- [x] **C-81 Report: Landed cost preview screen**
+  *AI #2, 27 Oct: verified on `main` — Reports → **Landed Cost Preview** previews the freight, duty and allocation per receipt before anything posts. `landed-cost-preview.test.ts` and `landed-cost-preview-view.test.tsx` pass; the posting itself stays AI #9/#1.*
+- [x] **C-82 Report: Vendor withholding by payment month — export to the Israeli 856 layout check**
+  *AI #2, 27 Oct: verified on `main` — Reports → **Vendor withholding** groups by payment month and Reports → **Withholding Report (Form 856)** lays the same figures out for the Israeli 856 check through `src/lib/tax/form856.ts`; the screen states it does not file, post or pay. `form-856.test.ts`, `form-856-view.test.tsx` and `form856-review-export.test.ts` pass.*
+- [x] **C-83 Report: Customer tax certificate expiry — e-mail reminder draft**
+  *AI #2, 27 Oct: **done on `arena/89c30823-ledgerflow`** — Reports → Customer tax certificates now drafts the reminder letter (English or עברית) for a certificate that expired, expires within 30 days or has no recorded expiry: what the records hold, a request for a current certificate, and an explicit line that it is a request and not a decision about the customer’s tax status, signed with the workspace name. Copy to clipboard, `mailto:` only when the customer has a saved email, and **nothing is sent, filed or changed** from the screen. Rows whose saved certificate cannot be read get no letter. `src/lib/tax/certificateReminder.ts`, `CertificateReminderDrafts.tsx`, `certificate-reminder.test.ts` (4) and `certificate-reminder-drafts.test.tsx` (4). Evidence: `docs/verification/ai2-c84-c83-c94-c95-2026-10-27.md`.*
+- [x] **C-84 Report pack: add the new reports to the monthly pack picker**
+  *AI #2, 27 Oct: **done on `arena/89c30823-ledgerflow`** — the monthly pack picker now offers **Budget vs actual** and **Stock on hand by age**, read from the existing `budget-vs-actual` and `stock-aging` services (no new endpoint, no recalculation). The budget section asks for the month the period ends in, stock for the period end day, both are printed with their own period line and cover note, over-budget lines and undated stock units are warned about, and an empty or mismatching answer refuses to print rather than showing zeroes. `report-pack-sections.test.ts` (5) plus the existing pack tests; `e2e/report-pack.spec.ts` gains a keyboard test for the two sections. Evidence: `docs/verification/ai2-c84-c83-c94-c95-2026-10-27.md`.*
 - [x] **C-85 Saved views: save any report's filters as a named view (per user)**
   *AI #2, 26 Oct: Reports → Saved report views stores the report, period, comparison and custom dates by user/workspace on this device; `report-saved-views.test.tsx` covers parse/save/restore/isolation. No rows or amounts are stored.*
 - [~] **C-86 Report scheduling UI: choose reports and a day; stores the schedule (sending is AI #1's)**
@@ -273,18 +283,24 @@ Same rules as above. Branch from the latest `main`, one branch per task, and wri
   *AI #2, 26 Oct: verified on `main` — `moneyText` is the one negative formatter, `formatCurrency` reads workspace `moneyDisplay.negativeStyle`, and Settings → Appearance → Money display offers minus/accounting brackets; `money-display-panel.test.tsx` and `money-display-setting.test.ts` pass.*
 - [x] **C-91 Report empty states: plain explanation and next action on every report**
   *AI #2, 26 Oct: same shared report fallback and coverage guard as C-54; loading, error and explicit empty rows are never duplicated.*
-- [ ] **C-92 Hebrew review: every report title and column in Hebrew, checked against the glossary**
-- [ ] **C-93 Keyboard: every report reachable and usable without a mouse (axe + manual)**
-- [ ] **C-94 Report loading: skeleton rows instead of spinners on the 10 slowest reports**
-- [ ] **C-95 Drill-down: every total on P&L, balance sheet and trial balance opens its entries**
+- [~] **C-92 Hebrew review: every report title and column in Hebrew, checked against the glossary**
+  *AI #2, 27 Oct: all 171 report titles in `REPORT_TABS_REGISTRY` carry an English and a Hebrew label (checked by script on `2b6705e`). The **columns** are English literals inside each view and there is no per-column translation dictionary in the app, so the row stays open: it needs an i18n layer for report headings, not a wording pass.*
+- [~] **C-93 Keyboard: every report reachable and usable without a mouse (axe + manual)**
+  *AI #2, 27 Oct: the report picker, the scrollable table regions and the column controls are keyboard reachable and `e2e/keyboard.spec.ts` walks the main journeys, but “every report, axe + manual” has not been walked screen by screen. The rows this batch touched (statement totals, pack sections) use native buttons and are covered by unit tests and the pack browser spec.*
+- [x] **C-94 Report loading: skeleton rows instead of spinners on the 10 slowest reports**
+  *AI #2, 27 Oct: **done on `arena/89c30823-ledgerflow` for the shared report shell** — `ReportSkeleton` replaces the spinner that every registry report showed while it loaded, and appears while the report pack reads its sections (the slowest read in reports). One polite status, decoration kept out of the accessibility tree, motion-reduce respected. `report-skeleton.test.tsx` (3) includes a source guard. Limit: a view that loads its own records still reports with a text status, so “skeleton rows on the ten slowest reports” is covered at the shell, not per report. Evidence: `docs/verification/ai2-c84-c83-c94-c95-2026-10-27.md`.*
+- [x] **C-95 Drill-down: every total on P&L, balance sheet and trial balance opens its entries**
+  *AI #2, 27 Oct: **done on `arena/89c30823-ledgerflow`** — every total opens its entries: the P&L revenue, expenditure and net-income cards, the balance sheet’s total assets, sub-total liabilities and sub-total equity, and the trial balance’s footer total debit and credit. `src/lib/statementDrill.ts` lists only posted entries whose lines touch the total’s own accounts, and hands the figure on screen to the server explainer unchanged so a partial list is said so. The trial-balance totals deliberately send no expected figure (a balanced trial balance’s lines net to zero). `statement-drill.test.ts` (5) and `statement-total-drill-view.test.tsx` (2). Evidence: `docs/verification/ai2-c84-c83-c94-c95-2026-10-27.md`.*
 - [x] **C-96 Report links: copy link to this report with filters**
   *AI #2, 26 Oct: Reports → Copy link copies the exact URL with report, year, timeframe, month/quarter, comparison, custom dates and unrelated query keys preserved; clipboard refusal is announced. `report-saved-views.test.tsx` covers the pure URL and refusal.*
 - [x] **C-97 Glossary screen: accounting words explained in plain English and Hebrew**
   *AI #2, 26 Oct: Preferences → Accounting glossary is a searchable 36-term EN/HE screen with categories, RTL isolation and a clear-search empty state; help entries and a bilingual help page are wired. `accounting-glossary.test.tsx` 2/2 and registry/help guards pass.*
 - [x] **C-98 Onboarding: first-week checklist screen (connect bank, import, first invoice)**
   *AI #2, 26 Oct: verified on `main` — Dashboard/OnboardingView → FirstHourGuide already gives the ordered bank/import/first-invoice/document/bill/payment/reconcile/report checklist with screen links, guest and role limits. It is delivered as a first-hour guide, not a week-long calendar.*
-- [ ] **C-99 Settings: entity profile page (legal name, IDs, addresses, logo) per entity**
-- [ ] **C-100 Settings: document numbering screen per entity and series**
+- [~] **C-99 Settings: entity profile page (legal name, IDs, addresses, logo) per entity**
+  *AI #2, 27 Oct: not built — `legalName`, tax ids, addresses and a per-entity logo are not allowed keys on `workspaces` (a migration plus the model are AI #1’s lane). A screen saving into fields the server strips would be a false promise; asked in Messages.*
+- [x] **C-100 Settings: document numbering screen per entity and series**
+  *AI #2, 27 Oct: verified on `main` — Settings → **Document numbering** sets prefix, next number and digits per series (invoices, bills, estimates, credit notes, vendor credits, payments) with a live preview of the next number; the server refuses a next number already used. `numbering-settings-view.test.tsx` and `numbering.test.ts` pass.*
 - [x] **C-101 Settings: tax registrations screen per entity, reading taxProfiles**
   *AI #2, 26 Oct: verified Settings → Tax profiles already lists and edits registrations per entity/label with kind, number, place, filing frequency and validity dates; `tax-profiles-settings.test.tsx` covers the server-confirmed save path.*
 

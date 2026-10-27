@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PACK_REPORTS = {
   pl: 'Profit and loss', bs: 'Balance sheet', ar: 'Receivables aging',
   tb: 'Trial balance', cf: 'Cash flow', ap: 'Payables aging',
+  budget: 'Budget vs actual', stock: 'Stock on hand by age',
 } as const;
 export type PackReport = keyof typeof PACK_REPORTS;
 export interface PackRow { id: string; label: string; cents: number; total?: boolean }
@@ -19,6 +20,12 @@ const agingSchema = z.object({ current: amount, '1-30': amount, '31-60': amount,
 const tbSchema = z.object({ accounts: z.array(z.object({ name: z.string(), code: z.string().optional(), debit: amount, credit: amount, netSigned: amount })), totalDebit: amount, totalCredit: amount, isBalanced: z.boolean() });
 const flowGroup = z.object({ total: amount, inflow: amount, outflow: amount, items: z.array(z.object({ name: z.string(), amount })) });
 const cfSchema = z.object({ operating: flowGroup, investing: flowGroup, financing: flowGroup, netChange: amount });
+/** C-84: the budget screen's own answer (GET /reports/budget-vs-actual), in cents, one month */
+const budgetSchema = z.array(z.object({ accountName: z.string(), budget: amount, actual: amount, variance: amount, percent: z.number() }));
+/** C-84: the stock screen's own answer (GET /reports/stock-aging); quantity is units, the value is money */
+const stockSchema = z.object({ asOf: z.string(), items: z.array(z.object({
+  itemName: z.string(), quantity: z.number(), valueCents: amount, unknownAge: z.number().optional(),
+})) });
 
 /** Presentation only: preserve the single-report server totals, never reconstruct financial history. */
 export function packSection(kind: PackReport, input: unknown, names: Record<string, string>): PackSection {
@@ -52,6 +59,32 @@ export function packSection(kind: PackReport, input: unknown, names: Record<stri
     }
     row('Total debit', data.totalDebit, true); row('Total credit', data.totalCredit, true);
     if (!data.isBalanced) warnings.push('The trial balance is not balanced.');
+  } else if (kind === 'budget') {
+    const data = budgetSchema.parse(input);
+    if (!data.length) warnings.push('No budgets are set for the month of this pack, so there is nothing to compare.');
+    let budgetTotal = 0, actualTotal = 0, varianceTotal = 0, over = 0;
+    for (const line of data) {
+      row(`${line.accountName} · Budget`, line.budget);
+      row(`${line.accountName} · Actual`, line.actual);
+      row(`${line.accountName} · Variance`, line.variance);
+      budgetTotal += line.budget; actualTotal += line.actual; varianceTotal += line.variance;
+      if (line.variance < 0) over += 1;
+    }
+    if (data.length) {
+      row('Total budget', budgetTotal, true); row('Total actual', actualTotal, true); row('Total variance', varianceTotal, true);
+    }
+    if (over) warnings.push(`${over} budget ${over === 1 ? 'line is' : 'lines are'} over budget for the month.`);
+  } else if (kind === 'stock') {
+    const data = stockSchema.parse(input);
+    if (!data.items.length) warnings.push(`No item had stock on hand at ${data.asOf}.`);
+    let total = 0, undated = 0;
+    for (const item of data.items) {
+      row(`${item.itemName} · ${item.quantity} units`, item.valueCents);
+      total += item.valueCents;
+      if ((item.unknownAge || 0) > 0) undated += 1;
+    }
+    if (data.items.length) row('Total stock on hand', total, true);
+    if (undated) warnings.push(`${undated} ${undated === 1 ? 'item includes units' : 'items include units'} from before the stock history began, so their age is unknown.`);
   } else {
     const data = cfSchema.parse(input);
     for (const key of ['operating', 'investing', 'financing'] as const) {
@@ -65,9 +98,12 @@ export function packSection(kind: PackReport, input: unknown, names: Record<stri
 }
 export function packReportUrl(kind: PackReport, workspaceId: string, startDate: string, endDate: string): string {
   const query = new URLSearchParams({ workspaceId });
-  const path = { pl: 'profit-and-loss', bs: 'balance-sheet', ar: 'aging', ap: 'aging', tb: 'trial-balance', cf: 'cash-flow' }[kind];
+  const path = { pl: 'profit-and-loss', bs: 'balance-sheet', ar: 'aging', ap: 'aging', tb: 'trial-balance', cf: 'cash-flow', budget: 'budget-vs-actual', stock: 'stock-aging' }[kind];
   if (kind === 'ar' || kind === 'ap') query.set('type', kind);
   else if (kind === 'tb') query.set('asOfDate', endDate);
+  // C-84: the budget report is one month at a time, so the pack asks for the month it ends in
+  else if (kind === 'budget') query.set('month', endDate.slice(0, 7));
+  else if (kind === 'stock') query.set('asOf', endDate);
   else { query.set('endDate', endDate); if (kind === 'pl' || kind === 'cf') query.set('startDate', startDate); }
   return `/api/v1/reports/${path}?${query}`;
 }

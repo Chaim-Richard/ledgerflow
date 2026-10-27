@@ -30,8 +30,12 @@ const TB_COLLECTIONS = [...STATEMENT_COLLECTIONS, 'journalEntries'] as const;
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
   formatCurrency: (val: number) => string;
-  /** N-12: with the account's figure, so the drill-down explains it from the server */
-  onDrillDown: (accountId: string, figure?: { asOfDate: string; expectedCents: number; sign: 1 | -1 }) => void;
+  /**
+   * N-12: with the account's figure, so the drill-down explains it from the server.
+   * C-95: a total sends every account it adds up (`accountIds`) and a name; no expected figure,
+   * because a balanced trial balance's lines net to zero while its debit and credit totals do not.
+   */
+  onDrillDown: (accountId: string, figure?: { asOfDate: string; expectedCents?: number; sign?: 1 | -1; accountIds?: string[]; label?: string }) => void;
 }
 
 type SortField = 'code' | 'name' | 'type' | 'debit' | 'credit';
@@ -573,10 +577,22 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 </div>
               </td>
               <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
-                {formatCurrency(trialBalance.totalDebits)}
+                <button
+                  type="button"
+                  onClick={() => onDrillDown('Total trial balance', { asOfDate, accountIds: trialBalance.lines.map(line => line.id), label: `Total trial balance at ${asOfDate} · every account it adds up` })}
+                  aria-label="See the entries behind the total debit column"
+                  title="Open every account's entries behind the total debit column"
+                  className="min-h-11 underline decoration-dotted underline-offset-2 hover:text-indigo-600 focus-visible:text-indigo-600"
+                >{formatCurrency(trialBalance.totalDebits)}</button>
               </td>
               <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
-                {formatCurrency(trialBalance.totalCredits)}
+                <button
+                  type="button"
+                  onClick={() => onDrillDown('Total trial balance', { asOfDate, accountIds: trialBalance.lines.map(line => line.id), label: `Total trial balance at ${asOfDate} · every account it adds up` })}
+                  aria-label="See the entries behind the total credit column"
+                  title="Open every account's entries behind the total credit column"
+                  className="min-h-11 underline decoration-dotted underline-offset-2 hover:text-indigo-600 focus-visible:text-indigo-600"
+                >{formatCurrency(trialBalance.totalCredits)}</button>
               </td>
             </tr>
           </tfoot>

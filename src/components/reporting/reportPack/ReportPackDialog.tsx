@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useDialog } from '../../../hooks/useDialog';
+import ReportSkeleton from '../ReportSkeleton';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useLedgerStore } from '../../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../../lib/utils';
@@ -70,21 +71,23 @@ export default function ReportPackDialog({ startDate, endDate, onClose }: { star
       </fieldset>
       <div className="flex flex-wrap gap-3"><button className={control} disabled={busy || !selected.length || !user || !workspaceId} onClick={() => void prepare()}>{busy ? 'Preparing…' : snapshot ? 'Refresh pack' : 'Prepare pack'}</button>
         <button className={control} disabled={!snapshot || busy} onClick={() => window.print()}>Print pack / PDF</button></div>
-      {busy && <p role="status">Reading all selected reports…</p>}{error && <p role="alert">{error}</p>}
+      {busy && <><p role="status">Reading all selected reports…</p><ReportSkeleton rows={6} columns={2} label="Reading the selected reports for the pack" /></>}{error && <p role="alert">{error}</p>}
     </div>
     {snapshot && <article data-report-pack-print className="report-pack-paper max-w-4xl mx-auto mt-6 bg-white text-black p-4">
       <section className="report-pack-cover"><h1 className="text-3xl font-bold">Report pack</h1><h2 className="text-xl"><bdi dir="auto">{workspace?.name || workspaceId}</bdi></h2>
         <p>Reporting period: {startDate} – {endDate}</p><p>P&L / balance sheet basis: accrual · Currency: {workspace?.currency || 'USD'}</p>
         <p>Made: {snapshot.made}</p><ol>{snapshot.sections.map(section => <li key={section.kind}>{PACK_REPORTS[section.kind]}</li>)}</ol>
         {snapshot.sections.some(s => s.kind === 'ar' || s.kind === 'ap') && <p>Aging shows current outstanding balances retrieved at {snapshot.made}. It is not a historical balance at {endDate}.</p>}
+        {snapshot.sections.some(s => s.kind === 'budget') && <p>Budget vs actual covers one month only: {endDate.slice(0, 7)} (the month the reporting period ends in). It compares the budgets saved in the workspace with that month’s posted entries.</p>}
+        {snapshot.sections.some(s => s.kind === 'stock') && <p>Stock on hand is a position at {endDate}, from the stock-moves history; it is not a movement report for the period.</p>}
         <p>Sections are read from the existing workspace report services. Each section is read separately; refresh if the books change while preparing.</p>
       </section>
       {snapshot.sections.map(section => <section className="report-pack-section" key={section.kind} aria-label={PACK_REPORTS[section.kind]}>
-        <h2 className="text-xl font-bold">{PACK_REPORTS[section.kind]}{section.kind === 'ar' || section.kind === 'ap' ? ` as of ${snapshot.agingDate}` : ''}</h2>
-        <p>{section.kind === 'ar' || section.kind === 'ap' ? `Current aging · retrieved ${snapshot.made}` : section.kind === 'bs' || section.kind === 'tb' ? `As of ${endDate} · accrual` : `${startDate} – ${endDate}${section.kind === 'pl' ? ' · accrual' : ''}`}</p>
+        <h2 className="text-xl font-bold">{PACK_REPORTS[section.kind]}{section.kind === 'ar' || section.kind === 'ap' ? ` as of ${snapshot.agingDate}` : section.kind === 'stock' ? ` at ${endDate}` : ''}</h2>
+        <p>{section.kind === 'ar' || section.kind === 'ap' ? `Current aging · retrieved ${snapshot.made}` : section.kind === 'bs' || section.kind === 'tb' ? `As of ${endDate} · accrual` : section.kind === 'stock' ? `Units and value on hand at ${endDate}` : section.kind === 'budget' ? `Month of ${endDate.slice(0, 7)}` : `${startDate} – ${endDate}${section.kind === 'pl' ? ' · accrual' : ''}`}</p>
         {(section.kind === 'ar' || section.kind === 'ap') && <p>Today’s position, not the reporting period end. Buckets follow the server’s current day; the heading date is the workspace retrieval date.</p>}
         {section.warnings.map(warning => <p key={warning}>{warning}</p>)}
-        <table className="w-full"><caption className="sr-only">{PACK_REPORTS[section.kind]}</caption><thead><tr><th scope="col" className="text-left">Account / measure</th><th scope="col" className="text-right">Amount ({workspace?.currency || 'USD'})</th></tr></thead>
+        <table className="w-full"><caption className="sr-only">{PACK_REPORTS[section.kind]}</caption><thead><tr><th scope="col" className="text-left">{section.kind === 'budget' ? 'Budget line / measure' : section.kind === 'stock' ? 'Item / measure' : 'Account / measure'}</th><th scope="col" className="text-right">Amount ({workspace?.currency || 'USD'})</th></tr></thead>
           <tbody>{section.rows.map(row => <tr key={row.id} className={row.total ? 'font-bold border-t' : ''}><th scope="row" className="text-left py-1 font-[inherit]"><bdi dir="auto">{row.label}</bdi></th><td className="text-right whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(row.cents, workspace?.currency || 'USD')}</bdi></td></tr>)}</tbody>
         </table>
       </section>)}

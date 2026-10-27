@@ -14,6 +14,7 @@ import {
 } from '../../lib/tax/usExemptionCertificates';
 import { downloadCsv } from '../../lib/csvExport';
 import { RelatedRecordEditButton } from '../common/RecordDetailsLauncher';
+import CertificateReminderDrafts from './CertificateReminderDrafts';
 import type { Customer } from '../../types';
 
 interface Snapshot {customers:Customer[];assessed:string;retrieved:string;cache:Customer[]}
@@ -23,6 +24,7 @@ export default function CustomerTaxCertificatesView(){
 }
 function ScopedCertificates(){
   const uid=useAuthStore(state=>state.user?.uid),workspaceId=useAuthStore(state=>state.currentWorkspaceId),guest=useAuthStore(state=>state.isGuest);
+  const workspaceName=useAuthStore(state=>state.workspaces.find(w=>w.id===state.currentWorkspaceId)?.name);
   const customers=useLedgerStore(state=>state.customers),{loading}=useLedgerCollections('customers');
   const [snapshot,setSnapshot]=useState<Snapshot|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
   const pending=useRef(false),mounted=useRef(true);useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
@@ -58,6 +60,11 @@ function ScopedCertificates(){
     <p>{report.missing} customers have no recorded certificate and are outside this list.</p>
     <div role="region" aria-label="Scrollable certificate table" tabIndex={0} className="overflow-x-auto"><table className="w-full min-w-[640px] text-sm"><caption>Current customer certificates — recorded expiry assessed on {today}</caption><thead><tr>{['Customer','Certificate number','Recorded expiry','Recorded status','Details'].map(label=><th scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{report.rows.map(row=>{const recordedType=certificateTypeName(taxExemptionOf(customerById.get(row.id))?.type);return <tr key={row.id} className={row.state==='Expired'?'bg-red-500/10':''}><th scope="row"><bdi>{row.customer}</bdi></th><td><bdi>{row.number||'Not readable'}</bdi>{recordedType?<span className="ml-2 text-xs text-[var(--muted)]">({recordedType})</span>:null}</td><td><bdi>{row.expires||'Not recorded'}</bdi></td><td>{row.state}{row.problem&&<p>{row.problem}</p>}</td><td><RelatedRecordEditButton target={{kind:'customers',id:row.id}}/></td></tr>;})}</tbody></table></div>
     {!loading&&report.rows.length===0&&<p>{confirmed?'No customer certificates are recorded. Add the certificate number and expiry in the customer editor, then refresh this list.':snapshot?'No certificates appeared in the last complete read; customer details have changed since then. Refresh to review current records.':'No certificates appear in the loaded preview. Refresh the complete customer list before concluding that none are recorded.'}</p>}
+    <CertificateReminderDrafts
+      rows={report.rows.map(row => ({ id: row.id, customer: row.customer, number: row.number, expires: row.expires, state: row.state, email: (customerById.get(row.id) as { email?: string } | undefined)?.email }))}
+      today={today}
+      entityName={workspaceName}
+    />
     <details className="text-xs text-[var(--muted)] space-y-2 pt-2 border-t border-[var(--line)]">
       <summary className="cursor-pointer font-medium text-[var(--text)]">US sales-tax exemption certificate types &amp; multistate forms (reference)</summary>
       <p>Streamlined Sales Tax (SST) full member states ({SST_MEMBER_STATES.length}): {SST_MEMBER_STATES.join(', ')}. Each state’s own instructions govern which certificates it accepts.</p>
