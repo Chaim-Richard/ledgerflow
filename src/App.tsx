@@ -1,4 +1,5 @@
 import FeedbackWidget from './components/support/FeedbackWidget';
+import TestEnvironmentBanner from './components/support/TestEnvironmentBanner';
 import { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { usePerformanceTrace } from './hooks/usePerformanceTrace';
 import { auth } from './firebase';
@@ -424,6 +425,7 @@ const shortcutMap = useMemo(() => {
           </div>
         )}
         <Suspense fallback={null}><LedgerAutoAuditor /></Suspense>
+        <TestEnvironmentBanner />
         <RootLayout />
         <FeedbackWidget />
         <CookieConsent onOpenPrivacyPolicy={() => { setLegalModalTab('privacy'); setIsLegalModalOpen(true); }} />

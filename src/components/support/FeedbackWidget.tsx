@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { useDialog } from '../../hooks/useDialog';
-import { sendFeedback, FEEDBACK_APP_VERSION, feedbackScreenshotProblem } from '../../lib/feedbackTicket';
+import { sendFeedback, FEEDBACK_APP_VERSION, feedbackReference, feedbackScreenshotProblem } from '../../lib/feedbackTicket';
 import { attachFiles, readAsDataUrl } from '../../services/attachmentActions';
 import { MAX_ATTACHMENT_BYTES, formatBytes } from '../../lib/attachments';
 import { toast } from 'sonner';
@@ -69,7 +69,8 @@ function FeedbackForm({ workspaceId, uid }: { workspaceId: string | null; uid?: 
         if (!current()) return;
         if (result.saved.length !== 1 || result.refused.length) throw new Error(result.refused[0]?.reason || 'The screenshot was not attached. Retry or finish without it.');
       }
-      finish(screenshot ? 'Feedback saved with screenshot' : 'Feedback saved as a support ticket');
+      // G-06: a reference the tester can quote later (the ticket's short id)
+      finish(`${screenshot ? 'Feedback saved with screenshot' : 'Feedback saved as a support ticket'}. Reference: ${feedbackReference(ticketId)}`);
     } catch (failure) { if (current()) setError(failure instanceof Error ? failure.message : 'Could not send feedback. Your text is kept; try again.'); }
     finally { pending.current = false; if (current()) setBusy(false); }
   }
@@ -97,7 +98,7 @@ function FeedbackForm({ workspaceId, uid }: { workspaceId: string | null; uid?: 
         {!uid && <p role="status">Sign in to a workspace to send feedback. Guest feedback cannot be saved.</p>}
         {error && <p role="alert">{error}</p>}
         <div className="flex flex-wrap gap-3"><button type="button" className="btn-secondary min-h-11" onClick={close} disabled={busy}>{savedTicket ? 'Close' : 'Cancel'}</button>
-          {savedTicket && <button type="button" className="btn-secondary min-h-11" disabled={busy} onClick={() => finish('Feedback saved without a screenshot')}>Finish without screenshot</button>}
+          {savedTicket && <button type="button" className="btn-secondary min-h-11" disabled={busy} onClick={() => finish(`Feedback saved without a screenshot. Reference: ${feedbackReference(savedTicket)}`)}>Finish without screenshot</button>}
           <button type="submit" className="btn-primary min-h-11" disabled={busy || !uid || !workspaceId || !body.trim() || Boolean(screenshot && feedbackScreenshotProblem(screenshot)) || Boolean(savedTicket && !screenshot)}>{busy ? (savedTicket ? 'Attaching…' : 'Sending…') : savedTicket ? 'Retry screenshot' : 'Send'}</button></div>
       </form>
     </div>}

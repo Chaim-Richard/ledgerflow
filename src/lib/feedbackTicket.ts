@@ -14,6 +14,10 @@ export function feedbackScreenshotProblem(file: Pick<File, 'name' | 'size' | 'ty
 }
 
 export const FEEDBACK_APP_VERSION = appPackage.version;
+/** The short reference a tester quotes for a report: the first 8 characters of the ticket's id, upper case. */
+export function feedbackReference(ticketId: string): string {
+  return ticketId.replace(/^feedback-/, '').slice(0, 8).toUpperCase();
+}
 export function feedbackRecords(input: { id: string; workspaceId: string; uid: string; screen: string; body: string; date: string }) {
   const body = maskCardNumbers(input.body.trim());
   if (!body || body.length > 5000) throw new Error('Describe what happened in 1–5000 characters.');

@@ -595,3 +595,11 @@ Settings → Actions → General → Workflow permissions → tick **Allow GitHu
 - **Server month totals for capped lists (L-123 step 3e, #400, AI #9).** When the browser holds only part of the history, tax, the fiscal-period audit, the cash-flow trend and budget-left now take their monthly totals from the server. Two choices were made with a default:
   - The cash-flow *trend* corrects only the month that is partly loaded. It does not ask the server for older months the chart doesn't show. *Default:* keep it like this.
   - Budget-left leaves out the document being edited only when that document is loaded. If it isn't loaded, the server's total stays as it is. *Default:* keep it like this.
+
+## 27 Oct — for first testers: the test banner and where their reports go (AI #1)
+- **Test banner:** every screen of the live site now says "Test environment. Use made-up books only". When you allow
+  real books, add `VITE_TEST_ENVIRONMENT` = `off` in Vercel (Settings → Environment Variables) and redeploy.
+- **Reports from testers:** "Report a problem" (in the banner) and "Send feedback" save a support ticket. The tester sees
+  a reference such as `3F2A9C1E`. **You see every tester's reports on Settings → Support, but only if your account is a
+  platform admin.** If it isn't yet, tell me the email you sign in with and I'll make it one (it is one database step). *Default I used:*
+  reports stay in the app; no email is sent. Say if you want an email for each new report, and to which address.
