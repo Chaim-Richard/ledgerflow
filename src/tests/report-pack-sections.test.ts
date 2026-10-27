@@ -44,6 +44,21 @@ test('two budgets saved on one account keep its spending counted once', () => {
   assert.deepEqual(section.warnings, ['2 budgets are saved across 1 accounts; each account’s spending is counted once.']);
 });
 
+test('two different accounts with the same name keep their own spending', () => {
+  const answer = [
+    { accountId: 'acc-a', accountCode: '6100', accountName: 'Office', budget: 2000, actual: 1000, variance: 1000, percent: 50 },
+    { accountId: 'acc-b', accountName: 'Office', budget: 4000, actual: 3000, variance: 1000, percent: 75 },
+  ];
+  const section = packSection('budget', answer, {});
+  const cents = (label: string) => section.rows.find(row => row.label === label)?.cents;
+  assert.equal(cents('Total budget'), 6000);
+  assert.equal(cents('Total actual'), 4000, 'both accounts’ spending is counted');
+  assert.equal(cents('Total variance'), 2000);
+  assert.equal(cents('Office (6100) · Actual'), 1000, 'the code tells the twins apart');
+  assert.equal(cents('Office (acc-b) · Actual'), 3000, 'without a code the id does');
+  assert.deepEqual(section.warnings, []);
+});
+
 test('a month with no budgets says so instead of printing an empty comparison', () => {
   const section = packSection('budget', [], {});
   assert.deepEqual(section.rows, []);
