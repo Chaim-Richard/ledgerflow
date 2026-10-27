@@ -109,7 +109,9 @@ jobs:
           set +e
           npx playwright test e2e/w10-backup-restore-reports.spec.ts e2e/report-pack.spec.ts --retries=0 > e2e.log 2>&1
           echo "exit=$?"
-          grep -aE '(✘|✗|✓|[0-9]+ (passed|failed|flaky))|Error:|label-content-name-mismatch' e2e.log | head -60
+          # every failing test becomes its own annotation, with the first lines of why
+          awk '/^  [0-9]+\) /{name=$0; getline; print "::error title=" substr(name,5,120) "::" substr($0,1,300)}' e2e.log | head -20
+          grep -aE 'label-content-name-mismatch|Received: |Expected: |toHaveScreenshot|Snapshot:|Timed out|Error:' e2e.log | head -60
           echo "::notice title=e2e::$(grep -aE '[0-9]+ (passed|failed|flaky)' e2e.log | tr '\n' ' ')"
           tail -30 e2e.log
       - uses: actions/upload-artifact@v4
