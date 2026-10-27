@@ -601,5 +601,5 @@ Settings → Actions → General → Workflow permissions → tick **Allow GitHu
   real books, add `VITE_TEST_ENVIRONMENT` = `off` in Vercel (Settings → Environment Variables) and redeploy.
 - **Reports from testers:** "Report a problem" (in the banner) and "Send feedback" save a support ticket. The tester sees
   a reference such as `3F2A9C1E`. **You see every tester's reports on Settings → Support, but only if your account is a
-  platform admin.** If it isn't yet, run `npm run grant-admin -- <your email>` once (or ask me to). *Default I used:*
+  platform admin.** If it isn't yet, tell me the email you sign in with and I'll make it one (it is one database step). *Default I used:*
   reports stay in the app; no email is sent. Say if you want an email for each new report, and to which address.
