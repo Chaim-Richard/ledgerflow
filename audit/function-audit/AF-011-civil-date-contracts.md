@@ -31,7 +31,21 @@
 ## Executed evidence (this environment)
 
 ```sh
+At the current audit checkout (`b4a92158`):
+
+```sh
 TZ=UTC npx tsx audit/function-audit/probes/af011-date-contracts.mjs
+```
+
+To reproduce the historical pre-fix behavior, check out the prior audit pin in a separate worktree and run the same probe there:
+
+```sh
+git worktree add /tmp/ledgerflow-50ee1205 50ee1205d9049d7c225beb433bcb3dff75b77be9
+cd /tmp/ledgerflow-50ee1205
+TZ=UTC npx tsx audit/function-audit/probes/af011-date-contracts.mjs
+```
+
+The `50ee1205` output is historical evidence; it must not be described as the result at `b4a92158`. At `b4a92158`, `formatDate` uses `civilDateParts` and displays the stored civil date correctly, while the `parseLocalDate(...).getFullYear()` TaxManager filter issue remains.
 ```
 
 ```
@@ -81,5 +95,4 @@ transaction is in 2025. The suite already runs in three time zones, so this is e
 
 Executed in Node with the store set directly (no browser). It proves the helper contract and the
 `TaxManager` classification; it does not measure how many live users have a device zone different from
-their workspace zone, and it does not touch production data. No money figure is changed by this defect;
-the risk is a document being counted in the wrong year on a screen the user reads before filing.
+their workspace zone, and it does not touch production data. Stored ledger amounts are unchanged by this defect. However, when server figures are unavailable, `TaxManager` derives displayed income, expenses, and estimated tax from the filtered transactions; a transaction classified into the wrong year can therefore change those displayed figures.
