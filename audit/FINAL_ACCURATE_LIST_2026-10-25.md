@@ -26,7 +26,7 @@ Everything else in stage A was verified at the pin (see §5). These are the real
 | A4 | **Known defect #342 (below, AF-011), not fixed.** | A January 1 document is counted in the *previous* year on the tax screen whenever the user's device time zone differs from the workspace's. For a synthetic beta this is a wrong number a tester will report, not a data loss. **Decide:** fix before inviting (small, shared helper) or put it in the tester note as a known issue. | §2, AF-011. |
 
 **Not** on this list, because it was verified working at the pin: the nine stage-A workflows, the posting
-and reports maths, roles/RLS, backup/restore, close/reopen (see §5). And the Vercel preview being red is the
+and report calculations, roles/RLS, backup/restore, close/reopen (see §5). And the Vercel preview being red is the
 owner's paused preview, not a code failure.
 
 ---
