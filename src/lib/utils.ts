@@ -66,6 +66,23 @@ export function parseAmountToCents(val: string | number | undefined | null): num
   return text.startsWith('(') ? -Math.abs(cents) : cents;
 }
 
+/**
+ * Typed amount text as cents, or null when it is blank or not a finished amount ('1.2.3', '1,2', '(100').
+ * For screens that read an amount while drawing or before saving: never throws, never turns a typo into 0.
+ */
+export function readAmountCents(val: string | null | undefined): number | null {
+  if (val == null || !String(val).trim() || !isAmountText(String(val), { complete: true })) return null;
+  // letters only as a currency: a 3-letter code ('USD', 'chf') or a prefix to a symbol ('CA$', 'A$', 'US$');
+  // '100k' or '5 m' is not an amount this reader can know
+  const letters = plainAmountText(String(val)).replace(/[A-Za-z]{1,3}(?=\s*\p{Sc})/gu, '').match(/[A-Za-z]+/g) || [];
+  if (letters.some(w => w.length !== 3)) return null;
+  try {
+    return parseAmountToCents(String(val));
+  } catch {
+    return null;
+  }
+}
+
 /** Known 3-decimal currencies per ISO 4217 (KWD, BHD, OMR, JOD, TND, LYD, IQD); one list with the storage rule (BM-04). */
 export { THREE_DECIMAL_CURRENCIES, amountStep, minorToMajor } from './currencyMinorUnits';
 
