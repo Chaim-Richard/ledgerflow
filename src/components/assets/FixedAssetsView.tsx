@@ -9,7 +9,7 @@ import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { getIdToken } from '../../firebase';
 import { depreciationThrough } from '../../lib/depreciationEngine';
-import { formatCurrency, formatDate, formatTzDate, parseAmountToCents } from '../../lib/utils';
+import { formatCurrency, formatDate, formatTzDate, isAmountText, parseAmountToCents } from '../../lib/utils';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import DisposeAssetDialog from './DisposeAssetDialog';
 import TransferAssetDialog from './TransferAssetDialog';
@@ -146,6 +146,8 @@ export const FixedAssetsView: React.FC = () => {
   };
 
   const saveAsset = async () => {
+    if (!isAmountText(form.cost, { complete: true })) return toast.error('Enter the asset name and its cost');
+    if (form.salvage.trim() && !isAmountText(form.salvage, { complete: true })) return toast.error('The salvage value must be between 0 and the cost');
     const cost = parseAmountToCents(form.cost);
     const salvage = parseAmountToCents(form.salvage);
     const years = Number(form.years);

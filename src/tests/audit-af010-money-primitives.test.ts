@@ -7,7 +7,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseAmountToCents } from '../lib/utils';
+import { isAmountText, parseAmountToCents } from '../lib/utils';
 import { bankCsvAmountCents } from '../lib/bankCsvRows';
 import { allocateCents as canonicalAlloc } from '../lib/Allocation';
 import { allocateCents as kernelAlloc } from '../kernel/templates/TransactionTemplates';
@@ -45,22 +45,48 @@ test('AF-010-F1: the two allocateCents primitives have silently different contra
   }
 });
 
-test('AF-010-F2: utils.parseAmountToCents loses the sign of parenthesized accounting negatives', () => {
-  // The bank CSV path has its own guarded parser (below), so this reaches the app through UI money
-  // fields and any caller that reuses the utils helper. An accountant typing (500.00) records +500.
-  assert.equal(parseAmountToCents('(100.00)'), 10000, 'OBSERVED DEFECT: parentheses stripped, sign lost');
-  assert.equal(parseAmountToCents('(0.01)'), 1, 'OBSERVED DEFECT: one cent the wrong way');
+test('AF-010-F2: utils.parseAmountToCents reads parenthesized accounting negatives as negative', () => {
+  // fixed 28 Oct: an accountant typing (500.00) records -500, as the other two parsers do
+  assert.equal(parseAmountToCents('(100.00)'), -10000);
+  assert.equal(parseAmountToCents('(0.01)'), -1);
+  assert.equal(parseAmountToCents('($1,234.56)'), -123456);
   // the other two primitives get parentheses right
   assert.equal(bankCsvAmountCents('(100.00)'), -10000);
   assert.equal(TruthEngine.parseAmountToCents('(100.00)'), -10000);
 });
 
-test('AF-010-F3: utils.parseAmountToCents throws on malformed text instead of returning 0', () => {
-  // A render-path caller (e.g. useMemo in a money dialog) typing "1.2.3" hits a DecimalError and
-  // trips the screen error boundary rather than showing a validation message.
-  assert.throws(() => parseAmountToCents('1.2.3'), /Invalid argument/);
-  assert.throws(() => parseAmountToCents('1-2'), /Invalid argument/);
-  assert.throws(() => parseAmountToCents('--5'), /Invalid argument/);
+test('AF-010-F3: utils.parseAmountToCents refuses a typo with a plain error, never another number or 0', () => {
+  // savers that accept 0 (prices, budgets, proceeds) must not record a typo as 0; render paths use isAmountText
+  for (const typo of ['1.2.3', '1-2', '--5', '(1+2)']) assert.throws(() => parseAmountToCents(typo), /is not an amount/, typo);
+  assert.equal(parseAmountToCents('abc'), 0, 'text without a digit is still no amount');
+  // half-typed amounts never throw while a screen renders them (Codex on #430)
+  for (const draft of ['1,', '1,2', '1,23', '(1', '(100', '-', '$', '1.']) assert.doesNotThrow(() => parseAmountToCents(draft), draft);
+  assert.equal(parseAmountToCents('(100'), -10000, 'an unclosed bracket already reads negative');
+  // he-IL money text carries direction marks and a no-break space (CodeRabbit on #430)
+  const hebrew = new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS' }).format(123456.78);
+  assert.equal(isAmountText(hebrew, { complete: true }), true, JSON.stringify(hebrew));
+  assert.equal(parseAmountToCents(hebrew), 12345678);
+  // qualified symbols the app's own formatter emits (Codex on #430)
+  for (const pasted of ['CA$1,234.56', '1,234.56 CA$', 'A$5', '₹100', 'US$ 12.50']) {
+    assert.equal(isAmountText(pasted, { complete: true }), true, pasted);
+    assert.doesNotThrow(() => parseAmountToCents(pasted), pasted);
+  }
+  const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(123456.78);
+  assert.equal(isAmountText(inr, { complete: true }), true, JSON.stringify(inr));
+  assert.equal(parseAmountToCents(inr), 12345678);
+  assert.equal(isAmountText('1,23,45', { complete: true }), false, 'an unfinished lakh group');
+  const cad = new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'CAD' }).format(1234.56);
+  assert.equal(parseAmountToCents(cad), 123456, JSON.stringify(cad));
+  // the minus may follow the currency, as de-CH writes it (Codex on #430)
+  const chf = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF' }).format(-123.45);
+  assert.equal(parseAmountToCents(chf), -12345, JSON.stringify(chf));
+  assert.equal(isAmountText(chf, { complete: true }), true, JSON.stringify(chf));
+  assert.equal(parseAmountToCents('CHF-123.45'), -12345);
+  // before a save, only a finished amount passes (CodeRabbit on #430)
+  for (const unfinished of ['1,', '1,2', '1,2,3', '(100', '100)', '1,234 567']) assert.equal(isAmountText(unfinished, { complete: true }), false, unfinished);
+  for (const done of ['0', '1,234.56', '1,234,567', '1 234', "1'234.50", '(100.00)', '-$99.95', '100 USD', '.5', '5.']) assert.equal(isAmountText(done, { complete: true }), true, done);
+  for (const typo of ['1.2.3', '1-2', '--5', '(1+2)', 'abc', '']) assert.equal(isAmountText(typo), false, typo);
+  for (const amount of ['0', '0.00', '1,234.56', '-$99.95', '(100.00)', '.5', '5.', 'USD 12.50', '₪40', '100 USD', '1 234.56', "1'234.50", '+5', '12.50 CR']) assert.equal(isAmountText(amount), true, amount);
   // TruthEngine wraps the same class of failure in its own integrity error; OrZero swallows it
   assert.throws(() => TruthEngine.parseAmountToCents('1.2.3'), /Invalid amount format/);
   assert.equal(TruthEngine.parseAmountToCentsOrZero('1.2.3'), 0);
@@ -77,8 +103,9 @@ test('AF-010-F4: utils.parseAmountToCents boundary table', () => {
   assert.ok(parseAmountToCents('-0') === 0, '-0 is numerically zero (strictEqual would see -0)');
   // non-Latin digits are stripped to a silent zero
   assert.equal(parseAmountToCents('۱۲۳'), 0, 'OBSERVED: Arabic-Indic digits become 0, not a refusal');
-  // Infinity is not an integer cent; document the passthrough so callers cannot assume integer output
-  assert.equal(Number.isFinite(parseAmountToCents(Infinity)), false, 'OBSERVED: Infinity passes through');
+  // fixed 28 Oct: a non-finite number is no amount
+  assert.equal(parseAmountToCents(Infinity), 0);
+  assert.equal(parseAmountToCents(-Infinity), 0);
 });
 
 test('AF-010: TruthEngine parser handles the notations the utils parser cannot', () => {
@@ -98,4 +125,10 @@ test('AF-010: bankCsvAmountCents refuses ambiguity and never invents a sign', ()
   assert.equal(bankCsvAmountCents('n/a'), null);
   assert.equal(bankCsvAmountCents(''), null);
   assert.equal(bankCsvAmountCents(undefined), null);
+});
+
+test('AF-010-F3: a sum with a currency between the numbers is refused; Swiss ’ grouping is an amount', () => {
+  for (const sum of ['1 + $2', '1+ USD 2', '$1 * $2']) assert.throws(() => parseAmountToCents(sum), /is not an amount/, sum);
+  assert.equal(isAmountText('CHF1’234.56', { complete: true }), true);
+  assert.equal(parseAmountToCents('CHF1’234.56'), 123456);
 });

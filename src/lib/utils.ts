@@ -19,15 +19,51 @@ export { roundCents, calculateFXCents } from './cents';
 /**
  * Safely parses string or numeric monetary inputs into integer cents without floating point precision errors.
  */
+/**
+ * Whether typed text is one amount: an optional sign, currency symbol or code, digits (thousands may be
+ * grouped with commas), an optional decimal part, optionally in accounting brackets. "1.2.3", "1-2" and
+ * "(1+2)" are not.
+ */
+/** Amount text as typed or pasted: direction marks dropped (he-IL money text carries them), no-break spaces made plain. */
+function plainAmountText(val: string): string {
+  return String(val).replace(/[\u200E\u200F\u202A-\u202E\u2066-\u2069]/g, '').replace(/[\u00A0\u202F]/g, ' ').replace(/\u2019/g, "'").trim();
+}
+
+export function isAmountText(val: string, opts: { complete?: boolean } = {}): boolean {
+  const text = plainAmountText(val);
+  // an opening bracket may still be waiting for its closing one while the amount is typed
+  const inner = text.replace(/^\(/, '').replace(/\)$/, '').trim();
+  if (!/\d/.test(inner)) return false;
+  // one sign at most, before the currency ('-CHF 5') or after it ('CHF-5', as de-CH writes it)
+  if ((inner.match(/[-+]/g) || []).length > 1) return false;
+  if (opts.complete) {
+    // before saving: brackets closed, digit groups of three (or Indian lakh grouping, 1,23,456), as a finished amount is written
+    if (text.startsWith('(') !== text.endsWith(')')) return false;
+    return /^[-+]?\s*(?:[A-Za-z]{1,3}\s*)?\p{Sc}?\s*[-+]?\s*(?:\d{1,3}(?:([, '])\d{3})?(?:\1\d{3})*|\d{1,2}(?:,\d{2})+,\d{3}|\d+)?(?:\.\d*)?\s*(?:[A-Za-z]{1,3}\s*)?\p{Sc}?$/u.test(inner);
+  }
+  // while typing, digit groups may be half done ('1,', '1,2'), as they are on the way to '1,234'
+  return /^[-+]?\s*(?:[A-Za-z]{1,3}\s*)?\p{Sc}?\s*[-+]?\s*(?:\d+(?:[, ']\d{0,3})*)?(?:\.\d*)?\s*(?:[A-Za-z]{1,3}\s*)?\p{Sc}?$/u.test(inner);
+}
+
 export function parseAmountToCents(val: string | number | undefined | null): number {
   if (val === undefined || val === null || val === '') return 0;
   if (typeof val === 'number') {
-    if (isNaN(val)) return 0;
+    if (!Number.isFinite(val)) return 0;
     return new Decimal(val).mul(100).round().toNumber();
   }
-  const cleanStr = String(val).replace(/[^0-9.-]/g, '');
-  if (!cleanStr || cleanStr === '-') return 0;
-  return new Decimal(cleanStr).mul(100).round().toNumber();
+  const text = plainAmountText(val);
+  // text without a digit ('abc') has always been no amount
+  if (!/\d/.test(text)) return 0;
+  // AF-010-F3: text that is one number in any format the app writes or a person pastes ('CHF-123.45',
+  // '₹1,23,456.78', '1 234,00 €') reads as before; a typo that leaves no single number ('1.2.3', '--5', '1-2')
+  // or a sum ('(1+2)') is refused with a plain error, never read as another number or as 0.
+  // a currency or code between the numbers ('1 + $2') is still a sum
+  if (/\d[\s\p{L}\p{Sc}]*[+*/×÷=][\s\p{L}\p{Sc}(]*\d/u.test(text)) throw new Error(`"${text}" is not an amount`);
+  const cleanStr = text.replace(/[^0-9.-]/g, '');
+  if (!/^-?(\d+\.?\d*|\.\d+)$/.test(cleanStr)) throw new Error(`"${text}" is not an amount`);
+  const cents = new Decimal(cleanStr).mul(100).round().toNumber();
+  // AF-010-F2: an accountant's (100.00) is a negative amount
+  return text.startsWith('(') ? -Math.abs(cents) : cents;
 }
 
 /** Known 3-decimal currencies per ISO 4217 (KWD, BHD, OMR, JOD, TND, LYD, IQD); one list with the storage rule (BM-04). */

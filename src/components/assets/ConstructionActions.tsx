@@ -4,7 +4,7 @@ import { db, getIdToken } from '../../firebase';
 import { doc, updateDoc } from '../../lib/db/firestore';
 import { useDialog } from '../../hooks/useDialog';
 import { useLedgerStore } from '../../stores/useLedgerStore';
-import { formatCurrency, formatDate, parseAmountToCents } from '../../lib/utils';
+import { formatCurrency, formatDate, isAmountText, parseAmountToCents } from '../../lib/utils';
 import type { ChartAccount, FixedAsset } from '../../types';
 
 /**
@@ -31,7 +31,7 @@ export function ConstructionActions({ asset, accounts, workspaceId, today, curre
   const open = (next: 'cost' | 'service') => { setAmount(''); setNote(''); setDate(today); setMode(next); };
 
   const addCost = async () => {
-    const cents = parseAmountToCents(amount);
+    const cents = isAmountText(amount, { complete: true }) ? parseAmountToCents(amount) : 0;
     if (!(cents > 0)) { toast.error('Enter what it cost'); return; }
     setBusy(true);
     try {
@@ -58,6 +58,7 @@ export function ConstructionActions({ asset, accounts, workspaceId, today, curre
   };
 
   const placeInService = async () => {
+    if (salvage.trim() && !isAmountText(salvage, { complete: true })) { toast.error('Enter the salvage value as an amount'); return; }
     setBusy(true);
     try {
       const data = await call('POST', { date, assetAccountId: accountId, usefulLifeYears: Number(years), salvageValueCents: parseAmountToCents(salvage) || 0 });
