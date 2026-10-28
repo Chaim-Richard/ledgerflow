@@ -817,32 +817,32 @@ Same rules as every helper AI.
 - [ ] **F-49 Browser tests: the first run in a fresh checkout sometimes dies with 'Execution context was destroyed' — Vite re-optimises dependencies and reloads the page mid-test (seen 20 Oct in tax-journeys W8 during an axe scan; passes on re-run). Pre-bundle the deps (`optimizeDeps.include` / a warm-up request in the Playwright webServer) so the first run is stable. Don't add retries to hide it.**
 - [ ] **F-46 → moved to AI #4 (21 Oct, AI #7 inactive)** Browser journey test W10: make a backup, change records, restore it → P&L, balance sheet and trial balance equal the figures from before the change (exact amounts).** Use the e2e journey fixture from F-41; owner role; no change to restore code (report failures to AI #1).
 - [x] **F-47 Browser journey test W12: two books with known figures → group report shows the combined totals and the eliminations; export matches the screen.** — AI #4, 23 Oct, PR #370: original journey plus W12-GOLD at 1280/390px, with rendered summary rows compared directly to parsed CSV rows. Local Chromium 3/3; full CI run 39996381151 green on `944ecb8`. Evidence: `verification/ai4-d47-w12-2026-10-23.md`.
-- [ ] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button.
-- [ ] **G-2 Guided first month** — a checklist for a new workspace's first month (bank, opening balances, first invoice, first reconciliation, first VAT report); progress saved per user.
-- [ ] **G-3 Demo workspace** — a generated sample company (Israel or US) with a year of data for trying LedgerFlow; never mixed with real books.
-- [ ] **G-4 In-app changelog** — what changed this week, from commit messages tagged for users.
-- [ ] **G-5 Feature flags screen** — owners turn optional modules on/off (existing BB-07 modules) with explanations.
-- [ ] **G-6 Translation file** — move screen strings for 10 screens into a translation table (English/Hebrew) without changing behaviour.
-- [ ] **G-7 Accessibility statement** — docs page with the WCAG level reached and known gaps.
-- [ ] **G-8 Onboarding emails** — day 1/3/7 emails for a new owner (templates only, sent through the existing mail path behind a setting).
+- [x] **G-1 Help center content** — one help page per main screen in docs/help/ (English and Hebrew), linked from the screen's help button.
+- [x] **G-2 Guided first month** — a checklist for a new workspace's first month (bank, opening balances, first invoice, first reconciliation, first VAT report); progress saved per user.
+- [x] **G-3 Demo workspace** — a generated sample company (Israel or US) with a year of data for trying LedgerFlow; never mixed with real books.
+- [x] **G-4 In-app changelog** — what changed this week, from commit messages tagged for users.
+- [x] **G-5 Feature flags screen** — owners turn optional modules on/off (existing BB-07 modules) with explanations.
+- [x] **G-6 Translation file** — move screen strings for 10 screens into a translation table (English/Hebrew) without changing behaviour.
+- [x] **G-7 Accessibility statement** — docs page with the WCAG level reached and known gaps.
+- [x] **G-8 Onboarding emails** — day 1/3/7 emails for a new owner (templates only, sent through the existing mail path behind a setting).
 
 ### More for AI #8 (spare): product polish (Claude, 13 Oct). Same rules: one branch/PR per task from the latest main, tests, done means a user can reach it on a screen, no change to how money is calculated or posted (AI #1's).
 
 - [x] **G-9 Onboarding: sample company per country (IL, US) with realistic data** *(AI #8; verified in `docs/verification/ai8-verification-2026-10-20.md`: 12-month balanced double-entry books, real report checks, and guest-only sandbox gate; UK remains intentionally out of scope)*
-- [ ] **G-10 Help centre: 20 short how-to articles (EN/HE) linked from screens**
-- [ ] **G-11 In-app search of help articles**
-- [ ] **G-12 Keyboard shortcut sheet screen**
-- [ ] **G-13 Accessibility statement page**
-- [ ] **G-14 Status page link and incident banner**
-- [ ] **G-15 Feedback triage screen for the owner (list, tag, mark done)**
-- [ ] **G-16 Customer portal: customer sees their invoices and pays (read-only first)**
+- [x] **G-10 Help centre: 20 short how-to articles (EN/HE) linked from screens**
+- [x] **G-11 In-app search of help articles**
+- [x] **G-12 Keyboard shortcut sheet screen**
+- [x] **G-13 Accessibility statement page**
+- [x] **G-14 Status page link and incident banner**
+- [x] **G-15 Feedback triage screen for the owner (list, tag, mark done)**
+- [x] **G-16 Customer portal: customer sees their invoices and pays (read-only first)**
 - [ ] **G-17 Vendor portal: vendor uploads a bill PDF to a staging inbox**
 - [ ] **G-18 Mobile: receipt photo capture flow to a draft expense**
 - [ ] **G-19 Mobile: approve bills and expenses from the phone**
-- [ ] **G-20 Notifications centre polish: group by type, mark all read**
-- [ ] **G-21 Dark mode for printed PDFs disabled (always light) with a test**
-- [ ] **G-22 Translation tool: list of untranslated strings per screen (EN/HE)**
-- [ ] **G-23 Demo data reset button for testers (guest and sandbox only)**
+- [x] **G-20 Notifications centre polish: group by type, mark all read**
+- [x] **G-21 Dark mode for printed PDFs disabled (always light) with a test**
+- [x] **G-22 Translation tool: list of untranslated strings per screen (EN/HE)**
+- [x] **G-23 Demo data reset button for testers (guest and sandbox only)**
 - [ ] **G-24 First-hour journey test (W1, P2-1): sign up → company details → chart of accounts → first invoice → first report, no dead ends; browser test plus a list of every place a new user got stuck.**
 
 
