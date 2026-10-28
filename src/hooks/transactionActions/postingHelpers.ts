@@ -6,6 +6,7 @@ import { db } from '../../firebase';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { TransactionLine, ChartAccount } from '../../types';
 import { toast } from 'sonner';
+import { savedInOtherWorkspace, workspaceChangedSince } from '../../lib/saveWorkspace';
 import type { ActionContext } from './shared';
 
 /** Shared by several groups: learn a categorisation from an entry, and balance entry lines. (F-05, moved from useTransactionActions.) */
@@ -55,6 +56,10 @@ export function createPostingHelpers(ctx: ActionContext) {
         lastUpdated: new Date().toISOString()
       }, { merge: true });
 
+      // the pattern is saved in the books it was learnt in; if other books were opened meanwhile, their
+      // cache and rules must not take it (PREV-5)
+      if (workspaceChangedSince(currentWorkspaceId)) return;
+
       useLedgerStore.getState().updateAnalyticalMatchCache(
         cleanDesc,
         accountId,
@@ -89,9 +94,13 @@ export function createPostingHelpers(ctx: ActionContext) {
             isActive: true,
             createdAt: new Date().toISOString()
           });
-          toast.success(`Sub-ledger rule created for "${cleanDesc}"`, {
-            description: `Automated link to ${accountName} established.`
-          });
+          if (workspaceChangedSince(currentWorkspaceId)) {
+            toast.info(savedInOtherWorkspace(`The rule for "${cleanDesc}"`, currentWorkspaceId));
+          } else {
+            toast.success(`Sub-ledger rule created for "${cleanDesc}"`, {
+              description: `Automated link to ${accountName} established.`
+            });
+          }
         }
       }
     } catch (e) {

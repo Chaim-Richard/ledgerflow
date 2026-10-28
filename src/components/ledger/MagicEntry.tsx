@@ -1,18 +1,50 @@
 import { useDialog } from '../../hooks/useDialog';
-import React, { useState, useEffect, useId } from 'react';
+import React, { useState, useEffect, useId, useRef } from 'react';
 import { aiService } from '../../services/aiService';
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { workspaceChangedSince } from '../../lib/saveWorkspace';
 import { parseNaturalLanguageEntry } from '../../lib/algorithms/nl-parser';
 import { Check, Wand2, Camera, X, Loader2, Edit2 } from 'lucide-react';
 import { useTransactionActions } from '../../hooks/useTransactionActions';
 import { toast } from 'sonner';
-import { getLocalDateISO, formatCurrency } from '../../lib/utils';
+import { getLocalDateISO, formatCurrency, getCurrencyFractionDigits } from '../../lib/utils';
 import { resolveAccountRole } from '../../lib/accountUtils';
 import { isCashAccount } from '../../lib/txFilters';
+import { getIsoCurrency } from '../../lib/isoCurrencyReference';
 import AsyncButton from '../ui/AsyncButton';
 import { focusOnMount } from '../../lib/focusOnMount';
 
-export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolean; onClose?: () => void; onAdd?: (data: Partial<import("../../types").Transaction> & { amount: number }) => void; categories?: string[]; accounts?: import("../../types").ChartAccount[]; projects?: string[]; autoRules?: import("../../types").AutoRule[]; patternCache?: Record<string, unknown> }) {
+const CURRENCY_SIGNS: Record<string, string> = { '€': 'EUR', '£': 'GBP', '₪': 'ILS', '¥': 'JPY', '₹': 'INR' };
+const PREFIXED_DOLLARS: Record<string, string> = { US: 'USD', C: 'CAD', CA: 'CAD', A: 'AUD', AU: 'AUD', NZ: 'NZD', HK: 'HKD', S: 'SGD', SG: 'SGD', R: 'BRL', MX: 'MXN' };
+const DOLLAR_BOOKS = new Set(['USD', 'CAD', 'AUD', 'NZD', 'SGD', 'HKD']);
+
+/**
+ * Whether the currencies a typed sentence names ('$80', '80 EUR') all fit books kept in `books`.
+ * A bare '$' is any dollar, so it fits dollar books; two different markers never fit.
+ */
+function typedCurrencyProblem(text: string, books: string): string | null {
+  const named = new Set<string>();
+  // any ISO 4217 code written next to the amount ('80 SEK', 'BRL 80'), or in capitals anywhere ('from USD account')
+  const codeWords = [
+    ...[...text.matchAll(/\d\s*([A-Za-z]{3})\b|\b([A-Za-z]{3})\s*\d/g)].map(m => m[1] || m[2]),
+    ...[...text.matchAll(/\b([A-Z]{3})\b/g)].map(m => m[1]),
+  ];
+  for (const w of codeWords) {
+    const code = w.toUpperCase() === 'NIS' ? 'ILS' : w.toUpperCase();
+    if (getIsoCurrency(code)) named.add(code);
+  }
+  for (const m of text.matchAll(/[€£₪¥₹]/g)) named.add(CURRENCY_SIGNS[m[0]]);
+  // a dollar sign with letters in front names its currency ('R$' reais, 'CA$', 'MX$'); an unknown prefix is refused
+  for (const m of text.matchAll(/\b([A-Za-z]{1,3})\$/g)) named.add(PREFIXED_DOLLARS[m[1].toUpperCase()] ?? `${m[1].toUpperCase()}$`);
+  const dollar = /(?<![A-Za-z])\$/.test(text);
+  if (named.size > 1 || (dollar && [...named].some(c => !DOLLAR_BOOKS.has(c)))) return 'This sentence names more than one currency. Enter one amount in one currency.';
+  const currency = [...named][0] ?? (dollar ? (DOLLAR_BOOKS.has(books) ? books : 'USD') : null);
+  if (currency && currency !== books) return `This amount is in ${currency} but your books are in ${books}. Use the full entry form to record it with an exchange rate.`;
+  return null;
+}
+
+export default function MagicEntry({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void; onAdd?: (data: Partial<import("../../types").Transaction> & { amount: number }) => void; categories?: string[]; accounts?: import("../../types").ChartAccount[]; projects?: string[]; autoRules?: import("../../types").AutoRule[]; patternCache?: Record<string, unknown> }) {
   const formId = useId();
   const [isAiParsing, setIsAiParsing] = useState(false);
   const [text, setText] = useState('');
@@ -20,6 +52,10 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
   const [, setReceiptMode] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { handleQuickAdd, handleParseReceipt } = useTransactionActions();
+  // one id per draft: a retry after an unknown reply reuses it, so the server cannot post the entry twice
+  const operationId = useRef<string | null>(null);
+  // a changed sentence or edited amount, date or account is a new entry with a new id
+  useEffect(() => { operationId.current = null; }, [parsed]);
 
   const isModal = isOpen !== undefined;
   const { dialogProps: overlayDialogProps, titleId: overlayTitleId } = useDialog(() => onClose?.(), !!isModal && isOpen !== false);
@@ -87,27 +123,43 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
 
   const handleSave = async () => {
     if (!parsed) return;
-    if (onAdd) {
-       onAdd({
-         description: parsed.description,
-         amount: parsed.amount,
-         date: parsed.dateStr,
-         type: parsed.action as import("../../types").Transaction['type']
-       });
-    } else {
+    {
+       // the quick-entry window used to hand only { amount } to onAdd, which the save ignores: the entry
+       // reached the server with no lines and was refused ('at least 2 lines required'). Build both lines here.
        const { accounts } = useLedgerStore.getState();
        const actionType = parsed.action || 'expense';
        const isExp = actionType === 'expense';
-       const targetAcc = accounts.find(a => resolveAccountRole(a) === (isExp ? 'expense' : 'revenue')) || accounts.find(a => a.type === (isExp ? 'expense' : 'income')) || accounts[0];
-       const cashAcc = accounts.find(a => resolveAccountRole(a) === 'cash') || accounts.find(a => isCashAccount(a)) || accounts[0];
+       const usable = accounts.filter(a => a.isActive !== false);
+       const targetAcc = usable.find(a => resolveAccountRole(a) === (isExp ? 'expense' : 'revenue')) || usable.find(a => a.type === (isExp ? 'expense' : 'income'));
+       const cashAcc = usable.find(a => resolveAccountRole(a) === 'cash') || usable.find(a => isCashAccount(a));
 
-       if (!targetAcc || !cashAcc) {
-         toast.error('Cannot post transaction: No chart of accounts available.');
+       // both sides on one account would post nothing; never fall back to the first account in the chart
+       if (!targetAcc || !cashAcc || targetAcc.id === cashAcc.id) {
+         toast.error(`Cannot post this entry: add ${isExp ? 'an expense' : 'an income'} account and a cash or bank account to your chart of accounts first.`);
          return;
        }
 
        const amt = Math.abs(parsed.amount || 0);
-       await handleQuickAdd({
+       if (!amt) {
+         toast.error('Enter an amount, for example "Paid $45 for lunch".');
+         return;
+       }
+       // the sentence's money is posted as-is: '$80' in euro books must not become €80
+       const booksCurrency = useAuthStore.getState().getCurrentWorkspace()?.currency || 'USD';
+       const currencyProblem = typedCurrencyProblem(text, booksCurrency);
+       if (currencyProblem) {
+         toast.error(currencyProblem);
+         return;
+       }
+       // quick entry reads amounts in cents; books kept in whole yen or in 3-decimal units would be scaled wrongly
+       if (getCurrencyFractionDigits(booksCurrency) !== 2) {
+         toast.error(`Quick entry works with two-decimal currencies. Use the full entry form for ${booksCurrency} books.`);
+         return;
+       }
+       const savedIn = useAuthStore.getState().currentWorkspaceId;
+       operationId.current ??= `qe-${crypto.randomUUID()}`;
+       const saved = await handleQuickAdd({
+         currency: booksCurrency,
          description: parsed.description || 'Natural Language Entry',
          totalAmountCents: amt,
          date: parsed.dateStr || getLocalDateISO(),
@@ -115,7 +167,8 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
          lines: [
            {
              accountId: targetAcc.id,
-             accountName: parsed.description || targetAcc.name,
+             accountName: targetAcc.name,
+             description: parsed.description,
              amountCents: isExp ? amt : -amt
            },
            {
@@ -124,8 +177,12 @@ export default function MagicEntry({ isOpen, onClose, onAdd }: { isOpen?: boolea
              amountCents: isExp ? -amt : amt
            }
          ]
-       });
-       toast.success('Transaction saved to General Ledger!');
+       }, operationId.current);
+       // handleQuickAdd says "added" itself once the server saved it
+       if (!saved) return;
+       // a reply after the user opened other books belongs to the old window: leave the new one and its draft alone
+       if (workspaceChangedSince(savedIn)) return;
+       operationId.current = null;
     }
     setText('');
     setParsed(null);
