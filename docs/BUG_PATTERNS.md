@@ -7,7 +7,7 @@
 | unchecked-write | 2 |
 | write-in-loop | 10 |
 | stale-async | 79 |
-| silent-catch | 52 |
+| silent-catch | 53 |
 | effect-before-write | 0 |
 
 - [ ] `silent-catch` src/components/admin/AuditLogViewer.tsx:39 — fetchLogs
@@ -16,6 +16,7 @@
 - [ ] `silent-catch` src/components/collaboration/TimeTimer.tsx:30 — start
 - [ ] `silent-catch` src/components/collaboration/TimeTimer.tsx:36 — stop
 - [ ] `silent-catch` src/components/dashboard/DashboardWidgets.tsx:100 — resetLayout
+- [ ] `silent-catch` src/components/forensics/ForensicAudit.tsx — scan
 - [ ] `silent-catch` src/components/finance/CreditNotesView.tsx:88 — (anonymous)
 - [ ] `silent-catch` src/components/finance/PettyCashView.tsx:66 — writePreference
 - [ ] `silent-catch` src/components/finance/TaxManager.tsx:225 — (anonymous)
