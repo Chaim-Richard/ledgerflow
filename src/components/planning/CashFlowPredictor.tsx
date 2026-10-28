@@ -6,6 +6,15 @@ import { StrategicEngine } from '../../services/strategicEngine';
 import { isPostable, lineAmount } from '../../lib/txFilters';
 
 import { useLedgerStore } from '../../stores/useLedgerStore';
+import { useServerActivity } from '../../hooks/useServerActivity';
+import { openingCutoff } from '../../lib/serverBalances';
+import { monthEnd, sumActivity } from '../../lib/periodActivity';
+
+/** The first and last day of the month `date` falls in. */
+const monthRange = (date: string): [string, string] => {
+  if (!/^\d{4}-\d{2}/.test(date)) return ['', ''];
+  return [`${date.slice(0, 7)}-01`, monthEnd(date.slice(0, 7))];
+};
 
 export default function CashFlowPredictor() {
   const transactions = useLedgerStore(s => s.transactions);
@@ -16,6 +25,10 @@ export default function CashFlowPredictor() {
   const forecastData = useMemo(() => {
     return StrategicEngine.getForecast(transactions.filter(isPostable), accounts);
   }, [transactions, accounts]);
+
+  // L-123 step 3e: when the loaded entries are capped, the oldest loaded month may be cut part-way: its bar is the server's
+  const [cutFrom, cutTo] = monthRange(useMemo(() => openingCutoff(transactions), [transactions]));
+  const { activity, serverMonths } = useServerActivity(cutFrom, cutTo);
 
   const historicalData = useMemo(() => {
     const monthlyMap: Record<string, number> = {};
@@ -30,8 +43,13 @@ export default function CashFlowPredictor() {
         }
       });
     });
+    if (serverMonths && cutFrom) {
+      const cash = new Set(accounts.filter(a => resolveAccountRole(a) === 'cash').map(a => a.id));
+      const m = cutFrom.slice(0, 7);
+      monthlyMap[m] = sumActivity(activity, m, m, id => cash.has(id), a => a.net) / 100;
+    }
     return Object.entries(monthlyMap).sort((a, b) => a[0].localeCompare(b[0])).map(([m, val]) => ({ month: m, value: val }));
-  }, [transactions, accounts]);
+  }, [transactions, accounts, serverMonths, activity, cutFrom]);
   
 
   return (

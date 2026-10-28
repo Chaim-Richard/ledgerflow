@@ -58,6 +58,15 @@ test('a rate above 100% is refused; delete asks first', async () => {
   assert.equal(calls.filter(c => c.url.includes('/rpc/')).length, 0);
 });
 
+test('an empty tax list says what to add and opens the same new-tax dialog', () => {
+  useLedgerStore.setState({ taxRates: [] });
+  stubFetchWithBodies(200, null);
+  render(<TaxManager />);
+  assert.ok(screen.getByText('No tax codes yet'));
+  fireEvent.click(screen.getByRole('button', { name: 'Add first tax code' }));
+  assert.ok(screen.getByRole('heading', { name: 'New tax' }));
+});
+
 test('viewers see the codes but cannot change them', () => {
   setComponentWorkspace('viewer');
   stubFetchWithBodies(200, null);

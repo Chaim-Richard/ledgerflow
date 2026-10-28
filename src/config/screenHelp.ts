@@ -95,6 +95,8 @@ export const SCREEN_HELP: Record<string, Record<string, string>> = {
       "Explore the API interface and integration examples. Review endpoint documentation and developer controls. An example response does not establish a live provider connection.",
     "system-command-center":
       "Inspect the developer-only administration demonstration. Explore its example panels when developer mode is enabled. Demonstration telemetry is distinct from production monitoring.",
+    glossary:
+      "Look up accounting words in plain English and Hebrew, grouped by the part of the books they describe. Search either language without transliterating names. A definition is a learning aid and never a tax decision, an entry or a filing.",
   },
   reports: {
     "customer-tax-certificates": "Review current customer certificate declarations, with expiries within 30 calendar days first and expired or unreadable entries marked. Refresh the complete workspace customer list before CSV export. This is a dated review of current metadata, not verified entitlement or certificate history. Open customer details in a side drawer to keep this list visible.",

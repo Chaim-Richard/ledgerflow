@@ -1,12 +1,10 @@
 import { RecurringTransaction, Transaction } from '../types';
 import { getLocalDateISO } from './utils';
+import { addDaysYMD, addMonthsYMD, dayNumber } from './calendarDate';
 
-function parseDateStrToMs(dateStr: string): number {
+function parseDateStrToDayNumber(dateStr: string): number {
   if (!dateStr) return NaN;
-  const cleanStr = dateStr.slice(0, 10);
-  const [y, m, d] = cleanStr.split('-').map(Number);
-  if (isNaN(y) || isNaN(m) || isNaN(d)) return NaN;
-  return Date.UTC(y, m - 1, d);
+  return dayNumber(dateStr.slice(0, 10));
 }
 
 export function calculateNextOccurrence(
@@ -14,41 +12,22 @@ export function calculateNextOccurrence(
   frequency: RecurringTransaction['frequency'],
   anchorDay: number
 ): string {
-  const [y, m, d] = (currentDateStr || getLocalDateISO()).split('-').map(Number);
-  const anchor = anchorDay;
-
-  const addMonths = (n: number) => {
-    const targetMonth = m - 1 + n;
-    const ty = y + Math.floor(targetMonth / 12);
-    const tm = ((targetMonth % 12) + 12) % 12;
-    const lastDay = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
-    return `${ty}-${String(tm + 1).padStart(2, '0')}-${String(Math.min(anchor, lastDay)).padStart(2, '0')}`;
-  };
+  const baseDate = (currentDateStr || getLocalDateISO()).slice(0, 10);
 
   switch (frequency) {
-    case 'daily': {
-      const dt = new Date(Date.UTC(y, m - 1, d + 1));
-      const year = dt.getUTCFullYear();
-      const monthStr = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      const dayStr = String(dt.getUTCDate()).padStart(2, '0');
-      return `${year}-${monthStr}-${dayStr}`;
-    }
-    case 'weekly': {
-      const dt = new Date(Date.UTC(y, m - 1, d + 7));
-      const year = dt.getUTCFullYear();
-      const monthStr = String(dt.getUTCMonth() + 1).padStart(2, '0');
-      const dayStr = String(dt.getUTCDate()).padStart(2, '0');
-      return `${year}-${monthStr}-${dayStr}`;
-    }
+    case 'daily':
+      return addDaysYMD(baseDate, 1);
+    case 'weekly':
+      return addDaysYMD(baseDate, 7);
     case 'monthly':
-      return addMonths(1);
+      return addMonthsYMD(baseDate, 1, anchorDay);
     case 'quarterly':
-      return addMonths(3);
+      return addMonthsYMD(baseDate, 3, anchorDay);
     case 'yearly':
-      return addMonths(12);
+      return addMonthsYMD(baseDate, 12, anchorDay);
     default: {
       const _exhaustive: never = frequency;
-      return addMonths(1);
+      return addMonthsYMD(baseDate, 1, anchorDay);
     }
   }
 }
@@ -64,7 +43,7 @@ export interface DueRecurringResult {
 
 export function findDueRecurring(recurringList: RecurringTransaction[], asOfDateStr?: string): DueRecurringResult {
   const todayStr = asOfDateStr || getLocalDateISO();
-  const asOfTime = parseDateStrToMs(todayStr);
+  const asOfTime = parseDateStrToDayNumber(todayStr);
 
   const dueTemplates: RecurringTransaction[] = [];
   const generatedTransactions: DueRecurringResult['generatedTransactions'] = [];
@@ -73,7 +52,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
     if (!item.isActive) continue;
     
     const currentNextOccStr = item.nextOccurrence || item.createdAt.slice(0, 10);
-    let nextOccTime = parseDateStrToMs(currentNextOccStr);
+    let nextOccTime = parseDateStrToDayNumber(currentNextOccStr);
 
     if (!isNaN(nextOccTime) && nextOccTime <= asOfTime) {
       dueTemplates.push(item);
@@ -129,7 +108,7 @@ export function findDueRecurring(recurringList: RecurringTransaction[], asOfDate
         };
 
         latestNextOccStr = calculateNextOccurrence(latestNextOccStr, item.frequency, anchorDay);
-        nextOccTime = parseDateStrToMs(latestNextOccStr);
+        nextOccTime = parseDateStrToDayNumber(latestNextOccStr);
 
         generatedTransactions.push({
           transaction: newTx,

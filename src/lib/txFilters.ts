@@ -65,8 +65,8 @@ export function transactionDate(t: Pick<Transaction, 'date'>): string {
 export function isTransactionInDateRange(t: Pick<Transaction, 'date'>, start?: string, end?: string): boolean {
   const date = transactionDate(t);
   if (!date) return false;
-  const startDate = start?.slice(0, 10);
-  const endDate = end?.slice(0, 10);
+  const startDate = typeof start === 'string' ? start.slice(0, 10) : undefined;
+  const endDate = typeof end === 'string' ? end.slice(0, 10) : undefined;
   return (!startDate || date >= startDate) && (!endDate || date <= endDate);
 }
 
@@ -317,6 +317,12 @@ export function runningBalances(chronological: Transaction[], accountMap: Map<st
     out.set(t.id, sum);
   }
   return out;
+}
+
+/** The accounts whose lines make the earnings (calculateNetIncome): income, revenue, cost of goods and expenses. */
+export function isEarningsAccount(acc: Pick<ChartAccount, 'type' | 'category' | 'role'>): boolean {
+  return acc.type === 'income' || acc.type === 'revenue' || acc.type === 'expense' || acc.type === 'cost_of_goods'
+    || acc.category === 'COGS' || acc.category === 'Direct Costs' || acc.role === 'cogs';
 }
 
 /**

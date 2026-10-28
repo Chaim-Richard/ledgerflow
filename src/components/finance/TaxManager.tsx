@@ -21,12 +21,32 @@ import { parseLocalDate, cn, formatCurrency, workspaceYearMonth } from '../../li
 import { isPostable, lineAmount } from '../../lib/txFilters';
 import AsyncButton from '../ui/AsyncButton';
 import InlineEdit from '../ui/InlineEdit';
+import { EmptyState } from '../ui/EmptyState';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { safeConfirm } from '../../lib/utils';
 import { effectiveRate, TAX_TREATMENTS } from '../../lib/taxCodes';
 import type { TaxComponent, TaxTreatment } from '../../lib/taxCodes';
 import { isIncomeAccount } from '../../lib/accountUtils';
+import { useServerActivity } from '../../hooks/useServerActivity';
+import { sumActivity, type ActivityByMonth } from '../../lib/periodActivity';
+
+/**
+ * L-123 step 3e: the year's gross income, expenses and sales tax from activity per account per month: a line's
+ * absolute amount summed over lines is the account's gross debits plus gross credits, and sales tax is the net.
+ */
+function yearFigures(activity: ActivityByMonth, year: number, accounts: ChartAccount[]) {
+  const [from, to] = [`${year}-01`, `${year}-12`];
+  const ids = (keep: (a: ChartAccount) => boolean) => new Set(accounts.filter(keep).map(a => a.id));
+  const income = ids(a => isIncomeAccount(a));
+  const expense = ids(a => a.type === 'expense');
+  const salesTax = ids(a => a.name.toLowerCase().includes('sales tax'));
+  return {
+    grossIncome: sumActivity(activity, from, to, id => income.has(id), a => a.debits + a.credits),
+    expenses: sumActivity(activity, from, to, id => expense.has(id), a => a.debits + a.credits),
+    salesTaxCollected: sumActivity(activity, from, to, id => salesTax.has(id), a => a.net),
+  };
+}
 
 const fieldClass = 'w-full px-4 py-3 bg-[var(--ink)] border border-[var(--line)] rounded-xl text-[var(--text)]';
 
@@ -173,19 +193,23 @@ export default function TaxManager({
   const [activeTab, setActiveTab] = useState<'rates' | 'contractors' | 'reporting'>('rates');
   const [includeSE, setIncludeSE] = useState(false);
   
+  // L-123 step 3e: when the loaded entries are capped and the year reaches before them, the server's sums
+  const { activity, serverMonths } = useServerActivity(`${selectedYear}-01-01`, `${selectedYear}-12-31`);
   const taxMetrics = useMemo(() => {
+    const fromServer = serverMonths ? yearFigures(activity, selectedYear, accounts) : null;
     const yearTransactions = (transactions || []).filter(tx => isPostable(tx) && parseLocalDate(tx.date).getFullYear() === selectedYear);
+    const accountById = new Map(accounts.map(a => [a.id, a]));
     
-    const grossIncome = yearTransactions
+    const grossIncome = fromServer ? fromServer.grossIncome : yearTransactions
       .reduce((acc, tx) => {
-        const incomeLines = tx.lines?.filter(l => isIncomeAccount(accounts.find(a => a.id === l.accountId))) || [];
+        const incomeLines = tx.lines?.filter(l => isIncomeAccount(accountById.get(l.accountId))) || [];
         // Typically income lines are negative in a ledger (Credit)
         return acc + incomeLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
 
-    const expenses = yearTransactions
+    const expenses = fromServer ? fromServer.expenses : yearTransactions
       .reduce((acc, tx) => {
-        const expenseLines = tx.lines?.filter(l => accounts.find(a => a.id === l.accountId)?.type === 'expense') || [];
+        const expenseLines = tx.lines?.filter(l => accountById.get(l.accountId)?.type === 'expense') || [];
         return acc + expenseLines.reduce((sum, l) => sum + Math.abs(lineAmount(l, tx)), 0);
       }, 0);
 
@@ -212,9 +236,9 @@ export default function TaxManager({
     const incomeTax = taxableIncome * effectiveTaxRate;
     const estimatedTax = netProfit > 0 ? incomeTax + seTax : 0; 
 
-    const salesTaxCollected = yearTransactions
+    const salesTaxCollected = fromServer ? fromServer.salesTaxCollected : yearTransactions
       .flatMap(tx => (tx.lines || []).map(l => ({ line: l, tx })))
-      .filter(({ line }) => accounts.find(a => a.id === line.accountId)?.name.toLowerCase().includes('sales tax'))
+      .filter(({ line }) => accountById.get(line.accountId)?.name.toLowerCase().includes('sales tax'))
       .reduce((acc, { line, tx }) => acc + lineAmount(line, tx), 0);
 
     return {
@@ -224,7 +248,7 @@ export default function TaxManager({
       estimatedTax,
       salesTaxCollected
     };
-  }, [transactions, selectedYear, accounts, taxRates, includeSE]);
+  }, [transactions, selectedYear, accounts, taxRates, includeSE, serverMonths, activity]);
 
   return (
     <div className="space-y-12 p-4 md:p-6 lg:p-10 w-full max-w-[1550px] mx-auto pb-20 animate-in fade-in duration-500">
@@ -242,6 +266,7 @@ export default function TaxManager({
         <div className="flex items-center gap-4">
           <div className="relative">
              <select 
+               aria-label="Tax reserve fiscal year"
                value={selectedYear}
                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
                className="px-6 py-3.5 bg-[var(--ink)] border border-[var(--line)] rounded-[32px] text-[10px] font-black uppercase tracking-widest text-[var(--text)] focus:outline-none focus:ring-2 focus:ring-slate-900 transition-all appearance-none cursor-pointer pr-10 shadow-sm"
@@ -348,6 +373,14 @@ export default function TaxManager({
           </div>
 
           <div className="space-y-4">
+            {taxRates.length === 0 && (
+              <EmptyState
+                title="No tax codes yet"
+                description={canEdit ? 'Add the sales, purchase, income, or payroll tax codes used in this workspace.' : 'No tax codes are configured. Ask an owner or accountant to add one.'}
+                actionLabel={canEdit ? 'Add first tax code' : undefined}
+                onAction={canEdit ? () => { setEditingRate(null); setIsModalOpen(true); } : undefined}
+              />
+            )}
             {taxRates.map(rate => (
               <motion.div 
                 key={rate.id}
@@ -395,7 +428,7 @@ export default function TaxManager({
 
           <div className="bg-[var(--surface)] rounded-[32px] border border-[var(--line)] overflow-hidden shadow-sm relative group">
             <div className="absolute technical-grid inset-0 opacity-[0.01] pointer-events-none" />
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto" role="region" aria-label="Tax liability accounts" tabIndex={0}>
               <table className="w-full text-left relative z-10 min-w-[700px]">
                 <caption className="sr-only">Tax liability accounts</caption>
               <thead>
@@ -403,7 +436,7 @@ export default function TaxManager({
                   <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Protocol Domain</th>
                   <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-right">Basis</th>
                   <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--muted)] uppercase tracking-widest text-center">Metric</th>
-                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-slate-700 uppercase tracking-widest text-right bg-slate-100/50">Apportionment</th>
+                  <th scope="col" className="px-6 py-5 text-[10px] font-black text-[var(--text)] uppercase tracking-widest text-right bg-[var(--ink)]">Apportionment</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -416,9 +449,9 @@ export default function TaxManager({
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-[var(--ink)] rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-[var(--ink)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * (taxRates.find(r => r.type === 'Income')?.rate ?? 0.21) : 0)}
                   </td>
                 </tr>
@@ -432,9 +465,9 @@ export default function TaxManager({
                     {formatCurrency(taxMetrics.netProfit)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-[var(--ink)] rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">NET_YIELD</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-slate-100/50 tabular-nums">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-[var(--text)] bg-[var(--ink)]/50 group-hover/row:bg-[var(--ink)] tabular-nums">
                     {formatCurrency(taxMetrics.netProfit > 0 ? taxMetrics.netProfit * 0.153 : 0)}
                   </td>
                 </tr>
@@ -448,9 +481,9 @@ export default function TaxManager({
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                   <td className="px-6 py-6 text-center">
-                    <div className="inline-flex h-7 items-center px-3 bg-slate-100 rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
+                    <div className="inline-flex h-7 items-center px-3 bg-[var(--ink)] rounded-lg text-[9px] font-black text-[var(--muted)] uppercase tracking-widest border border-[var(--line)]">GROSS_FLOW</div>
                   </td>
-                  <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-600 bg-emerald-50/50 group-hover/row:bg-emerald-50 tabular-nums">
+                  <td className="px-6 py-6 text-right font-mono text-base font-black text-emerald-700 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-950/30 group-hover/row:bg-emerald-50 dark:group-hover/row:bg-emerald-950/50 tabular-nums">
                     {formatCurrency(taxMetrics.salesTaxCollected)}
                   </td>
                 </tr>

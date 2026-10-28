@@ -5,9 +5,11 @@ import { formatCurrency, parseLocalDate, cn, formatDate } from '../../lib/utils'
 
 import { DollarSign, Search, Eye, Download, Printer } from 'lucide-react';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
-import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
+import { downloadDocumentPdf } from '../../services/documentDownloads';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import ListColumnChooser from '../ui/ListColumnChooser';
 
 function withOccurrenceKeys<T>(items: T[], keyForItem: (item: T) => string) {
   const occurrences = new Map<string, number>();
@@ -73,7 +75,9 @@ export default function PaymentsView() {
       </div>
 
       <div className="ledger-card p-1 rounded-[32px] overflow-hidden">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" data-list-columns="payments-register">
+          <ListColumnChooser scope="payments-register" label="Payments"
+            columns={['Date', 'Entity', 'Method & Ref', 'Amount', 'Allocations', 'Actions']} />
           <table className="w-full border-collapse min-w-[800px]">
             <caption className="sr-only">Payments Register</caption>
             <thead>

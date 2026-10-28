@@ -114,7 +114,7 @@ const TOOLS = Object.values(FINANCIAL_ALGORITHMS).map((algo) => {
 
 const DEFAULT_SPEED_DIAL = ['duplicate-detection', 'anomaly-detection', 'benfords-law', 'working-capital-aging'];
 
-export default function ToolsCatalog() {
+export default function ToolsCatalog({ isEmbedded }: { isEmbedded?: boolean } = {}) {
   const [activeCat, setActiveCat] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSandbox, setActiveSandbox] = useState<{ id: string, name: string } | null>(null);
@@ -186,7 +186,11 @@ export default function ToolsCatalog() {
                    <Library aria-hidden="true" size={24} />
                 </div>
                 <div>
-                  <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h1>
+                  {isEmbedded ? (
+                    <h2 className="text-3xl md:text-5xl font-black tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h2>
+                  ) : (
+                    <h1 className="text-3xl md:text-5xl font-black tracking-tighter uppercase leading-none text-[var(--text)]">Tool Catalog</h1>
+                  )}
                   <p className="text-[11px] font-black text-[var(--muted)] uppercase tracking-widest truncate mt-3">Enterprise Financial Capabilities Suite</p>
                 </div>
              </div>
@@ -313,7 +317,7 @@ export default function ToolsCatalog() {
                       <button className={cn(
                         "flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-all",
                         tool.implemented ? "text-[var(--text)] group-hover:text-[var(--brass)]" : "text-[var(--muted)] cursor-not-allowed"
-                      )} aria-label="Zap action">
+                      )} aria-label={tool.implemented ? `Open ${tool.name}` : `${tool.name} in development`}>
                          {tool.implemented ? 'Open Mathematical Sandbox' : 'In Development'}
                          {tool.implemented && <Zap aria-hidden="true" size={14} className="text-[var(--brass)]" />}
                       </button>

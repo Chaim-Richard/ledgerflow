@@ -1,0 +1,8 @@
+*Code,*Name,*Type,Tax Code,Description,Dashboard,Expense Claims,Enable Payments
+090,Business Bank Account,Bank,No Tax,,Y,N,N
+610,Accounts Receivable,Current Asset,No Tax,Debtors control,N,N,N
+710,Office Equipment,Fixed Asset,No Tax,Computers and furniture,N,N,N
+800,Loan From Shareholder,Liability,No Tax,,N,N,N
+200,Sales,Revenue,Tax on Sales,Product and service income,Y,N,N
+429,Depreciation,Depreciation,No Tax,,N,N,N
+300,Owner Equity,Equity,No Tax,,N,N,N

@@ -25,7 +25,9 @@ for (const width of [1280, 390]) {
     const target = dashboard.getByLabel('Dashboard date range'); expect((await target.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await revenue.getByRole('link').click();
     await expect(page).toHaveURL(/start=2024-02-10.*end=2024-02-29.*#reports/);
-    await expect(page.getByText('Custom range: 2024-02-10 to 2024-02-29', { exact: true }).first()).toBeVisible();
+    // A-220: the label names the custom range and the same dates print in the workspace's own date
+    // style; the ISO values stay in the date fields asserted just below (that is the data, not a label)
+    await expect(page.getByText('Custom range · Feb 10, 2024 – Feb 29, 2024', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Select Year')).toHaveValue('2024');
     await expect(page.getByLabel('Reporting period start date')).toHaveValue('2024-02-10');
     await expect(page.getByLabel('Reporting period end date')).toHaveValue('2024-02-29');

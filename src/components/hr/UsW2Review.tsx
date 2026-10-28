@@ -9,7 +9,7 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { useDataNeedsStore } from '../../stores/useDataNeedsStore';
 import { LEDGER_COLLECTIONS } from '../../lib/ledgerCollections';
 import { downloadCsv } from '../../lib/csvExport';
-import { usW2Review, US_W2_REVIEW_YEARS, type W2ReviewEmployee } from '../../lib/tax/usW2Review';
+import { exactW2Cents, usW2Review, US_W2_REVIEW_YEARS, type W2ReviewEmployee } from '../../lib/tax/usW2Review';
 
 const BOXES = [
   { key: 'box1Cents', name: 'Box 1 — taxable wages' },
@@ -21,14 +21,6 @@ const BOXES = [
 ] as const;
 type BoxKey = typeof BOXES[number]['key'];
 type Draft = Partial<Record<BoxKey, string>> & { reviewed?: boolean };
-
-/** Strict decimal to cents, without floating-point multiplication of user input. */
-export function exactW2Cents(input: string | undefined): number | undefined {
-  if (input === undefined || !/^(0|[1-9]\d{0,11})(\.\d{1,2})?$/.test(input.trim())) return undefined;
-  const [whole, fractional = ''] = input.trim().split('.');
-  const cents = Number(whole) * 100 + Number(fractional.padEnd(2, '0'));
-  return Number.isSafeInteger(cents) ? cents : undefined;
-}
 
 export function UsW2Review({ payRuns, homeCurrency }: { payRuns: readonly PayRun[]; homeCurrency: string }) {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);

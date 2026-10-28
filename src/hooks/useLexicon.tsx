@@ -7,7 +7,7 @@ import { SYSTEM_GLOSSARY } from '../config/registry';
  * Enterprise Lexicon Translation Hook
  * Handles localization and hot-swappable live overrides for any text card, title, or label.
  */
-export function useLexicon() {
+function useLexicon() {
   const language = useUIStore(state => state.language);
   const lexiconOverrides = useUIStore(state => state.lexiconOverrides);
 

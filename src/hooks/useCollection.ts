@@ -43,6 +43,8 @@ export function useCollection<T = Record<string, unknown>>(
 ): UseCollectionResult<T> {
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const targetWorkspaceId = options.workspaceId || currentWorkspaceId || 'default-workspace';
+  const whereKey = JSON.stringify(options.where ?? null);
+  const dateWindowKey = JSON.stringify(options.dateWindow ?? null);
 
   const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -58,75 +60,81 @@ export function useCollection<T = Record<string, unknown>>(
     let unsubscribe: (() => void) | null = null;
     let isMounted = true;
 
-    setLoading(true);
-    setError(null);
+    // Query setup and every state update run after the effect has finished its synchronous pass.
+    void Promise.resolve().then(() => {
+      if (!isMounted) return;
+      setLoading(true);
+      setError(null);
 
-    try {
-      const colRef = collection(db, collectionName);
-      const queryConstraints: QueryConstraint[] = [where('workspaceId', '==', targetWorkspaceId)];
+      try {
+        const filters = JSON.parse(whereKey) as UseCollectionWhereFilter[] | null;
+        const dateWindow = JSON.parse(dateWindowKey) as UseCollectionOptions['dateWindow'] | null;
+        const colRef = collection(db, collectionName);
+        const queryConstraints: QueryConstraint[] = [where('workspaceId', '==', targetWorkspaceId)];
 
-      if (options.where) {
-        for (const w of options.where) {
-          queryConstraints.push(where(w.field, w.op, w.value));
-        }
-      }
-
-      if (options.dateWindow) {
-        const dField = options.dateWindow.dateField || 'date';
-        if (options.dateWindow.start) {
-          queryConstraints.push(where(dField, '>=', options.dateWindow.start));
-        }
-        if (options.dateWindow.end) {
-          queryConstraints.push(where(dField, '<=', options.dateWindow.end));
-        }
-      }
-
-      if (options.orderByField) {
-        queryConstraints.push(orderBy(options.orderByField, options.orderDirection || 'asc'));
-      }
-
-      const limitVal = options.limit || 500;
-      queryConstraints.push(firestoreLimit(limitVal));
-
-      const q = query(colRef, ...queryConstraints);
-
-      if (options.live !== false) {
-        unsubscribe = onSnapshot(
-          q,
-          snapshot => {
-            if (!isMounted) return;
-            const items: T[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-            setData(items);
-            setTruncated(snapshot.docs.length >= limitVal);
-            setLoading(false);
-          },
-          err => {
-            if (!isMounted) return;
-            setError(err as Error);
-            setLoading(false);
+        if (filters) {
+          for (const w of filters) {
+            queryConstraints.push(where(w.field, w.op, w.value));
           }
-        );
-      } else {
-        getDocs(q)
-          .then(snapshot => {
-            if (!isMounted) return;
-            const items: T[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
-            setData(items);
-            setTruncated(snapshot.docs.length >= limitVal);
-            setLoading(false);
-          })
-          .catch(err => {
-            if (!isMounted) return;
-            setError(err as Error);
-            setLoading(false);
-          });
+        }
+
+        if (dateWindow) {
+          const dField = dateWindow.dateField || 'date';
+          if (dateWindow.start) {
+            queryConstraints.push(where(dField, '>=', dateWindow.start));
+          }
+          if (dateWindow.end) {
+            queryConstraints.push(where(dField, '<=', dateWindow.end));
+          }
+        }
+
+        if (options.orderByField) {
+          queryConstraints.push(orderBy(options.orderByField, options.orderDirection || 'asc'));
+        }
+
+        const limitVal = options.limit || 500;
+        queryConstraints.push(firestoreLimit(limitVal));
+
+        const q = query(colRef, ...queryConstraints);
+
+        if (options.live !== false) {
+          unsubscribe = onSnapshot(
+            q,
+            snapshot => {
+              if (!isMounted) return;
+              const items: T[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+              setData(items);
+              setTruncated(snapshot.docs.length >= limitVal);
+              setLoading(false);
+            },
+            err => {
+              if (!isMounted) return;
+              setError(err as Error);
+              setLoading(false);
+            }
+          );
+        } else {
+          getDocs(q)
+            .then(snapshot => {
+              if (!isMounted) return;
+              const items: T[] = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as T));
+              setData(items);
+              setTruncated(snapshot.docs.length >= limitVal);
+              setLoading(false);
+            })
+            .catch(err => {
+              if (!isMounted) return;
+              setError(err as Error);
+              setLoading(false);
+            });
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err as Error);
+          setLoading(false);
+        }
       }
-    } catch (err) {
-      if (isMounted) {
-        setError(err as Error);
-        setLoading(false);
-      }
-    }
+    });
 
     return () => {
       isMounted = false;
@@ -139,8 +147,8 @@ export function useCollection<T = Record<string, unknown>>(
     options.limit,
     options.orderByField,
     options.orderDirection,
-    JSON.stringify(options.where),
-    JSON.stringify(options.dateWindow),
+    whereKey,
+    dateWindowKey,
     reloadTrigger
   ]);
 

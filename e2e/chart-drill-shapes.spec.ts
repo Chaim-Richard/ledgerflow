@@ -80,5 +80,6 @@ for (const width of [1280,390]) test(`account icicle zoom and report-period drag
   expect(await report.getAttribute('href')).toContain('start=2024-02-01');
   await report.click();
   await page.getByRole('heading',{name:'Reports',exact:true}).waitFor({state:'visible',timeout:20000});
-  await expect(page.getByText('Custom range: 2024-02-01 to 2024-03-31',{exact:true})).toBeVisible();
+  // A-220: the custom range label carries the dates in the workspace's date style
+  await expect(page.getByText('Custom range · Feb 1, 2024 – Mar 31, 2024',{exact:true})).toBeVisible();
 });

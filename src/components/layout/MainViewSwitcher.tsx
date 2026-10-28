@@ -32,7 +32,7 @@ const MainViewSwitcher = React.memo(({ activeTab }: MainViewSwitcherProps) => {
         }>
           <motion.div
             key={`${activeTab}:${workspaceKey}`}
-            initial={{ opacity: 0, y: 5 }}
+            initial={{ y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.2 }}

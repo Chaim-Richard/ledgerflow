@@ -9,8 +9,8 @@ In GitHub **Settings → Branches / Rules → Create ruleset** for `main`, requi
 - `Lint, Typecheck, and Database rules`
 - `Accounting & Security Test Suites (coverage gate)` (passes only when all four `Unit tests n/4` parts passed and their merged coverage meets the thresholds)
 - `Production build`
-- `Unit tests in Pacific/Auckland (1/2)`, `(2/2)`
-- `Unit tests in America/Los_Angeles (1/2)`, `(2/2)`
+- `Unit tests in Pacific/Auckland (1/3)`, `(2/3)`, `(3/3)`
+- `Unit tests in America/Los_Angeles (1/3)`, `(2/3)`, `(3/3)`
 - `Playwright E2E Smoke Suite` (passes only when all four browser shards passed)
 
 Also prevent bypass by automated contributors and require branches to be up to date before merging, if the repository settings allow it. Branch protection is an owner setting and is **not** changed by this PR. Until it is enabled, a red GitHub Actions run may coexist with a merged commit.
@@ -29,7 +29,7 @@ Since 22 Oct:
   about 2 points *lower* when merged (a block a part never entered is listed only where it was, and Node numbers
   blocks per run, so the merge matches them by line), so the gate is slightly stricter than one run, never laxer.
   `scripts/coverage-merge.test.mjs` keeps the two sets of thresholds equal;
-- each time zone runs in **two parts**;
+- each time zone runs in **three parts** (two until 26 Oct, when one part alone took 8 min and set the wait);
 - the browser tests run in **five shards** (two before 22 Oct; four, then five on 24 Oct when shard 1 alone took 9 min against 5–6 for the others: Playwright splits by test count, not time). Playwright stays at `workers: 1` inside a shard: the tests
   in a shard share one dev server and one database, so more workers there would be a real isolation change, not a
   speed-up for free.

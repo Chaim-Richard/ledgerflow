@@ -7,7 +7,7 @@ import { CORE_KEYS, LEDGER_COLLECTIONS } from '../../lib/ledgerCollections';
 import type { LedgerKey } from '../../lib/ledgerCollections';
 
 /** What each collection is called on screen. */
-export const COLLECTION_LABELS: Record<LedgerKey, string> = {
+const COLLECTION_LABELS: Record<LedgerKey, string> = {
   transactions: 'entries', accounts: 'accounts', taxRates: 'tax codes', autoRules: 'rules', customers: 'customers',
   vendors: 'vendors', invoices: 'invoices', creditNotes: 'credit notes', payments: 'payments', estimates: 'estimates',
   bills: 'bills', vendorCredits: 'vendor credits', inventory: 'items', budgets: 'budgets', projects: 'projects',

@@ -23,7 +23,6 @@ import {
   TrendingUp, TrendingDown, DollarSign, Calendar, Sliders, SlidersHorizontal,
   Home, CreditCard, Clock, FileSignature, Zap, ShoppingCart, Headphones, Search, Package, CalendarDays, Globe, Truck, Handshake, ClipboardCheck, GitMerge, Scale, Barcode, RotateCcw, Coins, Wallet, Filter, MailWarning, Blocks, PackageCheck, ArrowLeftRight
 , Receipt, Tag , PieChart, Inbox, BookOpen, FileSpreadsheet, Upload, Mail, Palette, Hash, MessageCircleQuestion, BellRing, FolderTree, MessageSquareText, Split, BadgePercent, UserCheck, ListChecks, MapPin } from 'lucide-react';
-import { getEntityRegistry, defineEntity } from '../lib/entityFramework';
 
 // Plugin Discovery Engine (Upgraded to dynamic code-splitting and bundle optimization - Point 5)
 // Vite replaces the call at build time; outside Vite (unit tests) there are simply no plugins.
@@ -107,6 +106,7 @@ export const VIEW_COMPONENTS: Record<string, ElementType> = {
   'taxes': lazy(() => import('../components/finance/TaxManager')),
   'support': lazy(() => import('../components/support/SupportView')),
   'help': lazy(() => import('../components/support/HelpGuideView')),
+  'glossary': lazy(() => import('../components/support/GlossaryView')),
   'data-health': lazy(() => import('../components/system/DataHealthView')),
   'charts': lazy(() => import('../components/finance/FinancialChartsDashboard')),
   'query-builder': lazy(() => import('../components/ledger/QueryView')),
@@ -176,6 +176,7 @@ export const APP_TABS: AppTabDefinition[] = withScreenHelp<Omit<AppTabDefinition
   { id: 'data-health', label: { en: 'Data Health & Audit', he: 'בריאות נתונים' }, icon: ShieldCheck, groupId: 'settings' },
   { id: 'support', label: { en: 'Support', he: 'תמיכה' }, icon: Headphones, groupId: 'settings' },
   { id: 'help', label: { en: 'Help & Guide', he: 'מדריך ועזרה' }, icon: BookOpen, groupId: 'settings' },
+  { id: 'glossary', label: { en: 'Accounting glossary', he: 'מילון מונחים חשבונאיים' }, icon: BookOpen, groupId: 'settings' },
   { id: 'vault', label: { en: 'Documents', he: 'מסמכים' }, icon: ShieldCheck, groupId: 'settings' },
   { id: 'pricing', label: { en: 'Pricing & Plans', he: 'תמחור ומסלולים' }, icon: Zap, groupId: 'settings' },
   { id: 'api-hub', label: { en: 'API Platform', he: 'ממשק API' }, icon: TerminalIcon, groupId: 'settings' },

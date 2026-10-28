@@ -60,7 +60,6 @@ export default function CustomFieldsSettings() {
   const [draft, setDraft] = useState<CustomFieldDef[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [valuesType, setValuesType] = useState<CustomFieldEntity>('customer');
-  const [refresh, setRefresh] = useState(0);
 
   const saved = (workspace?.customFields || []) as CustomFieldDef[];
   const defs = draft ?? saved;
@@ -71,7 +70,7 @@ export default function CustomFieldsSettings() {
     return lists[valuesType].filter(r => !workspaceId || !r.workspaceId || r.workspaceId === workspaceId)
       .map(r => ({ ...r, name: String(r.name || r.id) }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [customers, vendors, items, valuesType, workspaceId, refresh]);
+  }, [customers, vendors, items, valuesType, workspaceId]);
   const columns = customFieldColumns(defs, valuesType);
 
   const change = (next: CustomFieldDef[]) => setDraft(next);
@@ -108,7 +107,6 @@ export default function CustomFieldsSettings() {
       { metadata: { ...(record.metadata || {}), customFields: nextValues } },
       `${def.label} saved on ${record.name}`,
     );
-    setRefresh(n => n + 1);
   };
 
   return (

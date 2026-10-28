@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { formatCurrency, getLocalDateISO } from '../../lib/utils';
 import { computeGeneralLedger } from '../../server/reports/computeReports';
-import { Search, BookOpen } from 'lucide-react';
+import { Search, BookOpen, Printer } from 'lucide-react';
 import { Labelled } from '../ui/Labelled';
 
 function keyedLedgerEntries(entries: ReturnType<typeof computeGeneralLedger>['accounts'][number]['entries']) {
@@ -18,7 +18,7 @@ function keyedLedgerEntries(entries: ReturnType<typeof computeGeneralLedger>['ac
   });
 }
 
-export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
+export default function GeneralLedgerView({ startDate: pageStartDate, endDate: pageEndDate, embedded = false }: { startDate?: string; endDate?: string; embedded?: boolean } = {}) {
   const accounts = useLedgerStore(s => s.accounts);
   const transactions = useLedgerStore(s => s.transactions);
 
@@ -49,20 +49,30 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
   }, [glData.accounts, searchTerm]);
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div className="flex flex-wrap items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
             <BookOpen aria-hidden="true" className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>
+            {embedded
+              ? <h2 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h2>
+              : <h1 className="text-xl font-bold text-slate-900 dark:text-white">General Ledger</h1>}
             <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Complete itemized transaction ledger for all chart of accounts
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-lg transition-colors print:hidden"
+        >
+          <Printer aria-hidden="true" className="w-4 h-4" />
+          Print Ledger
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -74,7 +84,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
                 type="date"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                className="min-h-11 px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
               />
             </Labelled>
           </div>
@@ -84,7 +94,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
                 type="date"
                 value={endDate}
                 onChange={e => setEndDate(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                className="min-h-11 px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
               />
             </Labelled>
           </div>
@@ -93,7 +103,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
               <select
                 value={selectedAccountId}
                 onChange={e => setSelectedAccountId(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white"
+                className="min-h-11 px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white max-w-full"
               >
                 <option value="all">All Accounts ({accounts.length})</option>
                 {accounts.map(a => (
@@ -106,14 +116,14 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
           </div>
         </div>
 
-        <div className="relative">
-          <Search aria-hidden="true" className="w-4 h-4 absolute left-3 top-2.5 text-[var(--muted)]" />
+        <div className="relative w-full sm:w-auto">
+          <Search aria-hidden="true" className="w-4 h-4 absolute left-3 top-3.5 text-[var(--muted)]" />
           <input aria-label="Search GL accounts"
             type="text"
             placeholder="Search GL accounts..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white w-56"
+            className="min-h-11 pl-9 pr-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white w-full sm:w-56"
           />
         </div>
       </div>
@@ -123,7 +133,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
         {filteredAccounts.map(acc => (
           <div key={acc.accountId} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
             {/* Account Header */}
-            <div className="flex flex-wrap items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 p-4 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
               <div>
                 <span className="text-xs font-mono px-2 py-0.5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 mr-2 font-bold">
                   {acc.accountCode || 'N/A'}
@@ -135,7 +145,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
                   ({acc.type} • {acc.category})
                 </span>
               </div>
-              <div className="flex items-center gap-6 text-xs font-mono">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs font-mono">
                 <div>
                   <span className="text-[var(--muted)] mr-1">Opening:</span>
                   <span className="font-semibold text-slate-700 dark:text-slate-300">

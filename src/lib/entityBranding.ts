@@ -45,7 +45,7 @@ function stripEmpty<T extends Record<string, unknown>>(obj: T): Partial<T> {
  * (e.g. `{ property: 'A/C1' }`), ordered by `order`.
  *
  * Starts from `workspaceBranding` and, in the first dimension in `order` that
- * has any override for the node or its ancestors, overlays the nearest overrides.
+ * carries an override for the node or its ancestors, overlays the nearest overrides.
  * This matches `resolveSellerProfile` inheritance: the most specific label wins
  * field-by-field, and its parent's values fill in what it left blank.
  *

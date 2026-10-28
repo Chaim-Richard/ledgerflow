@@ -16,6 +16,9 @@ import AsyncButton from '../../ui/AsyncButton';
 import RecoveryCodesPanel from './RecoveryCodesPanel';
 import RequireTwoStepPanel from './RequireTwoStepPanel';
 import TwoPersonRulePanel from './TwoPersonRulePanel';
+import AccessReviewPanel from './AccessReviewPanel';
+import { TWO_STEP_CHANGED } from '../../../lib/accessReview';
+import AuditEvidencePackPanel from './AuditEvidencePackPanel';
 
 type AuthenticatorFactor = Awaited<ReturnType<ReturnType<typeof multiFactor>['getFactors']>>[number];
 
@@ -69,10 +72,13 @@ function TwoStepLoginPanel() {
         await mfa.enroll(TotpMultiFactorGenerator.assertionForEnrollment(secret, code));
         if (!current(version)) return;
         setSecret(null); setCode(''); setNotice('Authenticator added. Two-step login is on.');
+        // window.Event, not the bare global: a test document rejects an Event from another realm.
+        window.dispatchEvent(new window.Event(TWO_STEP_CHANGED));
       } else if (action === 'remove' && removing) {
         await mfa.remove(removing.id, code);
         if (!current(version)) return;
         setRemoving(null); setCode(''); setNotice('Authenticator removed.');
+        window.dispatchEvent(new window.Event(TWO_STEP_CHANGED));
       } else if (action === 'cancel') {
         const factorId = secret?.factorId || factor?.id;
         if (!factorId) return;
@@ -166,6 +172,8 @@ export default function SecuritySettings() {
     <div className="space-y-10">
       <RequireTwoStepPanel />
       <TwoPersonRulePanel />
+      <AccessReviewPanel />
+      <AuditEvidencePackPanel />
       {/* Fiscal Period Locking */}
       <div className="ledger-card p-8 md:p-10 bg-[var(--surface)] border border-[var(--line)] shadow-sm rounded-2xl">
         <div className="flex items-center gap-5 mb-8">

@@ -5,12 +5,29 @@ import { useAuthStore } from '../../stores/useAuthStore';
 import { formatCurrency, getLocalDateISO, workspaceYearMonth } from '../../lib/utils';
 import { computeStatement } from '../../server/reports/computeReports';
 import { FileText, Printer, Eye, Download } from 'lucide-react';
-import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
+import { downloadDocumentPdf } from '../../services/documentDownloads';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
+import type { Bill, CreditNote, Invoice, Payment, VendorCredit } from '../../types';
 import { Labelled } from '../ui/Labelled';
 import { resolveStatementScope } from '../../lib/statementScope';
+import {
+  UNLABELLED_ENTITY,
+  entityLabelOf,
+  entityOptions,
+  entityStatementNote,
+  scopeStatementDocuments,
+} from '../../lib/statementByEntity';
 
-export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate }: { startDate?: string; endDate?: string } = {}) {
+interface StatementViewProps {
+  startDate?: string;
+  endDate?: string;
+  /** Reports already supplies the page h1; a standalone statement supplies its own. */
+  embedded?: boolean;
+}
+
+export default function StatementView({ startDate: pageStartDate, endDate: pageEndDate, embedded = false }: StatementViewProps = {}) {
+  const Heading = embedded ? 'h2' : 'h1';
   const currentWorkspaceId = useAuthStore(s => s.currentWorkspaceId);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const customers = useLedgerStore(s => s.customers);
@@ -23,6 +40,10 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
   useLedgerCollections('bills', 'creditNotes', 'customers', 'invoices', 'payments', 'vendorCredits', 'vendors');
 
   const [type, setType] = useState<'customer' | 'vendor'>('customer');
+  /** A-72: which entity label the statement is for ('' = the whole account). */
+  const [entity, setEntity] = useState<string>('');
+  const workspace = useAuthStore(s => s.getCurrentWorkspace());
+  const entityDimensionId = workspace?.dimensions?.find(d => d.isWorld)?.id || 'world';
   const [contactId, setContactId] = useState<string>('');
   const [startDate, setStartDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageStartDate || undefined, `${workspaceYearMonth().year}-01-01`);
   const [endDate, setEndDate] = usePageSyncedState(JSON.stringify([pageStartDate, pageEndDate]), pageEndDate || undefined, getLocalDateISO());
@@ -42,26 +63,69 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
 
   const scopeStart = scope?.startDate;
   const scopeEnd = scope?.endDate;
+  // A-72: this contact's own documents, then the chosen entity label: the statement rows come from
+  // the same computeStatement, so opening balance and running balance stay one implementation.
+  const contactDocuments = useMemo((): {
+    invoices: Invoice[];
+    bills: Bill[];
+    credits: Array<CreditNote | VendorCredit>;
+    payments: Payment[];
+  } => {
+    const contactId = selectedContact?.id || '';
+    return {
+      invoices: invoices.filter(inv => inv.customerId === contactId),
+      bills: bills.filter(bill => bill.vendorId === contactId),
+      credits: type === 'customer'
+        ? creditNotes.filter(cn => cn.customerId === contactId)
+        : vendorCredits.filter(vc => vc.vendorId === contactId),
+      payments: payments.filter(pay => pay.contactId === contactId),
+    };
+  }, [selectedContact?.id, invoices, bills, creditNotes, vendorCredits, payments, type]);
+
+  /** The labels this contact's documents actually use, plus documents that carry none. */
+  const entityChoices = useMemo(() => {
+    const docs = [...contactDocuments.invoices, ...contactDocuments.bills, ...contactDocuments.credits];
+    const labels = entityOptions(docs, entityDimensionId);
+    // a credit that credits no document and carries no label is an unlabelled document too
+    const hasUnlabelled = docs.some(doc => !entityLabelOf(doc, entityDimensionId));
+    return [...labels, ...(hasUnlabelled ? [UNLABELLED_ENTITY] : [])];
+  }, [contactDocuments, entityDimensionId]);
+
+  // A label that the newly chosen contact does not use falls back to the whole account, so a stale
+  // choice can never show one contact's figures under another's name.
+  const activeEntity = entity && entityChoices.includes(entity) ? entity : '';
+
+  const scoped = useMemo(
+    () => scopeStatementDocuments(contactDocuments, activeEntity, entityDimensionId, {
+      // a credit note carries no labels of its own: it belongs to the invoice or bill it credits
+      creditSourceId: credit => {
+        const record = credit as unknown as { invoiceId?: string; billId?: string };
+        return record.invoiceId || record.billId;
+      },
+    }),
+    [contactDocuments, activeEntity, entityDimensionId],
+  );
+
   const statementData = useMemo(() => {
     if (!selectedContact || !scopeStart || !scopeEnd) return null;
     return computeStatement(
       selectedContact,
-      invoices,
-      bills,
-      payments,
+      scoped.invoices,
+      scoped.bills,
+      scoped.payments,
       scopeStart,
       scopeEnd,
       type,
-      type === 'customer' ? creditNotes : vendorCredits
+      scoped.credits
     );
-  }, [selectedContact, invoices, bills, payments, creditNotes, vendorCredits, scopeStart, scopeEnd, type]);
+  }, [selectedContact, scoped, scopeStart, scopeEnd, type]);
 
   const handlePrint = () => {
     window.print();
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
       {/* Header Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4 print:hidden">
         <div className="flex items-center gap-3">
@@ -69,26 +133,31 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
             <FileText className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Account Statement</h1>
+            <Heading className="text-xl font-bold text-slate-900 dark:text-white">Account Statement</Heading>
             <p className="text-xs text-[var(--muted)] dark:text-slate-400">
               Customer and Vendor itemized account balance & transaction statements
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {selectedContact && scope && (
             <>
+              {/* A-72: the server PDF is the whole account, so it is off while one entity is chosen */}
               <button
                 onClick={() => setIsPreviewOpen(true)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 dark:border-indigo-800"
+                disabled={Boolean(activeEntity)}
+                title={activeEntity ? 'The PDF covers the whole account; choose All entities to use it' : undefined}
+                className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded-lg transition-colors border border-indigo-200 dark:border-indigo-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Eye className="w-4 h-4" />
                 Preview PDF
               </button>
               <button
                 onClick={() => downloadDocumentPdf('statement', selectedContact.id, currentWorkspaceId || 'default', `statement_${selectedContact.name || selectedContact.id}.pdf`, scope)}
-                className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+                disabled={Boolean(activeEntity)}
+                title={activeEntity ? 'The PDF covers the whole account; choose All entities to use it' : undefined}
+                className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download className="w-4 h-4" />
                 Download PDF
@@ -97,7 +166,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           )}
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-lg transition-colors"
           >
             <Printer className="w-4 h-4" />
             Print Statement
@@ -107,14 +176,14 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
 
       {/* Filter Options */}
       <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 print:hidden">
-        <div className="flex items-center gap-1 p-1 bg-slate-200 dark:bg-slate-800 rounded-lg">
+        <div className="flex flex-wrap items-center gap-1 p-1 bg-slate-200 dark:bg-slate-800 rounded-lg">
           <button
             type="button"
             onClick={() => {
               setType('customer');
               setContactId('');
             }}
-            className={`px-3 py-1 text-xs font-semibold rounded-md ${type === 'customer' ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs' : 'text-slate-600 dark:text-slate-400'}`}
+            className={`min-h-11 px-3 py-1 text-xs font-semibold rounded-md ${type === 'customer' ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs' : 'text-slate-600 dark:text-slate-400'}`}
           >
             Customer Statement
           </button>
@@ -124,7 +193,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
               setType('vendor');
               setContactId('');
             }}
-            className={`px-3 py-1 text-xs font-semibold rounded-md ${type === 'vendor' ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs' : 'text-slate-600 dark:text-slate-400'}`}
+            className={`min-h-11 px-3 py-1 text-xs font-semibold rounded-md ${type === 'vendor' ? 'bg-white dark:bg-slate-900 text-purple-600 dark:text-purple-400 shadow-xs' : 'text-slate-600 dark:text-slate-400'}`}
           >
             Vendor Statement
           </button>
@@ -145,6 +214,26 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
             </select>
           </Labelled>
         </div>
+
+        {entityChoices.length > 0 && (
+          <div>
+            {/* A-72: one entity label of this contact's documents, or the whole account */}
+            <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="Entity label">
+              <select
+                value={activeEntity}
+                onChange={e => setEntity(e.target.value)}
+                aria-describedby="statement-entity-note"
+                aria-label="Entity label for this statement"
+                className="px-3 py-1.5 text-xs bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-slate-900 dark:text-white min-w-[160px]"
+              >
+                <option value="">All entities (whole account)</option>
+                {entityChoices.map(choice => (
+                  <option key={choice} value={choice}>{choice}</option>
+                ))}
+              </select>
+            </Labelled>
+          </div>
+        )}
 
         <div>
           <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="From">
@@ -171,27 +260,48 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
 
       {'error' in resolved && <p role="status" className="text-xs text-amber-700 dark:text-amber-400 print:hidden">{resolved.error}.</p>}
 
+      {activeEntity && !('error' in resolved) && (
+        <p id="statement-entity-note" data-testid="statement-entity-note" className="text-xs text-[var(--muted)] border border-[var(--line)] rounded-lg p-3 print:hidden">
+          {entityStatementNote({
+            entity: activeEntity,
+            paymentsWithoutScope: scoped.paymentsWithoutScope,
+            paymentsWithoutScopeCents: scoped.paymentsWithoutScopeCents,
+            formattedMissing: scoped.paymentsWithoutScopeCents ? formatCurrency(scoped.paymentsWithoutScopeCents) : undefined,
+            allocatedElsewhereCents: scoped.allocatedElsewhereCents,
+            formattedElsewhere: scoped.allocatedElsewhereCents ? formatCurrency(scoped.allocatedElsewhereCents) : undefined,
+            unappliedCents: scoped.unappliedCents,
+            formattedUnapplied: scoped.unappliedCents ? formatCurrency(scoped.unappliedCents) : undefined,
+            mixedLabelDocuments: scoped.mixedLabelDocuments,
+          })}
+        </p>
+      )}
+
       {/* Printable Statement Canvas */}
       {'error' in resolved ? null : !statementData || !selectedContact ? (
         <div className="p-12 text-center text-sm text-[var(--muted)]">
           Please select a {type === 'customer' ? 'customer' : 'vendor'} to view statement.
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-8 space-y-8 shadow-sm">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-4 sm:p-8 space-y-8 shadow-sm">
           {/* Statement Header Card */}
-          <div className="flex justify-between items-start border-b border-slate-200 dark:border-slate-800 pb-6">
+          <div className="flex flex-wrap justify-between items-start gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
             <div>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">STATEMENT OF ACCOUNT</h2>
               <p className="text-xs text-[var(--muted)] mt-1">Period: {statementData.startDate} to {statementData.endDate}</p>
+              {activeEntity && (
+                <p className="text-xs text-[var(--muted)] mt-1">
+                  Entity: {activeEntity} — this statement covers this entity only, not the whole account.
+                </p>
+              )}
             </div>
-            <div className="text-right text-xs space-y-1">
+            <div className="text-left sm:text-right text-xs space-y-1">
               <div className="font-bold text-slate-900 dark:text-white">{selectedContact.name}</div>
               {selectedContact.email && <div className="text-[var(--muted)]">{selectedContact.email}</div>}
             </div>
           </div>
 
           {/* Statement Overview Cards */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
               <span className="text-xs text-[var(--muted)] uppercase font-semibold">Opening Balance</span>
               <div className="text-lg font-bold font-mono text-slate-900 dark:text-white mt-1">
@@ -215,7 +325,7 @@ export default function StatementView({ startDate: pageStartDate, endDate: pageE
           </div>
 
           {/* Activity Table */}
-          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
+          <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-x-auto">
             <table className="w-full text-left text-xs">
               <caption className="sr-only">Account statement</caption>
               <thead>

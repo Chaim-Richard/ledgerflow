@@ -56,8 +56,9 @@ export const TransferModal: React.FC<TransferModalProps> = ({
 
   // Detected candidates
   const candidates = useMemo(() => {
+    if (!isOpen) return [];
     return detectPotentialTransfers(transactions, accounts, 4);
-  }, [transactions, accounts]);
+  }, [isOpen, transactions, accounts]);
 
   if (!isOpen) return null;
 

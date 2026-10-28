@@ -1,5 +1,5 @@
 import { useDialog } from '../../hooks/useDialog';
-import { useState, useEffect, useId } from 'react';
+import { useState, useEffect, useId, useCallback } from 'react';
 import { useAuthStore } from '../../stores/useAuthStore';
 
 import { toast } from 'sonner';
@@ -68,7 +68,7 @@ export function useApiHubModel() {
   const [fieldMatchDesc, setFieldMatchDesc] = useState('Uber Trip transport ride\nAWS Cloud Services database bill\nMonthly advisory fee Deloitte business');
   const [fieldAIPrompt, setFieldAIPrompt] = useState('Explain what operational cost adjustments we should carry out based on our high software subscription drift.');
 
-  const loadBillingStatus = async () => {
+  const loadBillingStatus = useCallback(async function loadBillingStatus() {
     if (!currentWorkspace?.id || !user) return;
     try {
       const token = await getIdToken();
@@ -86,7 +86,7 @@ export function useApiHubModel() {
     } catch (e) {
       console.error("Failed to load billing status", e);
     }
-  };
+  }, [currentWorkspace, user]);
 
   const handleCheckout = async (plan: string) => {
     if (!currentWorkspace?.id || !user) return;
@@ -114,7 +114,7 @@ export function useApiHubModel() {
     }
   };
 
-  const loadWorkspaceKeys = async () => {
+  const loadWorkspaceKeys = useCallback(async function loadWorkspaceKeys() {
     if (!currentWorkspace?.id || !user) return;
     try {
       const q = query(
@@ -139,9 +139,9 @@ export function useApiHubModel() {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, [currentWorkspace, user]);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async function fetchLogs() {
     if (!currentWorkspace?.id) return;
     try {
       const token = user ? await getIdToken() : '';
@@ -158,7 +158,7 @@ export function useApiHubModel() {
     } catch (e) {
       console.error("Failed to fetch logs", e);
     }
-  };
+  }, [apiKey, currentWorkspace, user]);
 
   useEffect(() => {
     if (!currentWorkspace?.id) return;
@@ -172,7 +172,7 @@ export function useApiHubModel() {
       clearTimeout(timer);
       clearInterval(interval);
     };
-  }, [currentWorkspace?.id, activeTab]);
+  }, [currentWorkspace?.id, activeTab, fetchLogs, loadBillingStatus, loadWorkspaceKeys]);
 
   const generateNewKey = async () => {
     if (!currentWorkspace?.id || !user) return;

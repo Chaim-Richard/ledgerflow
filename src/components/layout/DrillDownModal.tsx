@@ -4,6 +4,7 @@ import { X, Table, Search } from 'lucide-react';
 import { Transaction } from '../../types';
 
 import { cn, formatDate } from '../../lib/utils';
+import { lineAmount } from '../../lib/txFilters';
 import { useDialog } from '../../hooks/useDialog';
 import { getIdToken } from '../../firebase';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -34,12 +35,13 @@ function Explained({ request, formatCurrency, onOpen, onFail }: { request: Expla
   const openRecord = useUIStore(s => s.openRecord);
   const [data, setData] = React.useState<Explanation | null>(null);
   const sign = request.sign || 1;
-  const query = workspaceId ? new URLSearchParams({ workspaceId, accountIds: request.accountIds.join(','), ...(request.startDate ? { startDate: request.startDate } : {}), ...(request.endDate ? { endDate: request.endDate } : {}), ...(request.labelFilter ? { labelDimension: request.labelFilter.dimensionId, labelValue: request.labelFilter.value } : {}) }).toString() : '';
+  // sent in the body: a total over a large chart of accounts is too long for a link
+  const query = workspaceId ? JSON.stringify({ workspaceId, accountIds: request.accountIds, ...(request.startDate ? { startDate: request.startDate } : {}), ...(request.endDate ? { endDate: request.endDate } : {}), ...(request.labelFilter ? { labelDimension: request.labelFilter.dimensionId, labelValue: request.labelFilter.value } : {}) }) : '';
   React.useEffect(() => {
     if (!query) return;
     let live = true;
     (async () => {
-      const res = await fetch(`/api/v1/reports/explain?${query}`, { headers: { Authorization: `Bearer ${await getIdToken()}` } });
+      const res = await fetch('/api/v1/reports/explain', { method: 'POST', headers: { Authorization: `Bearer ${await getIdToken()}`, 'Content-Type': 'application/json' }, body: query });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !Array.isArray(body.lines)) throw new Error(body.message || 'The entries could not be loaded');
       return body as Explanation;
@@ -159,6 +161,11 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
               {explained ? <Explained request={explained} formatCurrency={formatCurrency} onOpen={onClose} onFail={failExplain} /> : <>
               <table className="w-full text-left border-separate border-spacing-y-2">
                 <caption className="sr-only">Entries behind this amount</caption>
+                {explain?.accountIds?.length ? (
+                  <p className="text-xs text-[var(--muted)] pb-2">
+                    {explain.label ? `${explain.label} · ` : ''}the lines of the {explain.accountIds.length === 1 ? 'account' : `${explain.accountIds.length} accounts`} this figure is made of, from the entries this screen loaded.
+                  </p>
+                ) : null}
                 <thead>
                   <tr className="micro-label text-[var(--muted)]">
                     <th scope="col" className="pb-4 pl-4 font-black">Date</th>
@@ -168,8 +175,15 @@ export default function DrillDownModal({ isOpen, onClose, accountName, transacti
                 </thead>
                 <tbody>
                   {transactions.slice(0, displayLimit).map((tx) => {
-                    const matchedLine = tx.lines?.find(l => l.accountName === accountName || l.accountId === accountName);
-                    const amount = matchedLine ? matchedLine.amountCents : tx.totalAmountCents;
+                    // A statement total is made of several accounts, so the fallback list adds up the
+                    // lines of those accounts (the caller passes them); a single account's drill-down
+                    // keeps matching by its name or id.
+                    const amount = explain?.accountIds?.length
+                      ? (tx.lines || []).filter(l => explain.accountIds.includes(l.accountId)).reduce((sum, l) => sum + lineAmount(l, tx), 0)
+                      : (() => {
+                        const matchedLine = tx.lines?.find(l => l.accountName === accountName || l.accountId === accountName);
+                        return matchedLine ? matchedLine.amountCents : tx.totalAmountCents;
+                      })();
 
                     return (
                       <tr key={tx.id} className="group hover:bg-[var(--ink)] transition-all rounded-[32px] overflow-hidden">

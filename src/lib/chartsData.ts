@@ -18,7 +18,12 @@ export interface ChartsData {
   runwayMonths: number | null;
 }
 
-export function computeChartsData(transactions: Transaction[], accounts: ChartAccount[], monthCount: 6 | 12): ChartsData {
+/**
+ * `balanceTransactions` (L-123 step 3d): the entries the cash balances (and so the runway) are summed from, e.g. the
+ * loaded entries with the server's balances folded in (src/lib/serverBalances.ts balanceEntries); the monthly figures
+ * and the expense mix always read `transactions`.
+ */
+export function computeChartsData(transactions: Transaction[], accounts: ChartAccount[], monthCount: 6 | 12, balanceTransactions?: Transaction[]): ChartsData {
   const byId = new Map(accounts.map(a => [a.id, a]));
   const months = new Map<string, ChartsMonth>();
   const balance = new Map<string, number>();
@@ -47,6 +52,13 @@ export function computeChartsData(transactions: Transaction[], accounts: ChartAc
     .map(m => ({ ...m, profitCents: m.revenueCents - m.expenseCents }));
   const shownMonths = new Set(shown.map(m => m.month));
 
+  if (balanceTransactions) {
+    balance.clear();
+    for (const tx of balanceTransactions) {
+      if (!isPostable(tx)) continue;
+      for (const line of tx.lines || []) if (line.accountId) balance.set(line.accountId, (balance.get(line.accountId) || 0) + lineAmount(line, tx));
+    }
+  }
   const cashAccounts = accounts.filter(a => isCashAccount(a));
   const totalCashCents = cashAccounts.reduce((sum, a) => sum + (balance.get(a.id) || 0), 0);
   const cash = cashAccounts

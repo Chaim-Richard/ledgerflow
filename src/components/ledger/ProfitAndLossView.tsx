@@ -22,6 +22,9 @@ import { lineHasLabel } from '../../lib/dimensionUtils';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
+import ReportEmptyState from '../reporting/ReportEmptyState';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
+import { statementTotalDrill, type StatementTotal } from '../../lib/statementDrill';
 
 /** A P&L line as the report holds it; `parentId` is only for account groups (K-14). */
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
@@ -126,7 +129,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
   }, [fetchPL, dateRange.start, dateRange.end, isComparative, prevRange, basis]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const toggleSort = (field: 'code' | 'name' | 'balance') => {
@@ -298,6 +301,15 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
     setDrillDownTarget(target);
   };
 
+  // C-95: every total opens the entries it is made of — the same posted entries the figure covers,
+  // explained by the server, with the figure on screen passed through so a partial list is said so.
+  const drillTotal = (total: StatementTotal) => {
+    const target = statementTotalDrill(total, transactions);
+    if (target) drill(target);
+  };
+  const sectionIds = (section?: { accounts?: Record<string, unknown> }) => Object.keys(section?.accounts || {});
+  const totalCell = "mt-3 self-start min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2 hover:text-indigo-500 focus-visible:text-indigo-500";
+
   // Account groups (K-14): the same P&L lines, a group's children indented under their parent with
   // a subtotal under them. A group starts open and no figure here is the report's own total.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -331,6 +343,13 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
       <ReportProvenanceNote id="pl-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.pl} />
 
       {/* Period navigation/actions and aligned report filters. */}
+      {/* A-220: the period these figures cover, written the way the reader's locale writes dates */}
+      <ReportPeriodHeading
+        className="text-sm font-medium text-[var(--muted)] tabular-nums"
+        startDate={dateRange.start}
+        endDate={dateRange.end}
+      />
+
       <div data-testid="report-controls" role="region" aria-label="Report filters" className="p-4 sm:p-5 bg-[var(--surface)] border border-[var(--line)]/80 rounded-xl shadow-3xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <MonthNavigator 
@@ -379,10 +398,14 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
         </div>
       </div>
 
+      {incomeGroups.rows.length === 0 && expenseGroups.rows.length === 0 && Object.keys(data.cogs?.accounts || {}).length === 0 && (
+        <ReportEmptyState title="No report rows in this period" description="Add an entry, clear any label filter, or choose another period." />
+      )}
+
       {/* KPI Matrix */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
         >
@@ -407,10 +430,16 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                </span>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => drillTotal({ name: labels.inflowLabel, accountIds: sectionIds(data.income), expectedCents: data.income?.total || 0, sign: -1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
+            aria-label={`See the entries behind ${labels.inflowLabel}`}
+            className={totalCell}
+          >Entries</button>
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
           className="bg-[var(--surface)] p-5 rounded-xl border border-[var(--line)]/80 shadow-3xs relative overflow-hidden group hover:border-slate-300 transition-all flex flex-col justify-between"
@@ -436,10 +465,16 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                </span>
             )}
           </div>
+          <button
+            type="button"
+            onClick={() => drillTotal({ name: labels.outflowLabel, accountIds: sectionIds(data.expense), expectedCents: data.expense?.total || 0, sign: 1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
+            aria-label={`See the entries behind ${labels.outflowLabel}`}
+            className={cn(totalCell, 'self-start mt-0 pt-1')}
+          >Entries</button>
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className={cn(
@@ -451,7 +486,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
               <Target aria-hidden="true" size={80} />
            </div>
           <div>
-            <p className="text-[9px] font-bold text-white/40 mb-2 uppercase tracking-wider">{labels.netLabel}</p>
+            <p className={cn("text-[9px] font-bold mb-2 uppercase tracking-wider", (data.netIncome || 0) >= 0 ? "text-[#748480]" : "text-rose-200")}>{labels.netLabel}</p>
             <p className="text-xl font-black italic tracking-tight font-mono leading-none mb-3 tabular-nums">
               <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.netIncome || 0)}</bdi>
             </p>
@@ -460,6 +495,12 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
             <p className="text-[8px] font-bold uppercase tracking-wider text-white/60">
               {(data.netIncome || 0) >= 0 ? "Profit" : "Loss"}
             </p>
+            <button
+              type="button"
+              onClick={() => drillTotal({ name: labels.netLabel, accountIds: [...sectionIds(data.income), ...sectionIds(data.cogs), ...sectionIds(data.expense)], expectedCents: data.netIncome || 0, sign: -1, startDate: dateRange.start, endDate: dateRange.end, ...(labelFilter ? { labelFilter } : {}) })}
+              aria-label={`See the entries behind ${labels.netLabel}`}
+              className="min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider underline decoration-dotted underline-offset-2 text-white/70 hover:text-white focus-visible:text-white"
+            >Entries</button>
             {isComparative && prevData.netIncome !== 0 && (
                <span className={cn(
                  "text-[9px] font-bold ml-auto", 
@@ -504,7 +545,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                   onClick={() => toggleSort(field)}
                   className={cn(
                     "px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded transition-colors flex items-center gap-1 cursor-pointer",
-                    sortBy === field ? "bg-slate-900 text-white" : "text-slate-500 hover:text-[var(--text)]"
+                    sortBy === field ? "bg-slate-900 text-white" : "text-slate-500 dark:text-[#6a8f93] hover:text-[var(--text)]"
                   )}
                 >
                   <span>{field}</span>
@@ -527,7 +568,7 @@ const ProfitAndLossView: React.FC<ProfitAndLossViewProps> = ({ startDate, endDat
                  <h3 className="font-bold text-[var(--text)] uppercase tracking-wider text-xs">{labels.revenueStreams}</h3>
               </div>
               <div className="flex flex-col items-end">
-                <span className="font-mono text-base font-black text-emerald-700 tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.income?.total || 0)}</bdi></span>
+                <span className="font-mono text-base font-black text-emerald-700 dark:text-[#009e44] tabular-nums"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(data.income?.total || 0)}</bdi></span>
                 {isComparative && prevData.income?.total !== 0 && (
                   <div className="flex items-center gap-1.5 mt-0.5">
                      <span className="font-mono text-[9px] text-[var(--muted)] font-medium tabular-nums">prev: <bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(prevData.income?.total)}</bdi></span>

@@ -210,14 +210,14 @@ jobs:
   # The whole unit suite again in a time zone ahead of and one behind UTC, in parallel with the
   # job above (run one after the other they took the job past its time limit).
   timezones:
-    name: Unit tests in ${{ matrix.tz }} (${{ matrix.shard }}/2)
+    name: Unit tests in ${{ matrix.tz }} (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         tz: [Pacific/Auckland, America/Los_Angeles]
-        shard: [1, 2]
+        shard: [1, 2, 3]
 
     services:
       postgres:
@@ -260,7 +260,7 @@ jobs:
         run: npm run test:shard
         env:
           TZ: ${{ matrix.tz }}
-          TEST_SHARD: ${{ matrix.shard }}/2
+          TEST_SHARD: ${{ matrix.shard }}/3
 
   e2e_shards:
     name: Browser shard ${{ matrix.shard }}/5

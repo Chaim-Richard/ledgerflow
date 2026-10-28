@@ -11,7 +11,7 @@ import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { useEntityOperations } from '../../hooks/useEntityOperations';
 import { useCurrentRole } from '../../hooks/useCurrentRole';
 import { downloadCsv } from '../../lib/csvExport';
-import { formatCurrency, parseAmountToCents } from '../../lib/utils';
+import { formatCurrency, getLocalDateISO, parseAmountToCents } from '../../lib/utils';
 import {
   compareVendorQuotes,
   VENDOR_QUOTES_CSV_HEADERS,
@@ -33,7 +33,7 @@ export default function VendorQuotesCompareView() {
   const canWrite = useCurrentRole() !== 'viewer';
   const { updateEntity } = useEntityOperations();
 
-  const [asOfDate, setAsOfDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [asOfDate, setAsOfDate] = useState(() => getLocalDateISO());
   const [itemFilter, setItemFilter] = useState('ALL');
   const [itemId, setItemId] = useState('');
   const [vendorId, setVendorId] = useState('');

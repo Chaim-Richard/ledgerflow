@@ -35,6 +35,8 @@ import OpeningDocumentsDialog from '../common/OpeningDocumentsDialog';
 import { deleteWithUndo } from '../../lib/undoableDelete';
 import { useLedgerCollections } from '../../hooks/useLedgerCollections';
 import { LoadingState } from '../ui/LoadingState';
+import { EmptyState } from '../ui/EmptyState';
+import ListColumnChooser from '../ui/ListColumnChooser';
 import { csvMoney, downloadCsv } from '../../lib/csvExport';
 import ExpectedBills from './ExpectedBills';
 import type { ExpectedBill } from '../../lib/expectedBills';
@@ -83,6 +85,17 @@ export default function Purchases() {
       return matchText.includes(searchTerm.toLowerCase());
     });
   }, [bills, searchTerm]);
+
+  const [billLimit, setBillLimit] = useState(100);
+  const visibleBills = useMemo(() => {
+    if (filteredBills.length <= billLimit) return filteredBills;
+    const sliced = filteredBills.slice(0, billLimit);
+    if (focusedBillId && !sliced.some(b => b.id === focusedBillId)) {
+      const focused = filteredBills.find(b => b.id === focusedBillId);
+      if (focused) sliced.push(focused);
+    }
+    return sliced;
+  }, [filteredBills, billLimit, focusedBillId]);
 
   // Filter vendors based on search term
   const [vendorTag, setVendorTag] = useState<string | null>(null);
@@ -249,7 +262,7 @@ export default function Purchases() {
                 setIsVendorModalOpen(true);
               }
             }}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors"
+            className="px-4 py-2 bg-[#018669] hover:bg-emerald-700 text-white font-semibold rounded-lg flex items-center gap-2 text-sm shadow-sm transition-colors"
           >
             <Plus className="w-4 h-4" />
             {activeSubTab === 'bills' ? 'Record Bill' : 'Add Vendor'}
@@ -263,7 +276,7 @@ export default function Purchases() {
           onClick={() => { setActiveSubTab('bills'); setSearchTerm(''); }}
           className={`pb-3 text-sm font-bold border-b-2 transition-all ${
             activeSubTab === 'bills'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              ? 'border-emerald-500 text-[#02806d] dark:text-emerald-400'
               : 'border-transparent text-[var(--muted)] dark:text-slate-400 hover:text-slate-700'
           }`}
         >
@@ -273,7 +286,7 @@ export default function Purchases() {
           onClick={() => { setActiveSubTab('vendors'); setSearchTerm(''); }}
           className={`pb-3 text-sm font-bold border-b-2 transition-all ${
             activeSubTab === 'vendors'
-              ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400'
+              ? 'border-emerald-500 text-[#02806d] dark:text-emerald-400'
               : 'border-transparent text-[var(--muted)] dark:text-slate-400 hover:text-slate-700'
           }`}
         >
@@ -307,7 +320,9 @@ export default function Purchases() {
       <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden">
         {activeSubTab === 'bills' ? (
           // the header and the totals stay in view while the list scrolls (I-14)
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[70vh]" data-list-columns="purchase-bills">
+            <ListColumnChooser scope="purchase-bills" label="Bills"
+              columns={['Selection', 'Vendor', 'Bill #', 'Date', 'Due Date', 'Status', 'Amount', 'Actions']} />
             {pdfWorkspaceId && (
               <DocumentBulkBar type="bill" noun="bill" ids={[...pickedBills].filter(id => filteredBills.some(b => b.id === id))}
                 documents={filteredBills.filter(b => pickedBills.has(b.id))}
@@ -319,8 +334,8 @@ export default function Purchases() {
                 <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-bold text-[var(--muted)] uppercase tracking-wider">
                   <th scope="col" className="pl-4 w-8">
                     <input type="checkbox" aria-label="Select all bills shown"
-                      checked={filteredBills.length > 0 && filteredBills.every(b => pickedBills.has(b.id))}
-                      onChange={e => setPickedBills(e.target.checked ? new Set(filteredBills.map(b => b.id)) : new Set())} />
+                      checked={visibleBills.length > 0 && visibleBills.every(b => pickedBills.has(b.id))}
+                      onChange={e => setPickedBills(e.target.checked ? new Set(visibleBills.map(b => b.id)) : new Set())} />
                   </th>
                   <th scope="col" className="p-4">Vendor</th>
                   <th scope="col" className="p-4">Bill #</th>
@@ -332,7 +347,7 @@ export default function Purchases() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
-                {filteredBills.map(b => {
+                {visibleBills.map(b => {
                   const isOverdue = b.dueDate && new Date(b.dueDate) < new Date() && b.status !== 'paid' && b.status !== 'void';
                   return (
                     <tr key={b.id} id={recordElementId('bill', b.id)} aria-current={focusedBillId === b.id ? 'true' : undefined}
@@ -445,10 +460,24 @@ export default function Purchases() {
                   );
                 })}
 
-                {filteredBills.length === 0 && (
+                {filteredBills.length > visibleBills.length && (
+                  <tr>
+                    <td colSpan={8} className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setBillLimit(n => n + 200)}
+                        className="min-h-11 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                      >
+                        Show more bills ({visibleBills.length} of {filteredBills.length})
+                      </button>
+                    </td>
+                  </tr>
+                )}
+
+                {loading && filteredBills.length === 0 && (
                   <tr>
                     <td colSpan={8} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
-                      {loading ? <LoadingState what="bills" /> : searchTerm ? 'No bills match your search.' : 'No bills recorded yet.'}
+                      <LoadingState what="bills" />
                     </td>
                   </tr>
                 )}
@@ -457,7 +486,9 @@ export default function Purchases() {
             </table>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-list-columns="purchase-vendors">
+            <ListColumnChooser scope="purchase-vendors" label="Vendors"
+              columns={['Vendor Name', 'Category', 'Email', 'Phone', 'Outstanding balance', ...(canEditContacts ? ['Actions'] : [])]} />
             <TagFilter tags={vendorTags} value={vendorTag} onChange={setVendorTag} label="Show vendors with the tag" />
             <ShowArchivedToggle count={archivedVendors} on={showArchivedVendors} onChange={setShowArchivedVendors} noun="vendor" />
             {canEditContacts && (
@@ -509,15 +540,35 @@ export default function Purchases() {
                   </tr>
                 ))}
 
-                {filteredVendors.length === 0 && (
+                {loading && filteredVendors.length === 0 && (
                   <tr>
                     <td colSpan={canEditContacts ? 6 : 5} className="p-8 text-center text-[var(--muted)] dark:text-slate-400">
-                      No vendors listed yet.
+                      <LoadingState what="vendors" />
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {activeSubTab === 'bills' && !loading && filteredBills.length === 0 && (
+          <div className="p-3 sm:p-8">
+            <EmptyState
+              title={searchTerm ? 'No bills match your search' : 'No bills yet'}
+              description={searchTerm ? 'Try another vendor, number, or clear the search.' : 'Record your first bill to track what the business owes.'}
+              actionLabel={searchTerm ? 'Clear search' : 'Record first bill'}
+              onAction={() => searchTerm ? setSearchTerm('') : setIsBillModalOpen(true)}
+            />
+          </div>
+        )}
+        {activeSubTab === 'vendors' && !loading && filteredVendors.length === 0 && (
+          <div className="p-3 sm:p-8">
+            <EmptyState
+              title={searchTerm ? 'No vendors match your search' : 'No vendors yet'}
+              description={searchTerm ? 'Try another name or clear the search.' : 'Add a vendor before recording their first bill.'}
+              actionLabel={searchTerm ? 'Clear search' : 'Add first vendor'}
+              onAction={() => searchTerm ? setSearchTerm('') : setIsVendorModalOpen(true)}
+            />
           </div>
         )}
       </div>

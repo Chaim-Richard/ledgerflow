@@ -87,28 +87,74 @@ export function useReconciliationModel() {
   const aiSuggestionsMap = useMemo(() => {
     if (unmatchedBankLines.length === 0 || unclearedLedgerTransactions.length === 0) return [];
 
+    const cashAccountIds = new Set(cashAccounts.map(a => a.id));
+    interface PreparedLedgerEntry {
+      ltx: (typeof unclearedLedgerTransactions)[number];
+      absAmount: number;
+      cashSign: number;
+      cashSignByAccount: Map<string, number>;
+      dateMs: number;
+    }
+    const preparedByAbsAmount = new Map<number, PreparedLedgerEntry[]>();
+    const preparedList: PreparedLedgerEntry[] = [];
+
+    for (const ltx of unclearedLedgerTransactions) {
+      let cashDelta = 0;
+      const cashDeltaByAccount = new Map<string, number>();
+      if (ltx.lines) {
+        for (const l of ltx.lines) {
+          if (cashAccountIds.has(l.accountId)) {
+            const delta = lineAmount(l, ltx);
+            cashDelta += delta;
+            cashDeltaByAccount.set(l.accountId, (cashDeltaByAccount.get(l.accountId) || 0) + delta);
+          }
+        }
+      }
+      const cashSignByAccount = new Map<string, number>();
+      cashDeltaByAccount.forEach((delta, accId) => cashSignByAccount.set(accId, Math.sign(delta)));
+      const absAmount = Math.abs(ltx.totalAmountCents);
+      const entry: PreparedLedgerEntry = {
+        ltx,
+        absAmount,
+        cashSign: Math.sign(cashDelta),
+        cashSignByAccount,
+        dateMs: parseLocalDate(ltx.date).getTime(),
+      };
+      preparedList.push(entry);
+      const bucket = preparedByAbsAmount.get(absAmount);
+      if (bucket) bucket.push(entry);
+      else preparedByAbsAmount.set(absAmount, [entry]);
+    }
+
     const sourceItems = unmatchedBankLines.map(btx => {
       const scoreMap = new Map<string, number>();
+      const bAbsAmount = Math.abs(btx.amountCents);
+      const bSign = Math.sign(btx.amountCents);
+      const bDateMs = parseLocalDate(btx.date).getTime();
 
-      unclearedLedgerTransactions.forEach(ltx => {
-        // Sign direction validation for cash account movement
-        const cashLines = ltx.lines?.filter((l) => {
-          const acc = safeAccounts.find(a => a.id === l.accountId);
-          return acc && resolveAccountRole(acc) === 'cash';
-        }) || [];
-        const cashDelta = cashLines.reduce((s: number, l) => s + lineAmount(l, ltx), 0);
+      // Only candidates within matchToleranceCents can ever reach score > 115
+      // (max non-amount score is 65 + 30 = 95 <= 115).
+      const candidates = matchToleranceCents === 0
+        ? (preparedByAbsAmount.get(bAbsAmount) || [])
+        : preparedList.filter(p => Math.abs(p.absAmount - bAbsAmount) <= matchToleranceCents);
 
+      for (const { ltx, absAmount, cashSign, cashSignByAccount, dateMs: lDateMs } of candidates) {
         // Disallow matching positive bank deposits with negative cash outflows and vice versa
-        if (cashDelta !== 0 && Math.sign(cashDelta) !== Math.sign(btx.amountCents)) {
-          return;
+        const accountSign = btx.accountId ? cashSignByAccount.get(btx.accountId) : undefined;
+        if (accountSign === 0 && bSign !== 0) {
+          continue;
+        }
+        const effectiveSign = accountSign !== undefined ? accountSign : cashSign;
+        if (effectiveSign !== 0 && effectiveSign !== bSign) {
+          continue;
         }
 
         let score = 0;
 
         // Exact Amount Match (High Weight)
-        if (Math.abs(ltx.totalAmountCents) === Math.abs(btx.amountCents)) {
+        if (absAmount === bAbsAmount) {
           score += 100;
-        } else if (Math.abs(Math.abs(ltx.totalAmountCents) - Math.abs(btx.amountCents)) <= matchToleranceCents) {
+        } else if (Math.abs(absAmount - bAbsAmount) <= matchToleranceCents) {
           score += 30; // Near match / tiny difference
         }
 
@@ -117,30 +163,25 @@ export function useReconciliationModel() {
         score += descSimilarity * 65;
 
         // Date Proximity
-        const bDate = parseLocalDate(btx.date).getTime();
-        const lDate = parseLocalDate(ltx.date).getTime();
-        if (!isNaN(bDate) && !isNaN(lDate)) {
-          const dayDiff = Math.abs(bDate - lDate) / (1000 * 60 * 60 * 24);
-          if (dayDiff === 0) score += 30;
-          else if (dayDiff <= 3) score += 18;
-          else if (dayDiff <= 7) score += 8;
+        let dDiff = 99;
+        if (!isNaN(bDateMs) && !isNaN(lDateMs)) {
+          dDiff = Math.abs(bDateMs - lDateMs) / (1000 * 60 * 60 * 24);
+          if (dDiff === 0) score += 30;
+          else if (dDiff <= 3) score += 18;
+          else if (dDiff <= 7) score += 8;
         }
 
         // Require similarity > 0.3 or dateDiff <= 2 to prevent pure amount-only false positives
-        const bDateMs = parseLocalDate(btx.date).getTime();
-        const lDateMs = parseLocalDate(ltx.date).getTime();
-        const dDiff = (!isNaN(bDateMs) && !isNaN(lDateMs)) ? Math.abs(bDateMs - lDateMs) / (1000 * 60 * 60 * 24) : 99;
-
-        if (score > 115 && (descSimilarity >= 0.3 || dDiff <= 2)) { // Threshold for considering it a strong match candidate
+        if (score > 115 && (descSimilarity >= 0.3 || dDiff <= 2)) {
           scoreMap.set(ltx.id, score);
         }
-      });
+      }
 
       return { id: btx.id, scoreMap };
     });
 
     return sourceItems;
-  }, [unmatchedBankLines, unclearedLedgerTransactions, user?.uid, matchToleranceCents, safeAccounts]);
+  }, [unmatchedBankLines, unclearedLedgerTransactions, user?.uid, matchToleranceCents, cashAccounts]);
 
   const optimizedMatches = useMemo(() => {
      if (!aiSuggestionsMap || !Array.isArray(aiSuggestionsMap)) return new Map();

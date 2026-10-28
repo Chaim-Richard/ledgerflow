@@ -1,4 +1,4 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../lib/utils';
 import { SETTINGS_TABS_REGISTRY, SETTINGS_COMPONENTS } from '../../config/registry';
@@ -21,6 +21,28 @@ export default function Settings() {
 
   const activeTabDef = SETTINGS_TABS_REGISTRY.find(t => t.id === activeSubTab);
   const ActiveComponent = activeTabDef ? SETTINGS_COMPONENTS[activeTabDef.componentName] : null;
+  const activeTabLabel = activeTabDef ? (activeTabDef.label[language] || activeTabDef.label.en) : 'Settings';
+
+  // A section chosen from the shortcut grid is scrolled to and focused, so the buttons are not a
+  // no-op when the panel is below the fold (#274). Opening Settings, restoring a saved section or
+  // switching workspace changes `activeSubTab` without a request, and then the page stays put.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [revealRequest, setRevealRequest] = useState(0);
+  const chooseSection = (tabId: string) => {
+    setActiveSubTab(tabId);
+    setRevealRequest(request => request + 1);
+  };
+  useEffect(() => {
+    if (!revealRequest) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    // Either the app's own setting (Appearance → Reduced motion) or the operating system's.
+    const appReduceMotion = useUIStore.getState().reduceMotion;
+    const systemReduceMotion = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    panel.scrollIntoView?.({ block: 'start', behavior: appReduceMotion || systemReduceMotion ? 'auto' : 'smooth' });
+    panel.focus({ preventScroll: true });
+  }, [revealRequest]);
 
   const term = search.trim().toLocaleLowerCase();
   const groups = SETTINGS_GROUPS.map(group => ({ ...group, tabs: SETTINGS_TABS_REGISTRY.filter(tab => group.ids.includes(tab.id) && (!term || `${group.name} ${tab.label.en} ${tab.label[language]} ${tab.id}`.toLocaleLowerCase().includes(term))) }));
@@ -44,7 +66,7 @@ export default function Settings() {
           {groups.filter(group => group.tabs.length).map(group => <section key={group.name} aria-label={group.name} className="min-w-0 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
             <h2 className="text-sm font-semibold mb-2">{group.name}</h2>
             <div className="flex flex-wrap gap-1">
-              {group.tabs.map(tab => <button type="button" key={tab.id} aria-current={activeSubTab === tab.id ? 'page' : undefined} onClick={() => setActiveSubTab(tab.id)} className={cn('min-h-11 max-w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-start', activeSubTab === tab.id ? 'bg-[var(--brass-soft)] text-[var(--text)] ring-1 ring-[var(--brass-line)] font-semibold' : 'text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)]')}>
+              {group.tabs.map(tab => <button type="button" key={tab.id} aria-current={activeSubTab === tab.id ? 'page' : undefined} onClick={() => chooseSection(tab.id)} className={cn('min-h-11 max-w-full inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-start', activeSubTab === tab.id ? 'bg-[var(--brass-soft)] text-[var(--text)] ring-1 ring-[var(--brass-line)] font-semibold' : 'text-[var(--muted)] hover:bg-[var(--surface)] hover:text-[var(--text)]')}>
                 <tab.icon size={16} aria-hidden="true" className="shrink-0" />
                 <span className="min-w-0 break-words">{tab.label[language] || tab.label.en}</span>
               </button>)}
@@ -55,11 +77,18 @@ export default function Settings() {
       </nav>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+        <div
+          ref={panelRef}
+          id="settings-panel"
+          role="region"
+          aria-label={`${activeTabLabel} settings`}
+          tabIndex={-1}
+          className="lg:col-span-2 space-y-6 scroll-mt-24 outline-none"
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeSubTab}
-              initial={{ opacity: 0, x: -20 }}
+              initial={{ x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               className="space-y-10"
@@ -78,7 +107,7 @@ export default function Settings() {
         {/* Global Sidebar Documentation Context (Could also be modularized later) */}
         <div className="space-y-10">
           <div className="p-4 md:p-10 bg-[var(--surface)] rounded-[40px] border border-[var(--line)] shadow-sm group hover:border-indigo-600 transition-all duration-500">
-            <h2 className="text-[11px] font-black text-[var(--text)] uppercase tracking-[0.3em] mb-6 opacity-40">About settings</h2>
+            <h2 className="text-[11px] font-black text-[var(--text)] dark:text-[#699274] uppercase tracking-[0.3em] mb-6 opacity-40 dark:opacity-100">About settings</h2>
             <div className="space-y-4">
               <p className="text-[11px] text-[var(--muted)] leading-relaxed font-bold mb-8">
                 Choose a tab to review or update the settings for your workspace.

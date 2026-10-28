@@ -1,18 +1,37 @@
+import { toast } from 'sonner';
 import { useState } from 'react';
 import { AlertCircle, Layers, HandCoins, ShieldCheck, Activity, FileSpreadsheet, ArrowUp, ArrowDown, ExternalLink } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ChartAccount } from '../../types';
 import { accountGroupLayout, groupSubtotals, toggleAccountGroup, visibleGroupRows } from '../../lib/accountGroups';
 import { AccountGroupRow, AccountGroupSubtotal } from './AccountGroupControls';
-import { isPostable, isTransactionInDateRange } from '../../lib/txFilters';
+import { isEarningsAccount, isPostable, isTransactionInDateRange } from '../../lib/txFilters';
 import { motion } from 'motion/react';
 import MonthNavigator from '../ui/MonthNavigator';
 import DrillDownModal from '../layout/DrillDownModal';
+import { statementTotalDrill, type StatementTotal } from '../../lib/statementDrill';
 import type { BalanceSheetModel } from './BalanceSheetView';
 import { StatementColumns } from './StatementColumns';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
+import ReportEmptyState from '../reporting/ReportEmptyState';
 
 export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, showPercent, setShowPercent, columnStartDate, columnCompareStartDate, accounts, formatCurrency, formId, transactions, asOfDate, setAsOfDate, isComparative, setIsComparative, priorDate, setPriorDate, sortBy, sortDir, drillDownTarget, setDrillDownTarget, basis, chooseBasis, cashReady, provenance, loadingStates, isServerAuthoritative, loadServerReport, toggleSort, labels, currentData, prevData, exportBalanceSheet, getVarianceAndPct }: BalanceSheetModel) {
+
+  // C-95: the totals open the posted entries they are made of (the server explains the same figure).
+  // On cash basis the server's totals carry cash adjustments the posted lines do not hold (unapplied
+  // payments are added to liabilities), so the entries are not opened there and the button says why.
+  const cashBasis = basis === 'cash';
+  const drillTotal = (total: StatementTotal) => {
+    if (cashBasis) { toast.info('On cash basis the totals include the server’s cash adjustments, so the entries behind them are not listed yet: switch to accrual to see them'); return; }
+    const target = statementTotalDrill(total, transactions);
+    if (target) setDrillDownTarget(target);
+  };
+  const totalIds = (section?: Record<string, number>) => Object.keys(section || {});
+  /** the accounts whose balances make the earnings on this date (the same rule as calculateNetIncome) */
+  const earningsAccountIds = accounts.filter(isEarningsAccount).map(account => account.id);
+  const cashReason = 'Cash basis totals include the server’s cash adjustments; switch to accrual to open the entries.';
+  const entriesLink = "min-h-11 px-1 text-[9px] font-bold uppercase tracking-wider text-[var(--muted)] underline decoration-dotted underline-offset-2 hover:text-indigo-500 focus-visible:text-indigo-500 disabled:no-underline disabled:opacity-60 self-end";
   // Account groups (K-14): the same accounts, a group's children indented under their parent with a
   // subtotal under them. A group starts open, and the section totals below are the report's own.
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => new Set());
@@ -37,6 +56,14 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
     <div className="space-y-6">
       {/* AUD-10: where these figures come from */}
       <ReportProvenanceNote id="bs-statement-provenance" provenance={provenance} onRefresh={loadServerReport} busy={loadingStates.balanceSheet} />
+      {/* A-220: the as-of date in the reader's own date style */}
+      <ReportPeriodHeading
+        asOf
+        className="text-sm font-medium text-[var(--muted)] tabular-nums"
+        startDate={columnStartDate}
+        endDate={asOfDate}
+        compareEndDate={isComparative ? priorDate : undefined}
+      />
       {serverAsOf && <p data-testid="bs-balances-source" className="text-xs text-[var(--muted)]">Balances include every entry through {serverAsOf} as summed by the server, plus the loaded entries after it.</p>}
 
 
@@ -100,6 +127,10 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
           </div>
         </div>
       </div>
+
+      {accounts.length === 0 && (
+        <ReportEmptyState title="No accounts yet" description="Set up the chart of accounts, then add an entry or choose another date." />
+      )}
 
       {/* Balance check Card */}
       <div className="flex flex-col md:flex-row md:items-center justify-between p-5 bg-slate-900 rounded-xl text-white shadow-sm relative overflow-hidden border border-slate-950 gap-4">
@@ -179,7 +210,7 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Assets Column */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
         >
@@ -259,13 +290,21 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
                   </span>
                 )}
               </div>
+              <button
+                type="button"
+                onClick={() => drillTotal({ name: `Total ${labels.assetsLabel}`, accountIds: totalIds(currentData.assets), expectedCents: currentData.totalAssets, sign: 1, endDate: asOfDate || undefined })}
+                aria-label={`See the entries behind total ${labels.assetsLabel}`}
+                disabled={cashBasis}
+                title={cashBasis ? cashReason : undefined}
+                className={entriesLink}
+              >Entries</button>
             </div>
           </div>
         </motion.div>
 
         {/* Liabilities & Equity Column */}
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="bg-[var(--surface)] rounded-xl border border-[var(--line)]/80 shadow-3xs overflow-hidden group hover:border-slate-300 transition-all flex flex-col"
         >
@@ -340,9 +379,17 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
                     <span className="font-mono tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.notApplied || 0)}</bdi></span>
                   </div>
                 )}
-                <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
+                <div className="flex flex-wrap justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Liabilities</span>
                   <span className="font-mono font-semibold tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalLiabilities)}</bdi></span>
+                  <button
+                    type="button"
+                    onClick={() => drillTotal({ name: `Sub-total ${labels.liabilitiesLabel}`, accountIds: totalIds(currentData.liabilities), expectedCents: currentData.totalLiabilities, sign: -1, endDate: asOfDate || undefined })}
+                    aria-label={`See the entries behind sub-total ${labels.liabilitiesLabel}`}
+                    disabled={cashBasis}
+                    title={cashBasis ? cashReason : undefined}
+                    className={entriesLink}
+                  >Entries</button>
                 </div>
               </div>
 
@@ -442,9 +489,24 @@ export function BalanceSheetReport({ serverAsOf, columnMode, setColumnMode, show
                   </div>
                 </button>
 
-                <div className="flex justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
+                <div className="flex flex-wrap justify-between items-center pt-2 text-[var(--muted)] text-[8px] font-bold uppercase tracking-wider">
                   <span>Sub-Total Equity</span>
                   <span className="font-mono font-semibold tabular-nums whitespace-nowrap"><bdi dir="auto" style={{ unicodeBidi: 'isolate' }}>{formatCurrency(currentData.totalEquity + currentData.netIncome)}</bdi></span>
+                  <button
+                    type="button"
+                    onClick={() => drillTotal({
+                      name: `Sub-total ${labels.equityLabel}`,
+                      // the subtotal printed beside this button is the equity accounts plus the earnings
+                      accountIds: [...totalIds(currentData.equity), ...earningsAccountIds],
+                      expectedCents: currentData.totalEquity + currentData.netIncome,
+                      sign: -1,
+                      endDate: asOfDate || undefined,
+                    })}
+                    aria-label={`See the entries behind sub-total ${labels.equityLabel}`}
+                    disabled={cashBasis}
+                    title={cashBasis ? cashReason : undefined}
+                    className={entriesLink}
+                  >Entries</button>
                 </div>
               </div>
             </div>

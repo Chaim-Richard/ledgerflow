@@ -8,7 +8,7 @@ import {
   Calendar, FileSpreadsheet 
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { exportToExcel } from '../../lib/excelExport';
+import { currentReportExportContext, exportToExcel, reportTitleRows } from '../../lib/excelExport';
 import { motion } from 'motion/react';
 import { useLedgerStore } from '../../stores/useLedgerStore';
 import { isPostable, lineAmount, isTransactionInDateRange } from '../../lib/txFilters';
@@ -20,6 +20,8 @@ import { AccountGroupToggle } from './AccountGroupControls';
 import { ReportProvenanceNote } from '../reporting/ReportProvenanceNote';
 import { STATEMENT_COLLECTIONS, useBrowserProvenance } from '../../hooks/useBrowserProvenance';
 import { provenanceFromResponse } from '../../lib/reportProvenance';
+import ReportEmptyState from '../reporting/ReportEmptyState';
+import ReportPeriodHeading from '../reporting/ReportPeriodHeading';
 import { useBalanceEntries } from '../../hooks/useBalanceEntries';
 
 /** the trial balance worked out here also reads the journal entries */
@@ -28,8 +30,12 @@ const TB_COLLECTIONS = [...STATEMENT_COLLECTIONS, 'journalEntries'] as const;
 interface TrialBalanceViewProps {
   accounts: ChartAccount[];
   formatCurrency: (val: number) => string;
-  /** N-12: with the account's figure, so the drill-down explains it from the server */
-  onDrillDown: (accountId: string, figure?: { asOfDate: string; expectedCents: number; sign: 1 | -1 }) => void;
+  /**
+   * N-12: with the account's figure, so the drill-down explains it from the server.
+   * C-95: a total sends every account it adds up (`accountIds`) and a name; no expected figure,
+   * because a balanced trial balance's lines net to zero while its debit and credit totals do not.
+   */
+  onDrillDown: (accountId: string, figure?: { asOfDate: string; expectedCents?: number; sign?: 1 | -1; accountIds?: string[]; label?: string }) => void;
 }
 
 type SortField = 'code' | 'name' | 'type' | 'debit' | 'credit';
@@ -68,7 +74,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
   }, [fetchTrialBalance, asOfDate]);
 
   useEffect(() => {
-    loadServerReport();
+    void Promise.resolve().then(loadServerReport);
   }, [loadServerReport]);
 
   const handleSort = (field: SortField) => {
@@ -316,7 +322,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
 
     await exportToExcel(columns, rows, {
       sheetName: 'Trial Balance',
-      fileName: `trial_balance_as_of_${asOfDate}.xlsx`
+      fileName: `trial_balance_as_of_${asOfDate}.xlsx`,
+      titleRows: reportTitleRows(currentReportExportContext('Trial Balance', `As of ${asOfDate}`, 'Accrual posted entries'))
     });
   };
 
@@ -349,6 +356,13 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                Double-Entry Stability Protocol
             </div>
             <h2 className="text-xl font-bold text-[var(--text)] tracking-tight">Trial Balance</h2>
+            {/* A-220: the as-of date in the reader's own date style */}
+            <ReportPeriodHeading
+              asOf
+              className="text-sm font-medium text-[var(--muted)] tabular-nums"
+              startDate={asOfDate}
+              endDate={asOfDate}
+            />
             <div className="flex flex-wrap items-center gap-2 mt-2">
               <MonthNavigator
                 currentDate={asOfDate}
@@ -409,8 +423,8 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             className={cn(
               "px-3 py-1.5 rounded-lg flex items-center gap-2 font-bold text-[9px] uppercase tracking-wider border shadow-3xs transition-all w-full sm:w-auto",
               trialBalance.isBalanced 
-                ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" 
-                : "bg-rose-500 text-white border-rose-400"
+                ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" 
+                : "bg-rose-700 text-white border-rose-400"
             )}
           >
             {trialBalance.isBalanced ? <CheckCircle2 aria-hidden="true" size={12} className="shrink-0 text-emerald-500" /> : <AlertCircle aria-hidden="true" size={12} className="shrink-0" />}
@@ -433,7 +447,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
           </button>
           <button 
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600/10 text-emerald-600 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600/20 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1 bg-emerald-600/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 rounded-lg text-[9px] font-bold uppercase tracking-wider hover:bg-emerald-600/20 transition-all cursor-pointer"
            aria-label="Excel">
             <FileSpreadsheet aria-hidden="true" size={11} /> Excel
           </button>
@@ -549,7 +563,7 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
             {trialBalance.lines.length === 0 && (
               <tr>
                 <td colSpan={4} className="py-12 text-center text-[var(--muted)] text-xs">
-                  No accounts found in current ledger configuration.
+                  <ReportEmptyState title="No accounts found" description="Set up the chart of accounts, then add an entry or choose another date." />
                 </td>
               </tr>
             )}
@@ -563,10 +577,31 @@ export default function TrialBalanceView({ accounts, formatCurrency, onDrillDown
                 </div>
               </td>
               <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
-                {formatCurrency(trialBalance.totalDebits)}
+                <button
+                  type="button"
+                  onClick={() => onDrillDown('Total trial balance', {
+                    asOfDate,
+                    accountIds: trialBalance.lines.map(line => line.id),
+                    // the footer totals gross debits and gross credits; the lines behind them are the
+                    // same posted lines, and they net to zero because every entry balances. No expected
+                    // figure is sent, so the modal does not warn about a "mismatch" that is arithmetic.
+                    label: `Total debit column at ${asOfDate} · every posted line. This column totals the period’s gross debits; the lines net to zero because each entry balances.`,
+                  })}
+                  title="Open every posted line behind the total debit column"
+                  className="min-h-11 underline decoration-dotted underline-offset-2 hover:text-indigo-600 focus-visible:text-indigo-600"
+                >{formatCurrency(trialBalance.totalDebits)}<span className="sr-only"> — see the posted lines behind the total debit column</span></button>
               </td>
               <td className="px-5 py-3.5 text-right font-mono text-sm font-bold text-[var(--text)] tabular-nums">
-                {formatCurrency(trialBalance.totalCredits)}
+                <button
+                  type="button"
+                  onClick={() => onDrillDown('Total trial balance', {
+                    asOfDate,
+                    accountIds: trialBalance.lines.map(line => line.id),
+                    label: `Total credit column at ${asOfDate} · every posted line. This column totals the period’s gross credits; the lines net to zero because each entry balances.`,
+                  })}
+                  title="Open every posted line behind the total credit column"
+                  className="min-h-11 underline decoration-dotted underline-offset-2 hover:text-indigo-600 focus-visible:text-indigo-600"
+                >{formatCurrency(trialBalance.totalCredits)}<span className="sr-only"> — see the posted lines behind the total credit column</span></button>
               </td>
             </tr>
           </tfoot>

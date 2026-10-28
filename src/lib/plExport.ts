@@ -2,7 +2,7 @@
  * The Profit & Loss screen's spreadsheet export (moved out of ProfitAndLossView.tsx): each income and
  * expense account, its total, and net income; with the prior period and the change when comparing.
  */
-import { exportToExcel as exportToExcelHelper } from './excelExport';
+import { currentReportExportContext, exportToExcel as exportToExcelHelper, reportTitleRows } from './excelExport';
 
 interface PLAccount { name: string; code?: string; balance: number; parentId?: string }
 interface PLSection { total: number; accounts: Record<string, PLAccount> }
@@ -24,10 +24,11 @@ export async function exportPlToExcel(input: {
     { header: isComp ? 'Variance %' : '', key: 'variance', width: 20 },
   ];
 
-  const titleRows = [
-    [labels.title],
-    [`Period: ${start} to ${end}${cash ? ' (cash basis)' : ''}`]
-  ];
+  const titleRows = reportTitleRows(currentReportExportContext(
+    labels.title,
+    `${start} to ${end}${cash ? ' (cash basis)' : ''}`,
+    cash ? 'Cash' : 'Accrual',
+  ));
 
   const rows: (Record<string, string | number | null> | string[])[] = [];
 

@@ -184,7 +184,7 @@ export default function ArchitectureViewer() {
             <div className="bg-emerald-50/50 rounded-2xl p-6 border border-emerald-100 mb-8 flex gap-4 items-start">
               <Code2 aria-hidden="true" className="text-emerald-600 mt-1 flex-shrink-0" />
               <div>
-                <h4 className="font-bold text-emerald-900 mb-1">Algorithm Design Contract</h4>
+                <h3 className="font-bold text-emerald-900 mb-1">Algorithm Design Contract</h3>
                 <p className="text-emerald-800/80 text-sm">
                   Every algorithm must be a pure function matching <code>(transactions, accounts, inputs) =&gt; {'{'} metrics, charts, insights {'}'}</code>. They are located in <code>src/lib/algorithms/</code> and registered in <code>index.ts</code>. Do NOT add UI components inside the algorithm files.
                 </p>

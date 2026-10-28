@@ -6,6 +6,7 @@ import { useLedgerStore } from '../../stores/useLedgerStore';
 import { useUIStore } from '../../stores/useUIStore';
 import { formatCurrency, formatDate, getLocalDateISO } from '../../lib/utils';
 import { answerCents, readQuestion, type AskFilter, type AskReading } from '../../lib/askBooks';
+import ReportEmptyState from './ReportEmptyState';
 
 interface Line { key: string; date: string; description: string; payee?: string; accountName: string; amountCents: number; document: { type: 'invoice' | 'bill' | 'transaction'; id: string } | null; bankMatched: boolean; attachments: number }
 interface Explanation { lines: Line[]; totalCents: number; entries: number }
@@ -142,6 +143,8 @@ export default function AskBooksView() {
       {filter && filter.startDate > filter.endDate && <p role="status" className="text-xs text-amber-700 dark:text-amber-400">The period starts after it ends.</p>}
       {key && !shown && <p className="text-sm text-[var(--muted)]">Calculating…</p>}
       {shown?.error && <p role="alert" className="text-sm text-rose-600">{shown.error}</p>}
+      {shown?.data && shown.data.lines.length === 0 && <ReportEmptyState title="No posted entries match this question"
+        description="Clear a filter, widen the period, or choose an account with posted activity. A draft or an unposted document is not included in this answer." />}
       {shown?.data && (
         <div className="space-y-2">
           <p className="text-2xl font-bold text-[var(--text)]" aria-live="polite">

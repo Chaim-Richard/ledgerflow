@@ -6,6 +6,7 @@ The **Overview** screen summarizes cash on hand, money owed by customers, bills 
 1. Switch between **Owner Lens** and **Accountant Lens** to inspect high-level cash flow or trial-balance posture.
 2. Click any summary KPI card to open the underlying report period directly.
 3. Use **Add Entry** for a quick balanced transaction, or open **Help & Guide → First month & demo** to work through the first-month checklist or explore safe guest sample companies.
+4. Open **Accounting glossary** to search plain English and Hebrew explanations of the words used in reports and documents; a definition is not tax advice.
 
 ## עברית
 מסך **הסקירה הכללית** מציג בזמן אמת את יתרות המזומן, חובות הלקוחות, התחייבויות לספקים, הרווח התקופתי ומשימות פתוחות לטיפול.
@@ -13,3 +14,4 @@ The **Overview** screen summarizes cash on hand, money owed by customers, bills 
 1. עברו בין **תצוגת בעלים** ל-**תצוגת רואה חשבון** לפי הצורך התפעולי.
 2. לחצו על כל כרטיס סיכום כדי לפתוח ישירות את הדוח הכספי שעומד מאחוריו.
 3. השתמשו בכפתור **הוספת פקודה** לרישום מהיר ומאוזן, או פתחו **עזרה ומדריכים ← חודש ראשון ודמו** למעקב אחר צעדי ההקמה.
+4. פתחו את **מילון המונחים החשבונאיים** כדי לחפש הסברים פשוטים בעברית ובאנגלית למילים שבדוחות ובמסמכים; ההגדרה אינה ייעוץ מס.

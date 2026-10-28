@@ -1,11 +1,10 @@
 import { useDialog } from '../../hooks/useDialog';
 import React, { useEffect, useState } from 'react';
 import { X, Download, ExternalLink, Loader2, AlertCircle, FileText } from 'lucide-react';
-import { getIdToken } from '../../firebase';
 import { toast } from 'sonner';
+import { downloadDocumentPdf, fetchDocumentPdfBlob, type PdfDocumentKind } from '../../services/documentDownloads';
 
-/** Every document the server can print (documentRoutes.ts PDF_TYPES; BA-08). */
-export type PdfDocumentKind = 'invoice' | 'estimate' | 'creditNote' | 'payment' | 'statement' | 'purchaseOrder' | 'bill' | 'vendorCredit' | 'cheque';
+export type { PdfDocumentKind };
 
 export interface PdfPreviewModalProps {
   isOpen: boolean;
@@ -17,60 +16,6 @@ export interface PdfPreviewModalProps {
   filename?: string;
   /** statement only: the period shown on screen (ISS-141) */
   period?: { startDate?: string; endDate?: string };
-}
-
-export async function fetchDocumentPdfBlob(
-  type: PdfDocumentKind,
-  id: string,
-  workspaceId: string,
-  period?: { startDate?: string; endDate?: string }
-): Promise<Blob> {
-  if (!workspaceId) throw new Error('Workspace ID is required to generate PDF');
-  if (!id) throw new Error('Document ID is required');
-
-  const token = await getIdToken().catch(() => null);
-  const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const query = new URLSearchParams({ workspaceId });
-  if (period?.startDate) query.set('startDate', period.startDate);
-  if (period?.endDate) query.set('endDate', period.endDate);
-  const res = await fetch(`/api/v1/documents/${type}/${encodeURIComponent(id)}/pdf?${query}`, {
-    headers
-  });
-
-  if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
-    throw new Error(errorData.message || `Server returned ${res.status}: Failed to generate document PDF`);
-  }
-
-  return await res.blob();
-}
-
-export async function downloadDocumentPdf(
-  type: PdfDocumentKind,
-  id: string,
-  workspaceId: string,
-  filename?: string,
-  period?: { startDate?: string; endDate?: string }
-): Promise<void> {
-  const toastId = toast.loading('Generating document PDF...');
-  try {
-    const blob = await fetchDocumentPdfBlob(type, id, workspaceId, period);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename || `${type}_${id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
-    toast.success('PDF downloaded successfully', { id: toastId });
-  } catch (err) {
-    toast.error((err as Error).message || 'Failed to download PDF', { id: toastId });
-  }
 }
 
 export default function PdfPreviewModal({
@@ -88,39 +33,39 @@ export default function PdfPreviewModal({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const periodStartDate = period?.startDate;
+  const periodEndDate = period?.endDate;
+
   useEffect(() => {
-    if (!isOpen || !documentId || !workspaceId) {
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
-        setBlobUrl(null);
-      }
-      return;
-    }
-
     let isMounted = true;
-    setIsLoading(true);
-    setError(null);
+    void Promise.resolve().then(async () => {
+      if (!isMounted) return;
+      if (!isOpen || !documentId || !workspaceId) {
+        setBlobUrl(null);
+        return;
+      }
 
-    fetchDocumentPdfBlob(documentType, documentId, workspaceId, period)
-      .then((blob) => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const blob = await fetchDocumentPdfBlob(documentType, documentId, workspaceId, { startDate: periodStartDate, endDate: periodEndDate });
         if (!isMounted) return;
-        const url = URL.createObjectURL(blob);
-        setBlobUrl(url);
+        setBlobUrl(URL.createObjectURL(blob));
         setIsLoading(false);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         if (!isMounted) return;
         setError((err as Error).message || 'Failed to load PDF preview');
         setIsLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl);
       }
-    };
-  }, [isOpen, documentType, documentId, workspaceId, period?.startDate, period?.endDate]);
+    });
+
+    return () => { isMounted = false; };
+  }, [isOpen, documentType, documentId, workspaceId, periodStartDate, periodEndDate]);
+
+  // Revoke the previous URL whenever the preview changes or unmounts, without retriggering the fetch.
+  useEffect(() => () => {
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+  }, [blobUrl]);
 
   if (!isOpen) return null;
 

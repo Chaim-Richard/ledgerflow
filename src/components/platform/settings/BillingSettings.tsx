@@ -219,20 +219,20 @@ export default function BillingSettings() {
                   )}
 
                   {isCurrent && (
-                    <div className="absolute -top-3 right-4 bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
+                    <div className="absolute -top-3 right-4 bg-[#018669] text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-sm">
                       Active
                     </div>
                   )}
 
                   <div>
                     <h3 className="text-base font-bold text-[var(--text)]">{p.name}</h3>
-                    <p className="text-xs text-[var(--muted)] mt-1 min-h-[32px]">{p.desc}</p>
+                    <p className="text-xs text-[var(--muted)] dark:text-[#89a9a1] mt-1 min-h-[32px]">{p.desc}</p>
                     <div className="mt-4 mb-6">
                       <span className="text-3xl font-extrabold text-[var(--text)]">{p.price}</span>
-                      <span className="text-xs text-[var(--muted)] font-medium">{p.period}</span>
+                      <span className="text-xs text-[var(--muted)] dark:text-[#89a9a1] font-medium">{p.period}</span>
                     </div>
 
-                    <ul className="space-y-2.5 text-xs text-[var(--muted)] mb-6">
+                    <ul className="space-y-2.5 text-xs text-[var(--muted)] dark:text-[#89a9a1] mb-6">
                       {p.features.map((f) => (
                         <li key={f} className="flex items-center gap-2">
                           <CheckCircle2 size={14} className="text-[var(--brass)] shrink-0" />

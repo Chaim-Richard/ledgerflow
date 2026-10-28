@@ -21,6 +21,8 @@ interface TanStackDataGridProps<TData extends object> {
   caption?: string;
 }
 
+const useGridTable = useReactTable;
+
 export function TanStackDataGrid<TData extends object>({
   data,
   columns,
@@ -32,7 +34,7 @@ export function TanStackDataGrid<TData extends object>({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
 
-  const table = useReactTable({
+  const table = useGridTable({
     data,
     columns,
     state: {

@@ -1,19 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { toast } from 'sonner';
-import { Invoice } from '../../types';
-import {
-  Plus,
-  Users,
-  Download,
-  Mail,
-  Clock,
-  AlertCircle,
-  Activity,
-  ShieldCheck,
-  TrendingUp,
-  Trash2, DollarSign,
-  Eye, Ban, Undo2, Bell, BellOff, Pencil
-} from 'lucide-react';
+import { Customer, Invoice } from '../../types';
+import { Plus, Users, Download, Mail, Clock, AlertCircle, Activity, ShieldCheck, TrendingUp, Trash2, DollarSign, Eye, Ban, Undo2, Bell, BellOff, Pencil } from 'lucide-react';
 import { parseLocalDate, cn, formatCurrency, getLocalDateISO, safeConfirm, formatDate } from '../../lib/utils';
 import { getIdToken } from '../../firebase';
 import { isOpenInvoice } from '../../lib/txFilters';
@@ -24,13 +12,13 @@ import { motion } from 'motion/react';
 import InvoiceModal from './InvoiceModal';
 import { useRecordFocus, recordElementId } from '../../hooks/useRecordFocus';
 import { EmptyState } from '../ui/EmptyState';
+import ListColumnChooser from '../ui/ListColumnChooser';
 import CustomerModal from './CustomerModal';
 import TagFilter from '../common/TagFilter';
 import { allTags, hasTag, isArchivedParty } from '../../lib/contacts';
 import PartyRowActions, { ArchivedBadge, ShowArchivedToggle } from '../common/PartyRowActions';
 import EmailStatementsButton from './EmailStatementsButton';
 import DocumentTotalsFoot from '../ui/DocumentTotalsFoot';
-import { PartyDetailView } from '../common/PartyDetailView';
 import WriteOffModal from './WriteOffModal';
 import SpreadDialog from '../common/SpreadDialog';
 import { spreadProgress } from '../../lib/prepaidSchedule';
@@ -42,7 +30,8 @@ import { attachFiles, attachSummary } from '../../services/attachmentActions';
 import OpeningDocumentsDialog from '../common/OpeningDocumentsDialog';
 import type { ReceiptPayment } from './InvoiceModal';
 import InvoiceEmailDialog from './InvoiceEmailDialog';
-import PdfPreviewModal, { downloadDocumentPdf } from '../ui/PdfPreviewModal';
+import PdfPreviewModal from '../ui/PdfPreviewModal';
+import { downloadDocumentPdf } from '../../services/documentDownloads';
 import ReceivePaymentModal from './ReceivePaymentModal';
 
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -53,7 +42,6 @@ import { useCurrentRole } from '../../hooks/useCurrentRole';
 import InlineEdit from '../ui/InlineEdit';
 import InlineAdd from '../ui/InlineAdd';
 import DocumentBulkBar from '../ui/DocumentBulkBar';
-import { getDefaultTaxConfig, generateDefaultTaxRates } from '../../lib/taxRateDefaults';
 import { calculateNextOccurrence } from '../../lib/recurringEngine';
 
 import CustomerDetailView from './CustomerDetailView';
@@ -88,7 +76,7 @@ export default function Sales() {
     }
     return map;
   }, [customers, invoices, payments, creditNotes]);
-  const onAddInvoice = async (input: any) => { 
+  const onAddInvoice = async (input: Partial<Invoice> & { receiptPayment?: ReceiptPayment; attachmentFiles?: File[] }) => {
     // a sale receipt (K-03) carries where its money went; that is a payment, not part of the invoice
     // files picked for a new invoice (K-07) are kept with it once it has an id
     const { receiptPayment, attachmentFiles, ...rest } = input;
@@ -108,7 +96,7 @@ export default function Sales() {
       res = await updateEntity('invoices', id, updates); 
     } else {
       res = await addEntity('invoices', data); 
-      if (res && receiptPayment) await recordReceiptPayment(currentWorkspaceId || '', { ...data, id: res.id }, receiptPayment as ReceiptPayment);
+      if (res && receiptPayment) await recordReceiptPayment(currentWorkspaceId || '', { ...data, id: res.id }, receiptPayment);
       const uid = useAuthStore.getState().user?.uid;
       if (res && uid && Array.isArray(attachmentFiles) && attachmentFiles.length) {
         const { ok, message } = attachSummary(await attachFiles(currentWorkspaceId || '', uid, { collection: 'invoices', id: res.id, label: `Invoice ${data.number || ''}`.trim() }, attachmentFiles));
@@ -145,7 +133,7 @@ export default function Sales() {
     }
     return res;
   };
-  const onAddCustomer = (data: any) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
+  const onAddCustomer = (data: Partial<Customer>) => { if (data.id) { const { id, ...updates } = data; return updateEntity('customers', id, updates); } return addEntity('customers', data); };
   // opens on the invoice list ('pipeline' was the default but nothing draws it: the page was blank)
   const [activeSubTab, setActiveSubTab] = useState<'invoices' | 'customers'>('invoices');
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
@@ -216,6 +204,17 @@ export default function Sales() {
       return searchStr.includes(term);
     });
   }, [invoices, customers, searchTerm]);
+
+  const [invoiceLimit, setInvoiceLimit] = useState(100);
+  const visibleInvoices = useMemo(() => {
+    if (filteredInvoices.length <= invoiceLimit) return filteredInvoices;
+    const sliced = filteredInvoices.slice(0, invoiceLimit);
+    if (focusedInvoiceId && !sliced.some(i => i.id === focusedInvoiceId)) {
+      const focused = filteredInvoices.find(i => i.id === focusedInvoiceId);
+      if (focused) sliced.push(focused);
+    }
+    return sliced;
+  }, [filteredInvoices, invoiceLimit, focusedInvoiceId]);
 
   /**
    * Sign an invoice off or send it back (BE-04). This is the only place a decision is made from the
@@ -322,12 +321,12 @@ export default function Sales() {
       {/* Psychological Header: Aging Buckets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group"
         >
           <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-          <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 font-semibold mb-3 relative z-10">Critical Overdue</p>
+          <p className="text-[10px] font-mono uppercase tracking-widest text-rose-500 dark:text-[#ff495a] font-semibold mb-3 relative z-10">Critical Overdue</p>
           <p className="text-2xl sm:text-3xl font-mono font-bold text-rose-600 tracking-tight relative z-10 tabular-nums">{formatCurrency(agingBuckets.overdue)}</p>
           <div className="mt-3 flex items-center gap-2 text-xs font-mono text-[var(--muted)] relative z-10">
              <AlertCircle size={12} />
@@ -336,7 +335,7 @@ export default function Sales() {
         </motion.div>
         
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group"
@@ -351,7 +350,7 @@ export default function Sales() {
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--line)] shadow-sm relative overflow-hidden group"
@@ -366,7 +365,7 @@ export default function Sales() {
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
           className="p-5 bg-[var(--panel)] rounded-2xl border border-[var(--brass-line)] shadow-sm relative overflow-hidden group bg-gradient-to-b from-[var(--brass-soft)] to-[var(--panel)]"
@@ -389,15 +388,17 @@ export default function Sales() {
               workspaceId={currentWorkspaceId} onClear={() => setPickedInvoices(new Set())} />
           )}
           {/* the header and the totals stay in view while the list scrolls (I-14) */}
-          <div className="overflow-auto max-h-[70vh]">
+          <div className="overflow-auto max-h-[70vh]" data-list-columns="sales-invoices">
+            <ListColumnChooser scope="sales-invoices" label="Invoices"
+              columns={['Selection', 'Number', 'Customer', 'Date', 'Due', 'Amount', 'State', 'Actions']} />
             <table className="w-full border-collapse min-w-[700px]">
               <caption className="sr-only">Invoices</caption>
               <thead className="sticky top-0 z-10 bg-[var(--surface)]">
                 <tr className="text-left border-b border-[var(--line)]/50">
                   <th scope="col" className="pl-4 md:pl-8 w-8">
                     <input type="checkbox" aria-label="Select all invoices shown"
-                      checked={filteredInvoices.length > 0 && filteredInvoices.every(i => pickedInvoices.has(i.id))}
-                      onChange={e => setPickedInvoices(e.target.checked ? new Set(filteredInvoices.map(i => i.id)) : new Set())} />
+                      checked={visibleInvoices.length > 0 && visibleInvoices.every(i => pickedInvoices.has(i.id))}
+                      onChange={e => setPickedInvoices(e.target.checked ? new Set(visibleInvoices.map(i => i.id)) : new Set())} />
                   </th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Number</th>
                   <th scope="col" className="p-4 md:p-8 text-[10px] font-black text-[var(--muted)] uppercase tracking-[0.2em] whitespace-nowrap">Customer</th>
@@ -409,7 +410,7 @@ export default function Sales() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-ledger-line/30">
-                {filteredInvoices.map((inv) => (
+                {visibleInvoices.map((inv) => (
                   <tr key={inv.id} id={recordElementId('invoice', inv.id)} aria-current={focusedInvoiceId === inv.id ? 'true' : undefined}
                     className={cn("group hover:bg-[var(--ink)]/30 transition-all", focusedInvoiceId === inv.id && "ring-2 ring-inset ring-[var(--brass)]")}>
                     <td className="pl-4 md:pl-8">
@@ -505,7 +506,9 @@ export default function Sales() {
                         )}
                         {(() => {
                           // BE-05: the estimate's deposit waits until its invoice is issued
-                          const deposit = estimateDeposits(payments || [], inv.metadata?.convertedFromEstimateId as string | undefined);
+                          const estId = inv.metadata?.convertedFromEstimateId as string | undefined;
+                          if (!estId) return null;
+                          const deposit = estimateDeposits(payments || [], estId);
                           const due = calculateAmountDue(inv);
                           if (!canEditContacts || deposit.unappliedCents <= 0 || due <= 0 || ['draft', 'void', 'rejected', 'cancelled', 'paid'].includes(String(inv.status))) return null;
                           return (
@@ -620,6 +623,19 @@ export default function Sales() {
                     </td>
                   </tr>
                 ))}
+                {filteredInvoices.length > visibleInvoices.length && (
+                  <tr>
+                    <td colSpan={8} className="p-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceLimit(n => n + 200)}
+                        className="min-h-11 px-4 py-2 text-xs font-bold text-[var(--text)] bg-[var(--surface)] border border-[var(--line)] rounded-xl hover:bg-[var(--ink)]/50 transition-all"
+                      >
+                        Show more invoices ({visibleInvoices.length} of {filteredInvoices.length})
+                      </button>
+                    </td>
+                  </tr>
+                )}
                 {filteredInvoices.length === 0 && (
                   <tr>
                     <td colSpan={8} className="p-12">
@@ -648,7 +664,9 @@ export default function Sales() {
             <EmailStatementsButton className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-[var(--line)] text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)] disabled:opacity-50" />
             <ShowArchivedToggle count={archivedCustomers} on={showArchivedCustomers} onChange={setShowArchivedCustomers} noun="customer" />
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto" data-list-columns="sales-customers">
+            <ListColumnChooser scope="sales-customers" label="Customers"
+              columns={['Customer Profile', 'Contact', 'Net Receivable', 'Actions']} />
             {canEditContacts && (
               <InlineAdd className="px-4 md:px-8 pt-4" label="New customer name" placeholder="Add a customer: type a name and press Enter"
                 existing={customers.map(c => c.name)} onAdd={name => addEntity('customers', { name, status: 'active' }, `Customer "${name}" added`)} />
@@ -717,16 +735,17 @@ export default function Sales() {
                     </td>
                   </tr>
                 ))}
-                {customers.length === 0 && (
+                {shownCustomers.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="p-24 text-center relative overflow-hidden">
-                       <div className="absolute technical-grid inset-0 opacity-5 pointer-events-none" />
-                       <div className="relative z-10 flex flex-col items-center gap-4">
-                          <div className="w-20 h-20 bg-slate-200/20 rounded-[32px] flex items-center justify-center text-slate-500/30">
-                             <Users size={40} />
-                          </div>
-                          <p className="text-base font-black text-slate-500/40 uppercase tracking-[0.5em]">Supplier Registry Offline</p>
-                       </div>
+                    <td colSpan={4} className="p-6">
+                      {loading ? <LoadingState what="customers" /> : (
+                        <EmptyState
+                          title={customers.length === 0 ? 'No customers yet' : 'No customers match these filters'}
+                          description={customers.length === 0 ? 'Add a customer before creating their first invoice.' : 'Choose another tag or show archived customers.'}
+                          actionLabel={customers.length === 0 ? 'Add first customer' : undefined}
+                          onAction={customers.length === 0 ? () => setIsCustomerModalOpen(true) : undefined}
+                        />
+                      )}
                     </td>
                   </tr>
                 )}
@@ -738,60 +757,28 @@ export default function Sales() {
 
       {openingOpen && <OpeningDocumentsDialog side="customer" onClose={() => setOpeningOpen(false)} />}
       {/* mounted per opening, so a new invoice never inherits the last one's fields */}
-      {isInvoiceModalOpen && <InvoiceModal
-        key={`${newInvoiceFor?.id || 'new'}${receiptMode ? '-receipt' : ''}`}
-        isOpen={isInvoiceModalOpen}
-        receipt={receiptMode}
-        onClose={() => { setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); setReceiptMode(false); }}
-        onSave={async (inv) => {
-          await onAddInvoice(inv);
-          setIsInvoiceModalOpen(false);
-          setNewInvoiceFor(undefined);
-          setReceiptMode(false);
-        }}
-        customers={customers}
-        accounts={accounts}
-        initialInvoice={newInvoiceFor}
-      />}
-      <CustomerModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onSave={async (cust) => {
-          await onAddCustomer(cust);
-          setIsCustomerModalOpen(false);
-        }}
-      />
+      {isInvoiceModalOpen && (
+        <InvoiceModal key={`${newInvoiceFor?.id || 'new'}${receiptMode ? '-receipt' : ''}`} isOpen={isInvoiceModalOpen} receipt={receiptMode}
+          onClose={() => { setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); setReceiptMode(false); }}
+          onSave={async (inv) => { await onAddInvoice(inv); setIsInvoiceModalOpen(false); setNewInvoiceFor(undefined); setReceiptMode(false); }}
+          customers={customers} accounts={accounts} initialInvoice={newInvoiceFor} />
+      )}
+      <CustomerModal isOpen={isCustomerModalOpen} onClose={() => setIsCustomerModalOpen(false)}
+        onSave={async (cust) => { await onAddCustomer(cust); setIsCustomerModalOpen(false); }} />
       {isPaymentModalOpen && paymentDocumentId && paymentContactId && (
-        <ReceivePaymentModal
-          isOpen={isPaymentModalOpen}
-          onClose={() => setIsPaymentModalOpen(false)}
-          defaultDirection="received"
-          defaultDocumentId={paymentDocumentId}
-          defaultContactId={paymentContactId}
-        />
+        <ReceivePaymentModal isOpen={isPaymentModalOpen} onClose={() => setIsPaymentModalOpen(false)}
+          defaultDirection="received" defaultDocumentId={paymentDocumentId} defaultContactId={paymentContactId} />
       )}
       {emailInvoice && <InvoiceEmailDialog invoice={emailInvoice} onClose={() => setEmailInvoice(null)} />}
       {spreadingInvoice && <SpreadDialog kind="invoice" document={spreadingInvoice} onClose={() => setSpreadingInvoice(null)} />}
       {isWriteOffOpen && selectedInvoiceForWriteOff && (
-        <WriteOffModal
-          isOpen={isWriteOffOpen}
-          onClose={() => {
-            setIsWriteOffOpen(false);
-            setSelectedInvoiceForWriteOff(null);
-          }}
-          invoice={selectedInvoiceForWriteOff}
-        />
+        <WriteOffModal isOpen={isWriteOffOpen} onClose={() => { setIsWriteOffOpen(false); setSelectedInvoiceForWriteOff(null); }} invoice={selectedInvoiceForWriteOff} />
       )}
       {previewPdfInvoice && (
-        <PdfPreviewModal
-          isOpen={!!previewPdfInvoice}
-          onClose={() => setPreviewPdfInvoice(null)}
-          title={`Invoice ${previewPdfInvoice.number || previewPdfInvoice.id}`}
-          documentType="invoice"
-          documentId={previewPdfInvoice.id}
-          workspaceId={currentWorkspaceId || 'default'}
-          filename={`invoice_${previewPdfInvoice.number || previewPdfInvoice.id}.pdf`}
-        />
+        <PdfPreviewModal isOpen={!!previewPdfInvoice} onClose={() => setPreviewPdfInvoice(null)}
+          title={`Invoice ${previewPdfInvoice.number || previewPdfInvoice.id}`} documentType="invoice"
+          documentId={previewPdfInvoice.id} workspaceId={currentWorkspaceId || 'default'}
+          filename={`invoice_${previewPdfInvoice.number || previewPdfInvoice.id}.pdf`} />
       )}
     </div>
   );

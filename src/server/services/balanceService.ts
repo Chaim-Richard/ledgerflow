@@ -25,6 +25,8 @@ import type { ChartAccount, Transaction } from '../../types';
 import type { Firestore, Transaction as DbTransaction } from '../db/firestore';
 import { calculateNetIncome, isPostable, lineAmount, transactionDate } from '../../lib/txFilters';
 import { getLineDimension } from '../../lib/dimensionUtils';
+import { activityByMonth, type ActivityByMonth } from '../../lib/periodActivity';
+import { computeTopExpensesAndIncome, type TopLineItem } from '../../lib/reportGenerators';
 
 export const UNASSIGNED = 'Unassigned';
 export type Cents = Record<string, number>;
@@ -310,4 +312,33 @@ export async function rebuildSnapshots(db: Firestore, workspaceId: string, built
     built.push(asOf);
   }
   return { built };
+}
+
+/**
+ * L-123 step 3e: activity per account per month (net, gross debits, gross credits) and entry counts over every
+ * postable entry dated `from`…`to` (src/lib/periodActivity.ts). Reads the entries of the range only, no snapshot.
+ */
+export async function activityOver(db: Firestore, workspaceId: string, from: string, to: string): Promise<{ months: ActivityByMonth; entriesRead: number }> {
+  if (!DATE.test(from) || !DATE.test(to) || from > to) throw new Error(`An activity range is two YYYY-MM-DD dates, from ≤ to (got "${from}", "${to}")`);
+  const snap = await db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '>=', from).where('date', '<', nextDay(to)).get();
+  const entries = snap.docs.map(entryOf);
+  return { months: activityByMonth(entries, from, to), entriesRead: entries.length };
+}
+
+/**
+ * L-123 step 4a: the largest single expense and income lines dated `from`…`to` over every postable entry (what
+ * `computeTopExpensesAndIncome` gives over the full history). Entries dated from `from` on are read, not only to `to`:
+ * a reversal dated after the range still takes the entry it reverses (dated inside it) out of the list, as it does in
+ * the browser. Only a reversal dated before `from` that reverses an entry inside the range is not seen.
+ */
+export async function topLinesOver(db: Firestore, workspaceId: string, from: string, to: string, limit: number): Promise<{ topExpenses: TopLineItem[]; topIncome: TopLineItem[]; entriesRead: number }> {
+  if (!DATE.test(from) || !DATE.test(to) || from > to) throw new Error(`A line range is two YYYY-MM-DD dates, from ≤ to (got "${from}", "${to}")`);
+  const [accountsSnap, entriesSnap] = await Promise.all([
+    db.collection('chartAccounts').where('workspaceId', '==', workspaceId).get(),
+    db.collection('transactions').where('workspaceId', '==', workspaceId).where('date', '>=', from).get(),
+  ]);
+  const accounts = accountsSnap.docs.map(d => ({ ...d.data(), id: d.id }) as ChartAccount);
+  // every entry read, postable or not, as the browser passes its loaded list (the report itself keeps the postable ones)
+  const entries = entriesSnap.docs.map(entryOf);
+  return { ...computeTopExpensesAndIncome(accounts, entries, limit, from, to), entriesRead: entries.length };
 }

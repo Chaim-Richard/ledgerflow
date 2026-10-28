@@ -78,3 +78,17 @@ These are leads for the dedicated reviewer to reproduce, not an assertion that t
 | **Public launch** | Separate release decision after the real-data pilot, incident runbook, scale and recovery evidence, billing/support/legal review |
 
 **Launch metric:** completed end-to-end journeys with verified figures and recovery, not raw module count, tracked item count or passing type checks.
+
+## Evidence so far (AI #1, 27 Oct). Code is done; each row still needs its check on the deployed site.
+
+- **G-05 (test environment):** the built app shows a banner on every screen: "Test environment. Use made-up books only:
+  no real customers, payments or tax filings." (`src/components/support/TestEnvironmentBanner.tsx`, shown by
+  `src/lib/testEnvironment.ts`). It is in the production bundle, not on the development server, so browser screenshots are
+  unchanged. Set `VITE_TEST_ENVIRONMENT=off` in Vercel to remove it once real books are allowed. Test:
+  `src/tests/test-environment-banner.test.tsx`. *Still to check on the live site:* the banner appears; no real-payment or
+  filing action is offered.
+- **G-06 (report a problem):** "Report a problem" in the banner, and "Send feedback" on every screen, open the existing
+  feedback form. It saves a support ticket with the screen and app version, plus an optional screenshot, and now shows
+  the tester a reference (`feedbackReference`: the ticket's first 8 characters). Reports appear on Settings → Support:
+  for a platform admin, every workspace's tickets; for a tester, their own. *Still to check on the live site:* send one
+  and find it there.

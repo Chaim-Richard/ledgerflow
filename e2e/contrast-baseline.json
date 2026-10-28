@@ -1,14 +1,19 @@
 {
   "light:Overview": 0,
   "light:Transactions": 0,
-  "light:Sales": 1,
-  "light:Purchases": 1,
+  "light:Sales": 0,
+  "light:Purchases": 0,
   "light:Reports": 0,
-  "light:Settings": 1,
+  "light:Settings": 0,
   "dark:Overview": 0,
   "dark:Transactions": 0,
   "dark:Sales": 0,
   "dark:Purchases": 0,
-  "dark:Reports": 3,
-  "dark:Settings": 3
+  "dark:Reports": 0,
+  "dark:Settings": 0,
+  "dark:Banking": 0,
+  "dark:Reconcile": 0,
+  "dark:BalanceSheet": 0,
+  "dark:TrialBalance": 0,
+  "dark:Taxes": 0
 }

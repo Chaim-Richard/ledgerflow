@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { PayRun } from '../types';
-import { exactIlsCents, IsraelForm102Review } from '../components/hr/IsraelForm102Review';
+import { IsraelForm102Review } from '../components/hr/IsraelForm102Review';
+import { exactIlsCents } from '../lib/tax/israel102Review';
 
 const run: PayRun = {
   id: 'posted-1', uid: 'owner-1', workspaceId: 'ws-1',

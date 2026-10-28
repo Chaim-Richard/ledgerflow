@@ -2,7 +2,7 @@ import './helpers/dom';
 import test, { afterEach, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import React from 'react';
-import { act, cleanup, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import Dashboard from '../components/Dashboard';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useDataNeedsStore } from '../stores/useDataNeedsStore';
@@ -57,7 +57,7 @@ test('a previously completed empty workspace stays a dashboard, not first-time o
   assert.equal(screen.queryByText('Your Ledger is Ready.'), null);
 });
 
-test('a failed core collection shows a retry instruction rather than guessing new books', async () => {
+test('a failed core collection shows a working retry rather than guessing new books', async () => {
   const ws = setComponentWorkspace();
   useLedgerStore.setState({ transactions: [], accounts: [] });
   useDataNeedsStore.getState().resetLoaded(ws.id);
@@ -65,4 +65,6 @@ test('a failed core collection shows a retry instruction rather than guessing ne
   await act(async () => { useDataNeedsStore.getState().markFailed('transactions', 'offline'); });
   assert.match(screen.getByRole('alert').textContent || '', /Could not load your books/);
   assert.equal(screen.queryByText('Set up your books'), null);
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  assert.equal(useDataNeedsStore.getState().failed.transactions, undefined);
 });

@@ -120,10 +120,20 @@ test.describe('E2E Smoke Suite', () => {
       }
     });
 
-    let interceptedTxPayload: any = null;
+    interface InterceptedLine {
+      category?: string;
+      description?: string;
+      amountCents: number;
+    }
+    interface InterceptedTransaction {
+      totalAmountCents?: number;
+      description?: string;
+      lines?: InterceptedLine[];
+    }
+    let interceptedTxPayload: InterceptedTransaction | null = null;
     await page.route('**/api/v1/transactions', async (route) => {
       if (route.request().method() === 'POST') {
-        interceptedTxPayload = route.request().postDataJSON()?.transaction;
+        interceptedTxPayload = route.request().postDataJSON()?.transaction as InterceptedTransaction;
         await route.fulfill({
           status: 201,
           contentType: 'application/json',
@@ -176,24 +186,25 @@ test.describe('E2E Smoke Suite', () => {
     // Assert that the created transaction payload strictly satisfies accounting invariants:
     // (1) Total Amount Cents matches receipt total ($20.00 = 2000 cents)
     expect(interceptedTxPayload).not.toBeNull();
-    expect(interceptedTxPayload.totalAmountCents).toBe(2000);
-    expect(interceptedTxPayload.description).toBe('ShopRite Supermarket');
+    const txPayload = interceptedTxPayload!;
+    expect(txPayload.totalAmountCents).toBe(2000);
+    expect(txPayload.description).toBe('ShopRite Supermarket');
 
     // (2) Tax line item exists and matches taxAmountCents (152 cents)
-    const taxLine = interceptedTxPayload.lines?.find((l: any) =>
+    const taxLine = txPayload.lines?.find((l) =>
       l.category?.toLowerCase().includes('tax') ||
       l.description?.toLowerCase().includes('tax')
     );
     expect(taxLine).toBeDefined();
-    expect(taxLine.amountCents).toBe(152);
+    expect(taxLine!.amountCents).toBe(152);
 
     // (3) Double-entry balanced debits and credits
-    const debitSum = interceptedTxPayload.lines
-      ?.filter((l: any) => (l.amountCents || 0) > 0)
-      .reduce((s: number, l: any) => s + l.amountCents, 0) || 0;
-    const creditSum = interceptedTxPayload.lines
-      ?.filter((l: any) => (l.amountCents || 0) < 0)
-      .reduce((s: number, l: any) => s + Math.abs(l.amountCents), 0) || 0;
+    const debitSum = txPayload.lines
+      ?.filter((l) => (l.amountCents || 0) > 0)
+      .reduce((s: number, l) => s + l.amountCents, 0) || 0;
+    const creditSum = txPayload.lines
+      ?.filter((l) => (l.amountCents || 0) < 0)
+      .reduce((s: number, l) => s + Math.abs(l.amountCents), 0) || 0;
     expect(debitSum).toBe(creditSum);
     expect(debitSum).toBe(2000);
   });

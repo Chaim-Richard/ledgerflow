@@ -21,9 +21,9 @@ export function SystemTelemetryPanel({ model }: { model: SystemCommandCenterMode
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Database aria-hidden="true" size={18} />
                   </div>
-                  <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h3>
+                  <h2 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Active Tenants</h2>
                 </div>
-                <h2 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</h2>
+                <p className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">{telemetry.tenants.length}</p>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Isolated workspaces in sync</p>
               </div>
 
@@ -35,11 +35,11 @@ export function SystemTelemetryPanel({ model }: { model: SystemCommandCenterMode
                   <div className="w-10 h-10 bg-slate-900 text-white rounded-[32px] flex items-center justify-center">
                     <Activity aria-hidden="true" size={18} />
                   </div>
-                  <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h3>
+                  <h2 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">Global Ledger Rows</h2>
                 </div>
-                <h2 className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
+                <p className="text-2xl md:text-4xl font-black font-mono text-[var(--text)] tracking-tight">
                   {telemetry.tenants.reduce((acc, t) => acc + t.txCount, 0).toLocaleString()}
-                </h2>
+                </p>
                 <p className="text-[9px] font-bold text-[var(--muted)] uppercase tracking-wider mt-2">Total transactional assertions</p>
               </div>
 
@@ -51,9 +51,9 @@ export function SystemTelemetryPanel({ model }: { model: SystemCommandCenterMode
                   <div className="w-10 h-10 bg-rose-500/10 text-rose-600 rounded-[32px] flex items-center justify-center">
                     <AlertOctagon aria-hidden="true" size={18} />
                   </div>
-                  <h3 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h3>
+                  <h2 className="text-[10px] font-black text-[var(--muted)] uppercase tracking-widest">API Incidents (400+)</h2>
                 </div>
-                <h2 className="text-2xl md:text-4xl font-black font-mono text-rose-600 tracking-tight">{totalErrors}</h2>
+                <p className="text-2xl md:text-4xl font-black font-mono text-rose-600 tracking-tight">{totalErrors}</p>
                 <p className="text-[9px] font-bold text-rose-500 uppercase tracking-wider mt-2">Aggregated active warning nodes</p>
               </div>
             </div>

@@ -22,6 +22,7 @@
  * Nothing here posts, sends or changes a recurring rule.
  */
 import type { Customer, RecurringTransaction } from '../types';
+import { getLocalDateISO } from './utils';
 
 export type PlanStatus = 'active' | 'paused' | 'completed';
 
@@ -132,7 +133,7 @@ function planStatus(plan: SubscriptionPlansInput['plans'][number]): PlanStatus {
 
 /** The window is the caller's, or the twelve months that end with `to`. */
 function windowFor(input: SubscriptionPlansInput): { from: string; to: string } | null {
-  const to = input.to && MONTH.test(input.to) ? input.to : monthOf(input.plans.map(plan => plan.nextOccurrence).sort().at(-1)) || monthOf(new Date().toISOString());
+  const to = input.to && MONTH.test(input.to) ? input.to : monthOf(input.plans.map(plan => plan.nextOccurrence).sort().at(-1)) || monthOf(getLocalDateISO());
   if (!MONTH.test(to)) return null;
   const from = input.from && MONTH.test(input.from) ? input.from : addMonths(to, -11);
   if (monthIndex(from) > monthIndex(to)) return null;

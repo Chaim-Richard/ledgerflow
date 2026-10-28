@@ -47,7 +47,14 @@ test.describe('Transaction List Improvements Suite', () => {
 
     // Inject a test transaction with attachments (fileUrls) into the Zustand ledger store
     await page.evaluate(() => {
-      const store = (window as any).__ledgerStore;
+      const store = (window as unknown as {
+        __ledgerStore?: {
+          getState?: () => {
+            transactions?: unknown[];
+            setTransactions: (txs: unknown[]) => void;
+          };
+        };
+      }).__ledgerStore;
       const testTx = {
         id: 'tx_e2e_attachment_test',
         uid: 'guest_user',
