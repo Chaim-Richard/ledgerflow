@@ -59,9 +59,10 @@ product taxability) but every current target is an **accumulate** rule or a comp
 so the two orderings that differ are not reachable from today's packs. Reason: the pack builders derive
 targets from the rate tables, and none of those tables nests an override under an override.
 - `lintRules` refuses a rule that overrides with no targets and a target that does not exist, but not a
-  chain, a cycle or two overrides targeting each other. A future pack (or an imported local-rate table with
-  a "combined" row in a state that already has a combined row for an overlapping period) can produce one
-  without any test failing.
+  chain, a cycle or two overrides targeting each other. Do not use overlapping combined rows in the local-rate
+  pack as evidence of a reachable chain: `usLocalRatePack` targets state rules and earlier component rows, and
+  excludes combined rows from `samePlace`. The risk is a future rule pack or another supported input creating
+  a chain/cycle that the current linter does not reject.
 
 ## Proposed correction (AI #9 / AI #1 lane — rules engine)
 
@@ -70,8 +71,7 @@ Pick one deterministic semantics and enforce it instead of relying on order:
 1. **Reject unsupported graphs.** In `lintRules`, refuse an override whose target is itself an override, and
    any cycle among overrides/exclusions. That keeps today's packs valid and turns the next one into a loud
    failure with the rule ids named.
-2. Or **resolve to a fixed point** (iterate until no further displacements), so a chain has one answer
-   whatever the array order, and report the final `by` for each displaced rule.
+Do not implement a naive fixed-point loop as written here: each iteration must retract all displacement effects from overrides that are no longer active, remove their stale entries from the `off` map, then recompute active overrides from the settled set. Cycles need explicit detection and a deterministic lint/error result. Until those semantics and tests are designed, prefer option 1 (reject chains/cycles) rather than claiming a simple repeated pass is correct.
 
 **Acceptance test:** the same three rules in all six permutations produce one identical outcome, plus a lint
 case that refuses `A overrides B` where `B` overrides `C`, and a property test over random small graphs
@@ -80,4 +80,4 @@ asserting permutation-invariance. Worked tax figures in the existing packs must 
 ## Limits
 
 Executed against `evaluateRules` directly (no HTTP, no workspace). The probe demonstrates the engine, not a
-wrong tax figure in a live book: with the current packs the outcome is order-stable because no chain exists.
+wrong tax figure in a live book: with the current packs the applied and displaced sets are order-stable because no reachable chain exists. The `displaced[].by` value can still depend on order when multiple exclusions target the same rule and a later exclusion overwrites the earlier `Map` entry.
