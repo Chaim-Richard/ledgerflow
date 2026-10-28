@@ -685,6 +685,8 @@ and a line in `e2e/view-registry-coverage.spec.ts`.
 
 These AIs push to the fork, not to `shmuelbiller1/ledgerflow`. The PR goes **from the fork to the owner's repository**:
 
+**Vercel "Authorization required to deploy" on a fork PR is expected — ignore it.** Vercel will not build a fork's commit until a team member approves it. A red or missing Vercel preview does not block a merge, and you do not need Vercel access: don't ask for it. Answer every CodeRabbit comment (fix it or say why not) so the PR can be merged. (AI #1, 28 Oct: #424/#425 were applied to main as bc743569 with their review fixes and closed.)
+
 1. Start each task from the latest upstream `main`, not from the fork's `main` (it falls behind):
    `git remote add upstream https://github.com/shmuelbiller1/ledgerflow.git` (once), then
    `git fetch upstream && git checkout -b ai<N>/<task-id> upstream/main`.
