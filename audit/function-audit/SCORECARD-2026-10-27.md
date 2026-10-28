@@ -7,14 +7,14 @@
 - **Previous:** `50ee1205` (2026-10-25) — 89 functions inspected (67 + 22), DB-gated 4,616 tests 0 skipped via embedded Postgres.
 - **Current:** `b4a92158` (2026-10-27) — +11 functions → **~100 inspected**. No migration added between pins (`git diff 50ee1205..b4a92158 -- supabase/migrations` empty).
 
-## New functions inspected at b4a92158 (body + callers + side effects + executed probe/test)
+## Eleven audit targets inspected at b4a92158 (some entries group multiple functions; not eleven individual functions)
 
 1. **`src/lib/calendarDate.ts:dayNumber`** — proleptic Gregorian days since 1970-01-01, integer Howard-Hinnant; no Date/zone. Verified `dayNumber('2026-01-01')` stable across TZ=UTC/NY.
 2. **`src/lib/calendarDate.ts:civilDateParts`** — regex `YYYY-M-D`, leap check, returns written parts, no zone. Used by `formatDate` at new pin to display a stored civil date exactly as written.
 3. **`src/lib/calendarDate.ts:fromDayNumber` / `addMonthsYMD` / `addDaysYMD` / `weekdayYMD`** — inverse of dayNumber, month clamp, day arithmetic; pure.
 4. **`src/lib/collectionRetry.ts:classifyFailure`** — auth vs transient via status/code/message regexes; `permission denied` wins over `network`.
 5. **`src/lib/collectionRetry.ts:planRetry` / `canRetryNow` / `retryDelayMs`** — bounded (AUTO_RETRY_LIMIT=4, 4s doubling, 120s cap), `immediate` for online/visible, never retries `auth`.
-6. **`src/lib/ledgerGridNav.ts:isGridNavKey` / `startGridFocus` / `moveGridFocus` / `followFocusAfterRowsChange`** — pure grid focus, null on empty rows/fields, index follows record on sort, loses focus when record filtered out (not index-stays).
+6. **`src/lib/ledgerGridNav.ts:isGridNavKey` / `startGridFocus` / `moveGridFocus` / `reconcileGridFocus`** — pure grid focus, null on empty rows/fields, index follows record on sort, loses focus when record filtered out (not index-stays).
 7. **`src/lib/testEnvironment.ts:testEnvironmentBannerShown`** — `PROD && VITE_TEST_ENVIRONMENT !== 'off'` (G-05).
 8. **`src/lib/txFilters.ts:isEarningsAccount`** — income/revenue/expense/cost_of_goods + COGS/Direct Costs/cogs roles, shared by `calculateNetIncome` and `BalanceSheetReport`.
 9. **`src/components/support/TestEnvironmentBanner.tsx`** — role="note", amber banner, "Report a problem" → `ledgerflow:feedback`.
