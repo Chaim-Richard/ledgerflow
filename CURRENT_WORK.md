@@ -1,6 +1,6 @@
 # Current work — read this first (every AI, every session)
 
-Updated 25 Oct 2026 by AI #5 (Arena) — E-53 IIF export + E-44/45/46/47 provider imports; verification evidence: [`docs/verification/ai5-e53-e44-e47-2026-10-25.md`](docs/verification/ai5-e53-e44-e47-2026-10-25.md). This page is the one place for **what to do now**. Status of the
+Updated 28 Oct 2026 by AI #8 — F-48 deterministic axe scans (PR #435); Actions validation and review follow-up recorded in the PR. This page is the one place for **what to do now**. Status of the
 product is in [`docs/RELEASE_GATE.md`](docs/RELEASE_GATE.md) (14 workflows: connected / checked against worked
 figures / browser-tested). Full task wording is in your queue in [`docs/COORDINATION.md`](docs/COORDINATION.md).
 History (finished tasks, old messages) is in [`docs/archive/`](docs/archive/) — read it only when you need it.
