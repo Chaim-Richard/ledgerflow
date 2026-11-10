@@ -1834,3 +1834,17 @@ Review round (26 Oct): saved-view comparison/period restore, private query-key a
 ## Money input fixes (AI #1, 28–29 Oct)
 - [x] **AF-010** typed amounts: `readAmountCents` on ten screens (#432); quick entry always posts two lines (#431); a mistyped estimate price no longer freezes the price box (#437).
 - [x] **AF-011** decimal comma: `12,50` read 1,250.00 and `1.234,56` read 1.23. Now `1.234,56`, `1 234,56` and `1234,56` read as the decimal everywhere, and `12,50` / `1,23` finish as a decimal only in comma-decimal books, so an en-US save still refuses a half-typed `1,234` (#438).
+
+## UX — the whole front end, screen by screen (owner, 9 Nov: "make sure the UI/UX of the whole site is good, normal and great")
+
+Method for every item: open the screen in a browser at 1280 and 1440 px (and 390 px for phones), fix what is messy, check the screenshot again, then a PR. Plain words only, no made-up figures, one page-header shape (title + one line + actions on the right, like Purchases), tables fit the screen.
+
+- [x] UX-1 Journal Entries: one-row toolbar, table fills the window and fits the width, one line per entry, plain words (PR #582)
+- [x] UX-2 Sales: plain header and cards, fake "Mid-Term" $0 card removed, page padding; compact Columns chooser on every list (PR #582)
+- [x] UX-3 Reconcile: normal-case title, "0% of bank lines matched", controls fit at 1280 and 390, names wrap (#589, 9 Nov)
+- [x] UX-4 Reports: the controls above a report (paper size, Generate, saved views, "Choose report" box) into one tidy row — done (#591, 9 Nov)
+- [x] UX-5 Dashboard: the empty "First-hour bookkeeping guide" box, spacing, date range in the header row — done (#594, 9 Nov)
+- [x] UX-6 Settings: survey and tidy — plan cards fixed in #582; 25 sub-pages checked at 1280/390, nothing clipped (9 Nov)
+- [x] UX-7 Top of every page: backup reminder and demo banner in one slim line; tab bar spacing — done (#596, 9 Nov)
+- [x] UX-8 One shared page-header component used by every main screen — `PageHeader` on Dashboard, Sales, Purchases, Purchase orders (#597, 10 Nov)
+- [x] UX-9 Phone (390 px) pass over the same screens — clipping check over 10 main screens at 1280/390 clean (#598, 10 Nov)
