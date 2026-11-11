@@ -19,7 +19,8 @@ the tip was `3f60e2dc` when the FINAL-13 patch was cut; the commits after it are
 
 | Drive file | id | What it is |
 |---|---|---|
-| `2026-11-10_Agent6_Ledgerflow_FINAL-23-commits-fa93999.patch` | `1whzuUcru1EuWDT2Wp6Ku7tmu94NbL6im` | **THE backup to restore from**: all 23 commits `e58fa00..HEAD`, tip `fa93999`, 164,742 B, sha256 `50a44ae860f2ec3a`. Verified: `git am` onto `e58fa00` exits 0 and reproduces **all 15 audit files byte-for-byte**. |
+| `2026-11-10_Agent6_Ledgerflow_FINAL-26-commits-253db73.patch` | `(id)` | **THE backup to restore from**: all 26 commits `e58fa00..HEAD`, tip `253db73`, 170,556 B, sha256 `a060b9fbabef36bb`. Verified: `git am` onto `e58fa00` exits 0 and reproduces **all 15 audit files byte-for-byte**. |
+| `2026-11-10_Agent6_Ledgerflow_FINAL-23-commits-fa93999.patch` | `1whzuUcru1EuWDT2Wp6Ku7tmu94NbL6im` | earlier verified backup (23 commits), kept |
 | `2026-11-10_Agent6_Ledgerflow_FINAL-22-commits-4a3fa09.patch` | `1qB7eTVSYIKwhchCbBMkrY7EvEyvg6dfa` | earlier verified backup (22 commits), kept |
 | `2026-11-10_Agent6_Ledgerflow_COMPLETE-20-commits-dc3fed4.patch` | `1eNt9B-lo1Rx4lGLbq-vcwAK-7J-jS90Y` | earlier verified backup (20 commits), kept |
 | `2026-11-10_Agent6_Ledgerflow_COMPLETE-19-commits.patch` | `1JJTYoV2J3LhN1Ahat0b0ncfNAQ7iFG6T` | earlier verified backup (19 commits), kept |
