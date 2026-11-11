@@ -56,3 +56,39 @@
    compare sizes/hashes; write the Drive index file with ids.
 4. If time remains: reproduce #517/#519 (line-level entity label, seller profile), and add a
    registration-level version of the route matrix to the repo as the D-30 replacement.
+
+---
+
+## CHECKPOINT-02 (2026-11-10, ~04:37Z) — the sandbox was recycled, and what that proved
+
+Between two tool calls this session the workspace was torn down and rebuilt:
+
+* **`/home/user/lf-pin` — the pinned audit tree — was gone.**
+* **`/tmp` was gone**, taking every log (`pin-shard1.log`, `shard2.log`, `shard3.log`, `shard4.log`,
+  `pin-tsc*.log`, `pin-eslint-*.log`, `pin-build.log`) and the `format-patch` files with it.
+* **The local checkout was reset**: `git log` showed `e58fa00` again and the 15 audit commits were no
+  longer in the local history. **`node_modules` was gone too.**
+
+What survived, and why it matters:
+
+| Store | State after the recycle |
+|---|---|
+| `origin/arena/9bdf6e26-ledgerflow` on GitHub | **intact**, tip `8a423a05`, 15 commits — restored locally with `git fetch && git reset --hard origin/…` in one command |
+| Google Drive folder `1gXiKgFoNYDyHgVO2PEAtyNfPE-GO-rrD` | intact (29+ files, every findings/gates/handoff revision + probe + patch) |
+| `/tmp` scratch | **gone — do not rely on it for anything a later session needs** |
+
+**Lesson for every agent after this one:** the Arena workspace is *not* durable across a session, and
+`/tmp` is the least durable part of it. Anything worth keeping must be (a) committed **and pushed**,
+or (b) uploaded to Drive, *in that order of preference*. Logs quoted in `03-gates.md` are transcribed
+there for exactly this reason; they no longer exist as files.
+
+To re-establish the pin after a recycle:
+
+```sh
+mkdir -p /home/user/lf-pin && cd /home/user/ledgerflow
+git fetch upstream main
+git archive upstream/main | tar -x -C /home/user/lf-pin
+ln -s /home/user/ledgerflow/node_modules /home/user/lf-pin/node_modules   # after npm ci
+```
+
+(`lf-pin` has no `.git`, so `vercel-ignore-boundary` will fail there again — see `03-gates.md`.)
