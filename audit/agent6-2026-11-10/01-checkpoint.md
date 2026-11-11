@@ -119,3 +119,13 @@ Result on 2026-11-10: **`git am` exit 0, 8/8 docs and 7/7 probes byte-identical.
 *working tree* is not identical to `HEAD` as a git tree, because `git archive` drops `.github/`,
 `.husky/` and other dot-directories that are excluded from the snapshot; that is a property of the
 archive, not of the patch — compare the **audit files**, which is what the patch carries.
+
+### Recovery paths, all three tested (2026-11-10, after the recycle)
+
+| path | command | result |
+|---|---|---|
+| **GitHub (primary)** | `git clone --depth 1 --branch arena/9bdf6e26-ledgerflow https://github.com/Chaim-Richard/ledgerflow.git` | exit 0, tip `b59afc9`, all 15 audit files **byte-identical** to the working copy |
+| **Drive patch** | `git am 2026-11-10_…FINAL-23-commits-fa93999.patch` onto `e58fa00` | exit 0, 15/15 files byte-identical |
+| **Local `.git`** | — | **not a recovery path**: the sandbox reset it to `e58fa00` mid-session |
+
+So: push first, patch second, and never treat the workspace as the store.
