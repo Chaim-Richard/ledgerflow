@@ -7,6 +7,7 @@ import { useServerGeneralLedger } from '../../hooks/useServerGeneralLedger';
 import { RangeReportSourceNote } from '../reporting/RangeReportSourceNote';
 import { Search, BookOpen, Printer } from 'lucide-react';
 import { Labelled } from '../ui/Labelled';
+import { printElementById } from '../../lib/printRoot';
 
 function keyedLedgerEntries(entries: ReturnType<typeof computeGeneralLedger>['accounts'][number]['entries']) {
   const occurrences = new Map<string, number>();
@@ -46,9 +47,21 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-7xl mx-auto">
+      {/* H-7/AI #10: the ledger's own sheet is the print root. Without it `window.print()` printed
+          the whole application shell (sidebar, header, banners) because the print rules in
+          src/index.css only narrow the page when a root exists. The title and period below travel
+          with the sheet so the paper says which book and which days it covers. */}
+      <div id="general-ledger-sheet" data-print-root className="space-y-6">
+      <div className="hidden print:block">
+        <h1 className="text-xl font-bold">General Ledger</h1>
+        <p className="text-xs">
+          {selectedAccountId === 'all' ? 'All accounts' : accounts.find(a => a.id === selectedAccountId)?.name || 'Account'}
+          {' · '}{startDate} to {endDate}
+        </p>
+      </div>
       <RangeReportSourceNote source={source} testId="general-ledger-source" what="these balances and lines" />
       {/* Header */}
-      <div className="flex flex-wrap items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <div data-print-hide className="flex flex-wrap items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
           <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
             <BookOpen aria-hidden="true" className="w-6 h-6" />
@@ -64,7 +77,8 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
         </div>
         <button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => printElementById('general-ledger-sheet')}
+          data-print-hide
           className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-lg transition-colors print:hidden"
         >
           <Printer aria-hidden="true" className="w-4 h-4" />
@@ -73,7 +87,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
+      <div data-print-hide className="flex flex-wrap items-center justify-between gap-4 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
         <div className="flex flex-wrap items-center gap-3">
           <div>
             <Labelled labelClassName="block text-[10px] font-bold text-[var(--muted)] uppercase mb-1" label="From">
@@ -212,6 +226,7 @@ export default function GeneralLedgerView({ startDate: pageStartDate, endDate: p
             )}
           </div>
         ))}
+      </div>
       </div>
     </div>
   );
