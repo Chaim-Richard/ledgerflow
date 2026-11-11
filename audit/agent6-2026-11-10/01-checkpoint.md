@@ -92,3 +92,30 @@ ln -s /home/user/ledgerflow/node_modules /home/user/lf-pin/node_modules   # afte
 ```
 
 (`lf-pin` has no `.git`, so `vercel-ignore-boundary` will fail there again — see `03-gates.md`.)
+
+### How to cut a backup patch that is actually complete
+
+The first backup patches this session were cut with `git format-patch -15 --stdout`, which counts
+**from `HEAD`** — so as the branch grew, the oldest commit (`1ef64361`, the one that *creates*
+`02-findings.md`) silently fell out of the series, and `git am` failed on patch 2 with
+`03-gates.md: does not exist in index`. **A patch that does not apply is not a backup.**
+
+The correct form names the range, then proves it:
+
+```sh
+cd /home/user/ledgerflow
+git format-patch e58fa00a..HEAD --stdout > /tmp/agent6-complete.patch   # 19 commits, 150,967 B
+
+# proof: am onto the base in a scratch repo and compare every audit file
+rm -rf /tmp/restore2 && mkdir /tmp/restore2 && cd /tmp/restore2 && git init -q .
+git -C /home/user/ledgerflow archive e58fa00a | tar -x
+git add -A && git -c user.name=v -c user.email=v@v commit -qm base
+git config user.name v && git config user.email v@v
+git am /tmp/agent6-complete.patch          # must print no error
+for f in audit/agent6-2026-11-10/*.md audit/agent6-2026-11-10/probes/*; do ... done   # 15/15 sha256 equal
+```
+
+Result on 2026-11-10: **`git am` exit 0, 8/8 docs and 7/7 probes byte-identical.** The restored
+*working tree* is not identical to `HEAD` as a git tree, because `git archive` drops `.github/`,
+`.husky/` and other dot-directories that are excluded from the snapshot; that is a property of the
+archive, not of the patch — compare the **audit files**, which is what the patch carries.
