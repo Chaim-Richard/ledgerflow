@@ -19,7 +19,8 @@ the tip was `3f60e2dc` when the FINAL-13 patch was cut; the commits after it are
 
 | Drive file | id | What it is |
 |---|---|---|
-| `2026-11-10_Agent6_Ledgerflow_FINAL-22-commits-4a3fa09.patch` | `1qB7eTVSYIKwhchCbBMkrY7EvEyvg6dfa` | **THE backup to restore from**: all 22 commits `e58fa00..HEAD`, tip `4a3fa09`, 162,032 B, sha256 `4af5e0137c68d09d`. Verified: `git am` onto `e58fa00` exits 0 and reproduces **all 15 audit files byte-for-byte**. |
+| `2026-11-10_Agent6_Ledgerflow_FINAL-23-commits-fa93999.patch` | `(id)` | **THE backup to restore from**: all 23 commits `e58fa00..HEAD`, tip `fa93999`, 164,742 B, sha256 `50a44ae860f2ec3a`. Verified: `git am` onto `e58fa00` exits 0 and reproduces **all 15 audit files byte-for-byte**. |
+| `2026-11-10_Agent6_Ledgerflow_FINAL-22-commits-4a3fa09.patch` | `1qB7eTVSYIKwhchCbBMkrY7EvEyvg6dfa` | earlier verified backup (22 commits), kept |
 | `2026-11-10_Agent6_Ledgerflow_COMPLETE-20-commits-dc3fed4.patch` | `1eNt9B-lo1Rx4lGLbq-vcwAK-7J-jS90Y` | earlier verified backup (20 commits), kept |
 | `2026-11-10_Agent6_Ledgerflow_COMPLETE-19-commits.patch` | `1JJTYoV2J3LhN1Ahat0b0ncfNAQ7iFG6T` | earlier verified backup (19 commits), kept |
 | ~~`FINAL-15-commits-8a423a05.patch`, `FINAL-13`, `FINAL-12`, `FINAL-11`, `ALL-7`, `ALL-4`, `branch-commit-e2cadf3b`~~ | — | **DO NOT USE — all of these are INCOMPLETE.** They were cut with `git format-patch -N`, which counts from `HEAD` and therefore silently dropped commit 1 (`1ef64361`, the F-08 commit that *creates* `02-findings.md`). Proven only by `git am` failing on patch 2/15. Removed from this index; the files are still in Drive, labelled obsolete. |
